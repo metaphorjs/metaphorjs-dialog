@@ -1,0 +1,181 @@
+body {
+    padding: 40px;
+    margin: 0;
+    font-family: Georgia, sans-serif;
+    background-color: #fff;
+    background-image: url(noise.png);
+}
+
+h1 {
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+a, a:link, a:visited, a:hover {
+    color: #0000ff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.case {
+    width: 200px;
+    height: 200px;
+    border: 1px solid #ccc;
+    margin: 20px 0 0 20px;
+    float: left;
+    padding: 10px;
+    overflow: hidden;
+    background: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    -webkit-box-shadow: rgba(0,0,0,0.1) 5px 5px 10px;
+    -moz-box-shadow: rgba(0,0,0,0.1) 5px 5px 10px;
+    box-shadow: rgba(0,0,0,0.1) 5px 5px 10px;
+}
+
+
+
+.case a {
+    background: #f0f0f0;
+}
+
+.case h3 {
+    margin-top:     0;
+    margin-bottom:  10px;
+}
+
+.help {
+    padding: 4px;
+    background-color: #000;
+    color: #fff;
+    border-radius: 2px;
+    position: absolute;
+    font-size: 10px;
+}
+
+.dialog {
+    position:           absolute;
+    padding:            10px;
+    background-color:   #000;
+    background-color:   rgba(0,0,0,0.9);
+    border:             5px solid #000;
+    -webkit-box-shadow: rgba(0,0,0,0.1) 5px 5px 10px;
+    -moz-box-shadow:    rgba(0,0,0,0.1) 5px 5px 10px;
+    box-shadow:         rgba(0,0,0,0.1) 5px 5px 10px;
+
+}
+
+
+.dialog a {
+    color: #fff;
+}
+
+
+.dialog, .dialog pre {
+    color:              #f0f0f0;
+    font-size:          14px;
+    font-family:        Monaco, "Courier New", Courier, monospace;
+}
+
+
+.fixed-dialog {
+    position:   fixed;
+    left:       0;
+    right:      0;
+    bottom:     0;
+}
+
+.case a {
+    white-space: nowrap;
+}
+
+
+
+.css-anim {
+    -webkit-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -webkit-transform 0.2s ease-in-out;
+    -moz-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -moz-transform 0.2s ease-in-out;
+    -o-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -o-transform 0.2s ease-in-out;
+    transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.css-anim-opening {
+    -webkit-transform: scale(0.9) rotate(-5deg);
+    -moz-transform: scale(0.9) rotate(-5deg);
+    -ms-transform: scale(0.9) rotate(-5deg);
+    -o-transform: scale(0.9) rotate(-5deg);
+    transform: scale(0.9) rotate(-5deg);
+    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=90);
+    opacity: 0.9;
+}
+
+.css-anim-opening-active {
+    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
+    opacity: 1;
+    -webkit-transform: scale(1) rotate(0deg);
+    -moz-transform: scale(1) rotate(0deg);
+    -ms-transform: scale(1) rotate(0deg);
+    -o-transform: scale(1) rotate(0deg);
+    transform: scale(1) rotate(0deg);
+    -webkit-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -webkit-transform 0.2s ease-in-out;
+    -moz-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -moz-transform 0.2s ease-in-out;
+    -o-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -o-transform 0.2s ease-in-out;
+    transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.css-anim-closing {
+    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
+    opacity: 1;
+    -webkit-transform: scale(1) rotate(0deg);
+    -moz-transform: scale(1) rotate(0deg);
+    -ms-transform: scale(1) rotate(0deg);
+    -o-transform: scale(1) rotate(0deg);
+    transform: scale(1) rotate(0deg);
+}
+.css-anim-closing-active {
+    -webkit-transform: scale(0.9) rotate(-5deg);
+    -moz-transform: scale(0.9) rotate(-5deg);
+    -ms-transform: scale(0.9) rotate(-5deg);
+    -o-transform: scale(0.9) rotate(-5deg);
+    transform: scale(0.9) rotate(-5deg);
+    filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
+    opacity: 0;
+    -webkit-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -webkit-transform 0.2s ease-in-out;
+    -moz-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -moz-transform 0.2s ease-in-out;
+    -o-transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, -o-transform 0.2s ease-in-out;
+    transition: width 0.2s ease-in-out, height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+}
+
+
+
+.css-anim-visible {
+
+}
+
+.css-anim-hidden {
+
+}
+
+
+.custom-pointer {
+    background-color:   #444;
+    color:              #e0e0e0;
+    border:             1px solid #fff;
+    -webkit-box-shadow: #e0e0e0 1px 1px 3px;
+    -moz-box-shadow: #e0e0e0 1px 1px 3px;
+    box-shadow: #e0e0e0 1px 1px 3px;
+    font-size: 12px;
+    padding: 10px;
+}

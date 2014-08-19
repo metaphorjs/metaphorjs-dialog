@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <link rel="stylesheet" href="style.css"/>
+    <link rel="stylesheet" href="prism.css"/>
+
+
+    <script src="jquery-1.11.0.min.js"></script>
+    <script src="jquery.velocity.min.js"></script>
+    <script src="stuff.js"></script>
+
+    <script src="../../metaphorjs/src/MetaphorJs.js"></script>
+    <script src="../../metaphorjs/src/lib/Event.js"></script>
+    <script src="../../metaphorjs-promise/metaphorjs.promise.js"></script>
+    <script src="../../metaphorjs/src/lib/Animate.js"></script>
+    <script src="../../metaphorjs-observable/metaphorjs.observable.js"></script>
+    <script src="../metaphorjs.dialog.js"></script>
+    <script src="prism.js"></script>
+    <script src="beautify.js"></script>
+
+    <script>
+
+        var preserveStrings = function(obj, level) {
+            var t, i;
+            level = level || 1;
+            for (i in obj) {
+                if (obj.hasOwnProperty(i) && level < 3) {
+                    t = typeof obj[i];
+                    if (t == "string") {
+                        obj[i] = htmlspecialchars(obj[i]);
+                    }
+                    if (t = "object") {
+                        preserveStrings(obj[i], level + 1);
+                    }
+                }
+            }
+        };
+
+        var dumpCode  = function(options, noContent) {
+
+            var content,
+                code    = $.extend({}, typeof options == "string" ? caseOptions[options] : options);
+
+            if (noContent) {
+                delete code.content;
+            }
+            preserveStrings(code);
+            //content     = htmlspecialchars(pp(code));
+            content = window.js_beautify(pp(code));
+            return '<pre><code class="language-javascript">'+content+'</code></pre>';
+        };
+
+
+        var dialogColor = "#000";
+        var dialogBorder = "#000";
+
+
+        MetaphorJs.lib.Dialog.defaults  = {
+            debug:      false,
+            cls: {
+                dialog:    "dialog"
+            },
+            show:       {
+                single:  true
+            },
+            render: {
+                lifetime: 10000
+            },
+            position: {
+                screenX: 1,
+                screenY: 1
+            },
+            callback: {
+                beforeshow: function(dlg){
+                    var el      = $(dlg.getContentElem()),
+                        code    = el.find("code");
+
+                    if (code.length) {
+                        Prism.highlightElement(code.get(0));
+                    }
+                }
+            }
+        };
+
+        var caseOptions = {};
+
+        caseOptions["case-mouseover"] = {
+            content:    "Mouseover/mouseout tooltip",
+            show:       "mouseover",
+            hide:       "mouseout"
+        };
+
+        caseOptions["case-click"] = {
+            content:    "Toggle on click",
+            toggle:     "click"
+        };
+
+        caseOptions["case-dblclick"] = {
+            content:    "Toggle on dblclick",
+            toggle:     "dblclick"
+        };
+
+        caseOptions["case-no-hide"] = {
+            content:    "{hide: false}",
+            show:       "click",
+            hide:       false,
+            position:   "b"
+        };
+
+        caseOptions["case-hide-all"] = {
+            content:    "{show: {single: true}}",
+            toggle:     "click"
+        };
+
+
+        caseOptions["case-keep"] = {
+            content:    function(){
+                return dumpCode("case-keep", true);
+            },
+            show:       {
+                events: {
+                    _target:    "mouseover",
+                    _self:      "mouseover"
+                }
+            },
+            hide: {
+                delay:  300,
+                events: {
+                    _self:      "mouseout",
+                    _target:    "mouseout"
+                }
+            },
+            position: {
+                type: "b",
+                offsetY: 10
+            }
+        };
+
+
+
+        caseOptions["case-body-click"] = {
+            content:    function(){
+                return dumpCode("case-body-click", true);
+            },
+            toggle: {
+                events: {
+                    _target:    "click"
+                }
+            },
+            show:       {
+                events: {
+                    _self:      "click"
+                }
+            },
+            hide: {
+                events: {
+                    "_html":     "click"
+                }
+            },
+            position: {
+                type: "b",
+                offsetY: 10
+            }
+        };
+
+        caseOptions["case-pos-mouse-custom"] = {
+            content:    function(){
+                return dumpCode("case-pos-mouse-custom", true);
+            },
+            show:       {
+                events: {
+                    _target:    "click"
+                }
+            },
+            hide: {
+                events: {
+                    "_html":     "click"
+                }
+            },
+            position: {
+                type: "m",
+                screenX: 10,
+                screenY: 10,
+                get: function(dlg, e) {
+                    return {
+                        x: e.pageX + 10,
+                        y: e.pageY + 10
+                    }
+                }
+            }
+        };
+
+        caseOptions["case-mouse-x"] = {
+            content:    function(){
+                return dumpCode("case-mouse-x", true);
+            },
+            show:   "mouseover",
+            hide:   "mouseout",
+            position: {
+                type: "mt",
+                axis: "x"
+            },
+            pointer: {
+                position: "b",
+                direction: "b",
+                size: 12,
+                color: dialogColor,
+                border: 5,
+                borderColor: dialogBorder
+            }
+        };
+
+        caseOptions["case-mouse-y"] = {
+            content:    function(){
+                return dumpCode("case-mouse-y", true);
+            },
+            show:   "mouseover",
+            hide:   "mouseout",
+            position: {
+                type: "mr",
+                axis: "y"
+            }
+        };
+
+        caseOptions["case-pos-window-custom"] = {
+            content:    function(){
+                return dumpCode("case-pos-window-custom", true);
+            },
+            toggle:  "click",
+            hide: {
+                events: {
+                    _html: "click"
+                }
+            },
+            position: {
+                screenX: 10,
+                screenY: 10,
+                resize: false,
+                scroll: false,
+                get: function(dlg, e) {
+                    var w = $(window),
+                            ww  = w.width(),
+                            wh  = w.height();
+
+                    return {
+                        x: Math.random() * ww,
+                        y: Math.random() * wh
+                    }
+                }
+            },
+            callback: {
+                show: function(dlg) {
+                    window.itv    = window.setInterval(dlg.reposition, 5000);
+                },
+                hide: function() {
+                    window.clearInterval(window.itv);
+                }
+            }
+        };
+
+        caseOptions["case-resize-scroll"] = {
+            content:    function(){
+                return dumpCode("case-resize-scroll", true);
+            },
+            toggle:  "click",
+            hide: {
+                events: {
+                    _html: "click"
+                }
+            },
+            show: {
+                ignoreHideAll: true
+            },
+            position: {
+                type:   "wc",
+                screenX: 10,
+                screenY: 10,
+                resize: true,
+                scroll: true
+            }
+        };
+
+        caseOptions["case-css-position"] = {
+            content:    function(){
+                return dumpCode("case-css-position", true);
+            },
+            toggle:  "click",
+            cls: "dialog fixed-dialog",
+            hide: {
+                events: {
+                    _html: "click"
+                }
+            },
+            position: false
+        };
+
+        caseOptions["case-anim-fade"] = {
+            content:    function(){
+                return dumpCode("case-anim-fade", true);
+            },
+            position: {
+                screenX: false,
+                screenY: false
+            },
+            show: {
+                  animate: {
+                      fn: "fadeIn"
+                  },
+                  events: "mouseover"
+            },
+            hide: {
+                  animate: {
+                      fn: "fadeOut"
+                  },
+                  events: "mouseout"
+            }
+        };
+
+        caseOptions["case-anim-set"] = {
+            content:    function(){
+                return dumpCode("case-anim-set", true);
+            },
+            position: {
+                type: "t",
+                screenX: false,
+                screenY: false
+            },
+            show: {
+                animate: function(dlg) {
+                    return {
+                        before: {
+                            opacity: 0,
+                            width: "10px"
+                        },
+                        after: {
+                            width: "300px",
+                            opacity: 1
+                        },
+                        options: {
+                            step: function() {
+                                dlg.reposition();
+                            }
+                        }
+                    };
+                },
+                events: "mouseover"
+            },
+            hide: {
+                animate: {
+                    fn: "fadeOut"
+                },
+                events: "mouseout"
+            }
+        };
+
+        caseOptions["case-anim-fn"] = {
+            content:    function(){
+                return dumpCode("case-anim-fn", true);
+            },
+            position: {
+                type: "wt",
+                screenX: false,
+                screenY: false
+            },
+            show: {
+                animate: function(dlg) {
+                    var pos = dlg.getPosition();
+                    return {
+                        before: {
+                            top: "-400px",
+                            opacity: 0
+                        },
+                        after: {
+                            top: pos.y + "px",
+                            opacity: 1
+                        },
+                        options: {
+                            easing: "swing",
+                            duration: 300
+                        }
+                    }
+                },
+                events: "mouseover"
+            },
+            hide: {
+                animate: {
+                    after: {
+                        top: "-400px",
+                        opacity: 0
+                    },
+                    options: {
+                        duration: 400,
+                        easing: "swing"
+                    }
+                },
+                events: "mouseout"
+            }
+        };
+
+        caseOptions["case-anim-transition"] = {
+            content:    function(){
+                return dumpCode("case-anim-transition", true);
+            },
+            show: {
+                animate: "css-anim-opening",
+                events: "mouseover"
+            },
+            hide:  {
+                animate: "css-anim-closing",
+                events: "mouseout"
+            },
+            position: {
+                screenX: false,
+                screenY: false
+            }
+        };
+
+        caseOptions["case-anim-cls"] = {
+            content:    function(){
+                return dumpCode("case-anim-cls", true);
+            },
+            position: {
+                screenX: false,
+                screenY: false
+            },
+            show: "mouseover",
+            hide:  "mouseout",
+            cls: {
+                dialog: "dialog css-anim",
+                visible: "css-anim-opened"
+            }
+        };
+
+
+
+        var positions   = ["t", "tr", "trc", "rt", "r", "rb",
+            "brc", "br", "b", "bl", "blc",
+            "lb", "l", "lt", "tlc", "tl",
+            "mt", "mr", "mb", "ml",
+            "mrt", "mrb", "mlb", "mlt",
+            "wc", "wt", "wr", "wb", "wl",
+            "wrt", "wrb", "wlb", "wlt"];
+        for (var i = 0, len = positions.length; i < len; i++) {
+            var p = positions[i];
+            (function(p){
+                caseOptions["case-pos-"+p] = {
+                    content: function(){
+                        return dumpCode("case-pos-"+p, true);
+                    },
+                    position: {
+                        type: p,
+                        offsetX: 1,
+                        offsetY: 1
+                    },
+                    show: "mouseover",
+                    hide: "mouseout"
+                };
+            }(p));
+        }
+
+
+
+        var opposite = {"t": "b", "r": "l", "b": "t", "l": "r"};
+        var pointers = ["t", "tr", "rt", "r", "rb", "br", "b", "bl", "lb", "l", "lt", "tl"];
+
+        for (var i = 0, len = pointers.length; i < len; i++) {
+            var pnt     = pointers[i],
+                pri     = pnt.substr(0, 1),
+                sec     = pnt.substr(1),
+                pos;
+
+            pos = opposite[pri];
+            if (sec) {
+                pos     += sec;
+            }
+
+            (function(pnt, pos){
+                caseOptions["case-pointer-"+pnt] = {
+                    content: function() {
+                        return dumpCode("case-pointer-"+pnt, true);
+                    },
+                    position: {
+                        type: pos,
+                         screenX: false,
+                         screenY: false
+                    },
+                    pointer: {
+                        position: pnt,
+                        size: 12,
+                        color: dialogColor,
+                        border: 5,
+                        borderColor: dialogBorder,
+                        offset: pos.length == 1 ? 0 : -5
+                    },
+                    show: "mouseover",
+                    hide: "mouseout"
+                };
+            }(pnt, pos));
+
+        }
+
+        caseOptions["case-pointer-more"] = {
+            content: function() {
+                return dumpCode("case-pointer-more", true);
+            },
+            position: "t",
+            pointer: {
+                position: "b",
+                direction: "bl",
+                size: 12,
+                color: dialogColor,
+                border: 5,
+                borderColor: dialogBorder,
+                offset: 10
+            },
+            show: "mouseover",
+            hide: "mouseout"
+        };
+
+        caseOptions["case-pointer-custom"] = {
+            content: function() {
+                return dumpCode("case-pointer-custom", true);
+            },
+            position: "t",
+            pointer: {
+                position: "b",
+                el: "<div class='custom-pointer'>\\/</div>",
+                offset: -2
+            },
+            show: "mouseover",
+            hide: "mouseout"
+        };
+
+
+        caseOptions["case-overlay"] = {
+            content: function() {
+                return dumpCode("case-overlay", true);
+            },
+            position: "wc",
+            overlay: {
+                enabled: true,
+                opacity:.2,
+                animateShow: {
+                    fn: "fadeIn",
+                    options: {
+                        duration: 100
+                    }
+                },
+                animateHide: {
+                    fn: "fadeOut",
+                    options: {
+                        duration: 100
+                    }
+                }
+            },
+            show: {
+                  animate: {
+                      fn: "fadeIn",
+                      options: {
+                          duration: 100
+                      }
+                  },
+                  events: {
+                          _target: "click",
+                          _self: "click"
+                  }
+            },
+            hide: {
+                  animate: {
+                      fn: "fadeOut",
+                      options: {
+                          duration: 100
+                      }
+                  },
+                  events: {
+                      body: "click"
+                  }
+            },
+            pointer: {
+                position: "b",
+                size: 12,
+                color: dialogColor,
+                border: 5,
+                borderColor: dialogBorder,
+                offset: -1
+            }
+        };
+
+        caseOptions["case-modal"] = {
+            content: function() {
+                return dumpCode("case-modal", true);
+            },
+            position: "wt",
+            modal: true,
+            overlay: {
+                enabled: true,
+                opacity:.2
+            },
+            show: "click",
+            hide: {
+                events: {
+                    _self: "click"
+                }
+            }
+        };
+
+
+        caseOptions["case-content-value"] = {
+            content:    "{content: 'content: {...}'}",
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-content-tooltip"] = {
+            show: "mouseover",
+            hide:  "mouseout"
+            };
+
+        caseOptions["case-content-attr"] = {
+            content: {
+                attr: "custom-attr"
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-content-fn"] = {
+            content: function() {
+                return dumpCode("case-content-fn");
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-content-after"] = {
+            show: "mouseover",
+            hide:  "mouseout",
+            callback: {
+                show: function(dlg) {
+                    dlg.setContent(dumpCode("case-content-after"));
+                    var el      = $(dlg.getContentElem()),
+                        code    = el.find("code");
+
+                    if (code.length) {
+                        Prism.highlightElement(code.get(0));
+                    }
+                }
+            }
+        };
+
+        caseOptions["case-content-ajax"] = {
+            ajax: {
+                url:    "ajax.html",
+                cache:  false
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-content-href"] = {
+            useHref: true,
+            ajax: {
+                cache:  false
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+
+        caseOptions["case-content-complex"] = {
+            content: function() {
+                return {
+                    title: "Dialog title",
+                    body: dumpCode("case-content-complex")
+                }
+            },
+            render: "<div><h2 class='title'></h2><div class='body'></div></div>",
+            selector: {
+                title: ".title",
+                body: ".body"
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-render-existing"] = {
+            render: {
+                el: "#render-el"
+            },
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-render-href"] = {
+            useHref: true,
+            show: "mouseover",
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-show-delay"] = {
+            content: function() {
+                return dumpCode("case-show-delay", true);
+            },
+            show: {
+                delay: 500,
+                events: "mouseover"
+            },
+            hide:  "mouseout"
+        };
+
+        caseOptions["case-hide-delay"] = {
+            content: function() {
+                return dumpCode("case-hide-delay", true);
+            },
+            show: "mouseover",
+            hide:  {
+                delay: 500,
+                events: "mouseout"
+            }
+        };
+
+        caseOptions["case-hide-timeout"] = {
+            content: function() {
+                return dumpCode("case-hide-timeout", true);
+            },
+            show: "mouseover",
+            hide:  {
+                timeout: 1000,
+                events: "mouseout"
+            }
+        };
+
+        caseOptions["case-alert"] = {
+            content: function() {
+                return dumpCode("case-alert");
+            },
+            selector: {
+                content: ".content"
+            },
+            render: "<div><div class='content'></div><button class='ok'>Ok</button></div>",
+            buttons: {
+                ok: ".ok"
+            },
+            position: {
+                screenX: 1,
+                screenY: 1
+            },
+            show: {
+                events: "click",
+                ignoreHideAll: true
+            },
+            hide:  false,
+            callback: {
+                button: function(dlg, btn, e) {
+                    if (btn == "ok") {
+                        dlg.hide();
+                    }
+                }
+            }
+        };
+
+
+        caseOptions["case-confirm"] = {
+            content: function() {
+                return dumpCode("case-confirm");
+            },
+            selector: {
+                content: ".content"
+            },
+            render: "<div><div class='content'></div>"+
+                    "<button class='ok'>Ok</button>"+
+                    "<button class='cancel'>Cancel</button></div>",
+            buttons: {
+                ok: ".ok",
+                cancel: ".cancel"
+            },
+            position: {
+                screenX: 1,
+                screenY: 1
+            },
+            show: {
+                events: "click",
+                ignoreHideAll: true
+            },
+            hide:  false,
+            callback: {
+                button: function(dlg, btn, e) {
+                    dlg.hide();
+                    var a = new MetaphorJs.lib.Dialog({
+                        position: "wc",
+                        content: btn == "ok" ? "Confirmed!" : "Not confirmed!",
+                        hide: {
+                            timeout: 1000
+                        }
+                    });
+                    a.show();
+                }
+            }
+        };
+
+        caseOptions["case-change-target-style"] = {
+            content: function() {
+                return dumpCode("case-change-target-style", true);
+            },
+            toggle: "click",
+            callback: {
+                show: function(dlg) {
+                    $(dlg.getTarget()).css("font-weight", "bold");
+                },
+                hide: function(dlg) {
+                    $(dlg.getTarget()).css("font-weight", "normal");
+                }
+            }
+        };
+
+        caseOptions['case-focus-input'] = {
+            content: '<input type="text"/><br>' +
+                     '{show: {focus: true}}',
+            show: {
+                  focus: true
+            },
+            toggle: "click"
+        };
+
+        caseOptions['case-focus-button'] = {
+            content: '<button>Ok</button><br><br>' +
+                     '{show: {focus: true}, buttons: {ok: "button"}}',
+            buttons: {
+                ok: "button"
+            },
+            show: {
+                focus: true
+            },
+            toggle: "click",
+            callback: {
+                button: function(dlg) {
+                    dlg.hide();
+                }
+            }
+        };
+
+        caseOptions['case-focus-custom'] = {
+            content: '<a href="#">Focused link</a><br><br>' +
+                     '{show: {focus: "a"}}',
+            show: {
+                focus: "a"
+            },
+            toggle: "click"
+        };
+
+
+        var caseDynamicTarget = {
+            content: function() {
+                return dumpCode(caseDynamicTarget, true);
+            },
+            target: ".case-dynamic-target",
+            show: {
+                events: {
+                    _html: {click: ".case-dynamic-target"}
+                }
+            },
+            hide: {
+                events: {
+                    body: "click"
+                }
+            }
+        };
+
+
+
+        $(function(){
+
+            new MetaphorJs.lib.Dialog(caseDynamicTarget);
+
+            var caseDisable = {
+                content: "Now click enable and disable links",
+                position: "wc",
+                target: $(".case-disable").get(0),
+                toggle: "click"
+            };
+            var dDisable    = new MetaphorJs.lib.Dialog(caseDisable);
+
+            $("#action-disable").click(function(){
+                dDisable.disable();
+            });
+            $("#action-enable").click(function(){
+                dDisable.enable();
+            });
+
+
+
+            var caseFrozen = {
+                content: "Now click freeze and unfreeze links",
+                position: "wc",
+                target: $(".case-frozen").get(0),
+                toggle: "click"
+            };
+            var dFrozen    = new MetaphorJs.lib.Dialog(caseFrozen);
+
+            $("#action-freeze").click(function(){
+                dFrozen.freeze();
+            });
+            $("#action-unfreeze").click(function(){
+                dFrozen.unfreeze();
+            });
+
+
+            for (var i in caseOptions) {
+                $("." + i).metaphorjsTooltip($.extend({}, caseOptions[i]));
+            }
+
+
+            var dataEvent = new MetaphorJs.lib.Dialog({
+                target: "a[data-event]",
+                content: {
+                    attr: "data-event"
+                },
+                show: {
+                    events: "mouseover",
+                    single: false
+                },
+                hide: "mouseout",
+                position: {
+                    type: "r",
+                    offsetX: 5
+                },
+                cls: "help"
+            });
+        });
+
+
+
+
+
+
+    </script>
+
+</head>
+<body>
+    <h1>MetaphorJs.lib.Dialog v1.0</h1>
+    <p style="text-align: center">
+        <a href="https://github.com/kuindji/metaphorjs-dialog">Github</a>,
+        <a href="http://kuindji.com/js/dialog/docs/single/index.html">Docs</a>
+    </p>
+    <p style="text-align: center"><!--size-start-->
+Full size: 78.90kb; Minified: 18.85kb
+<!--size-end--></p>
+    <br><br>
+
+
+    <div class="case">
+        <h3>Event handling</h3>
+        Open tooltip on
+            <a class="case-mouseover">mouseover</a>,
+            <a class="case-click" data-event="click">click</a>,
+            <a class="case-dblclick" data-event="dblclick">dblclick</a> ...
+        Keep open on
+            <a class="case-keep">self mouseover</a>.
+        Hide by <a class="case-body-click" data-event="click">clicking anywhere</a> except dialog itself.
+        Keep position on window <a class="case-resize-scroll" data-event="click">resize and scroll</a>.
+
+    </div>
+
+    <div class="case target-position-case">
+        <h3>Target positions</h3>
+            <a class="case-pos-t" title="title should be hidden" tooltip="position: t">top</a>,
+            <a class="case-pos-tr" tooltip="position: tr">top right</a>,
+            <a class="case-pos-trc" tooltip="position: trc">top right corner</a>,
+            <a class="case-pos-rt" tooltip="position: rt">right top</a>,
+            <a class="case-pos-r" tooltip="position: r">right</a>,
+            <a class="case-pos-rb" tooltip="position: rb">right bottom</a>,
+            <a class="case-pos-brc" tooltip="position: brc">bottom right corner</a>,
+            <a class="case-pos-br" tooltip="position: br">bottom right</a>,
+            <a class="case-pos-b" tooltip="position: b">bottom</a>,
+            <a class="case-pos-bl" tooltip="position: bl">bottom left</a>,
+            <a class="case-pos-blc" tooltip="position: blc">bottom left corner</a>,
+
+            <a class="case-pos-lb" tooltip="position: lb">left bottom</a>,
+            <a class="case-pos-l" tooltip="position: l">left</a>,
+            <a class="case-pos-lt" tooltip="position: lt">left top</a>,
+
+            <a class="case-pos-tlc" tooltip="position: tlc">top left corner</a>,
+            <a class="case-pos-tl" tooltip="position: tl">top left</a>.
+    </div>
+
+
+
+
+    <div class="case window-position-case">
+        <h3>Window positions</h3>
+        <a class="case-pos-wc" tooltip="position: wc">center</a>,
+        <a class="case-pos-wt" tooltip="position: wt">top</a>,
+        <a class="case-pos-wrt" tooltip="position: wrt">right top</a>,
+        <a class="case-pos-wr" tooltip="position: wr">right</a>,
+        <a class="case-pos-wrb" tooltip="position: wrb">right bottom</a>,
+        <a class="case-pos-wb" tooltip="position: wb">bottom</a>,
+        <a class="case-pos-wlb" tooltip="position: wlb">left bottom</a>,
+        <a class="case-pos-wl" tooltip="position: wl">left</a>,
+        <a class="case-pos-wlt" tooltip="position: wlt">left top</a>.
+        <a class="case-pos-window-custom" data-event="click">Custom</a>.<br>
+        You can also <a class="case-css-position" data-event="click">prevent positioning</a>.
+    </div>
+
+    <div class="case">
+        <h3>Hide others</h3>
+        Dialogs can <a class="case-hide-all" data-event="click">hide other dialogs</a> upon its opening.
+        <a class="case-no-hide" data-event="click">This one</a> has no "hide" event.
+    </div>
+
+    <div class="case">
+        <h3>Animation</h3>
+        Basic <a class="case-anim-fade">fadeIn/fadeOut</a>.<br>
+        Using <a class="case-anim-set">property sets</a>.<br>
+        Using <a class="case-anim-fn">custom function</a>.<br>
+        Using <a class="case-anim-transition">transition classes</a>.
+    </div>
+
+    <div class="case">
+        <h3>Pointers</h3>
+        <a class="case-pointer-b">bottom</a>,
+        <a class="case-pointer-bl">bottom left</a>,
+        <a class="case-pointer-lt">left top</a>,
+        <a class="case-pointer-l">left</a>,
+        <a class="case-pointer-lb">left bottom</a>,
+        <a class="case-pointer-tr">top right</a>,
+        <a class="case-pointer-t">top</a>,
+        <a class="case-pointer-tl">top left</a>,
+        <a class="case-pointer-rb">right bottom</a>,
+        <a class="case-pointer-r">right</a>,
+        <a class="case-pointer-rt">right top</a>,
+        <a class="case-pointer-br">bottom right</a>.<br>
+        <a class="case-pointer-more">And more...</a>.
+        <a class="case-pointer-custom">And custom pointer</a>.
+    </div>
+
+    <div class="case">
+        <h3>Overlay</h3>
+        This one is quite <a class="case-overlay" data-event="click">straight forward</a>.<br>
+        If dialog is <a class="case-modal" data-event="click">modal</a>,
+        overlay will be forced to appear and it will catch all clicks.
+    </div>
+
+    <div class="case">
+        <h3>Content</h3>
+        Regular <a class="case-content-value">text value</a>.
+        Content from <a class="case-content-tooltip" tooltip="taken from tooltip attribute">tooltip</a>
+        attribute (also reads "title" and "alt").
+        Content from <a class="case-content-attr" custom-attr="taken from custom-attr">custom attribute</a>.
+        More: <a class="case-content-fn">generated content</a> and generated
+        <a class="case-content-after">after show</a>.
+        Plus <a class="case-content-ajax">ajax content</a> which can be loaded using
+        <a class="case-content-href" href="href.html">href</a> attribute.
+    </div>
+
+    <div class="case mouse-position-case">
+        <h3>Mouse positions</h3>
+        <a class="case-pos-mt" tooltip="position: mt">top</a>,
+        <a class="case-pos-mrt" tooltip="position: mrt">right top</a>,
+        <a class="case-pos-mr" tooltip="position: mr">right</a>,
+        <a class="case-pos-mrb" tooltip="position: mrb">right bottom</a>,
+        <a class="case-pos-mb" tooltip="position: mb">bottom</a>,
+        <a class="case-pos-mlb" tooltip="position: mlb">left bottom</a>,
+        <a class="case-pos-ml" tooltip="position: ml">left</a>,
+        <a class="case-pos-mlt" tooltip="position: mlt">left top</a>.
+        <a class="case-pos-mouse-custom" data-event="click">Custom</a>.
+        Following <a class="case-mouse-x">x axis</a> or <a class="case-mouse-y">y axis</a>.
+    </div>
+
+    <div class="case">
+        <h3>More content</h3>
+        You can use <a class="case-content-complex">complex and structured</a> content.<br>
+        Use <a class="case-render-existing">existing</a>
+        <a href="#href-el" class="case-render-href">elements</a>.
+    </div>
+
+    <div class="case">
+        <h3>Timeouts and delays</h3>
+        Show with <a class="case-show-delay">delay</a>.
+        Hide with <a class="case-hide-delay">delay</a>.
+        Hide after <a class="case-hide-timeout">timeout</a>.
+    </div>
+
+    <div class="case">
+        <h3>Buttons</h3>
+        Buttons allow creating such dialogs as
+        <a class="case-alert" data-event="click">alerts</a>,
+        <a class="case-confirm" data-event="click">confirms</a>.
+    </div>
+
+    <div class="case">
+        <h3>Dynamic targets</h3>
+        These three links
+        (<a class="case-dynamic-target" data-event="click">one</a>,
+        <a class="case-dynamic-target" data-event="click">two</a>,
+        <a class="case-dynamic-target" data-event="click">three</a>)
+        have one tooltip shared among them.
+    </div>
+
+    <div class="case">
+        <h3>Various</h3>
+        Change target's appearance using
+        <a class="case-change-target-style" data-event="click">callback</a>.<br>
+
+        <a class="case-disable" data-event="click">This dialog</a> can be
+        <a id="action-disable" data-event="click">disabled</a> and
+        <a id="action-enable" data-event="click">enabled</a>.<br>
+
+        And <a class="case-frozen" data-event="click">this dialog</a> can be
+        <a id="action-freeze" data-event="click">frozen</a> and
+        <a id="action-unfreeze" data-event="click">unfrozen</a>.<br>
+    </div>
+
+    <div class="case">
+        <h3>Focus</h3>
+        <a class="case-focus-input" data-event="click">Input elements</a> and
+        <a class="case-focus-button" data-event="click">buttons</a>
+        can be automatically focused upon show.<br>
+        You can also provide <a class="case-focus-custom" data-event="click">custom selector</a>.
+    </div>
+
+    <div style="clear:both"></div>
+
+    <div id="href-el" class="dialog" style="display:none">
+        <pre>
+        &lt;a href="#href-el"&gt;elements&lt;/a&gt;
+        {
+            useHref: true
+        }
+        </pre>
+    </div>
+
+
+    <div id="render-el" class="dialog" style="display:none">
+        <pre>
+        {
+            render: {
+                el: "#render-el"
+            }
+        }
+        </pre>
+    </div>
+
+
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+        ga('create', 'UA-7220987-3', 'kuindji.com');
+        ga('send', 'pageview');
+
+    </script>
+</body>
+</html>
