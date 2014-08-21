@@ -12,6 +12,7 @@
 
     <script src="../../metaphorjs/src/MetaphorJs.js"></script>
     <script src="../../metaphorjs/src/lib/Event.js"></script>
+    <script src="../../metaphorjs/src/lib/Selector.js"></script>
     <script src="../../metaphorjs-promise/metaphorjs.promise.js"></script>
     <script src="../../metaphorjs/src/lib/Animate.js"></script>
     <script src="../../metaphorjs-observable/metaphorjs.observable.js"></script>
@@ -305,7 +306,8 @@
             },
             show: {
                   animate: {
-                      fn: "fadeIn"
+                      fn: "fadeIn",
+                      skipDisplayChange: true
                   },
                   events: "mouseover"
             },

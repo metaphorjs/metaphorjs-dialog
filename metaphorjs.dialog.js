@@ -18,17 +18,17 @@
         addClass        = m.addClass,
         removeClass     = m.removeClass,
         isArray         = m.isArray,
-        toArray         = m.toArray,
         addl            = m.addListener,
         reml            = m.removeListener,
         dataFn          = m.data,
-        trim            = m.trim,
         normalizeEvent  = m.normalizeEvent,
         ajax            = m.ajax || $.ajax,
         Observable      = m.lib.Observable,
         animate         = m.animate,
 
-        slice           = Array.prototype.slice,
+        select          = m.select,
+        is              = select.is,
+
 
         isVisible       = function(el) {
             return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
@@ -135,71 +135,6 @@
             return getClientRect(el).height;
         },
 
-        select              = function(selector, context) {
-
-            context = context || document;
-            var e;
-
-            if (context.querySelectorAll) {
-                try {
-                    return toArray(context.querySelectorAll(selector));
-                }
-                catch (e) {}
-            }
-            if (window.jQuery) {
-                return $(selector, context).toArray();
-            }
-            else {
-                var mod;
-                selector = trim(selector);
-                if (selector.indexOf(" ") != -1) {
-                    e = "Cannot use selector " + selector;
-                }
-                else {
-                    mod = selector.substr(0, 1);
-
-                    if (mod == "#") {
-                        return [document.getElementById(selector.substr(1))];
-                    }
-                    else if (mod == ".") {
-                        return toArray(context.getElementsByClassName(selector.substr(1)));
-                    }
-                    else {
-                        return toArray(context.getElementsByTagName(selector));
-                    }
-                }
-            }
-
-            if (e) {
-                throw e;
-            }
-
-            return [];
-        },
-
-        is = function(el, selector) {
-
-            var els, i, l, e;
-            try {
-                els = select(selector, el.parentNode);
-                for (i = -1, l = els.length; ++i < l;) {
-                    if (els[i] === el) {
-                        return true;
-                    }
-                }
-            }
-            catch (e) {}
-
-            if (!els && window.jQuery) {
-                return $(el).is(selector);
-            }
-
-            if (e) {
-                throw e;
-            }
-
-            return false;
-        },
 
         delegates   = {},
 
@@ -1096,7 +1031,7 @@
              * .options - {} jQuery's .animate() options
              * .context -- fn's this object
              * .duration -- used when .fn is string
-             * .start -- function(Element) to call on animation start
+             * .skipDisplayChange -- do not set style.display = "" on start
              * function(){}<br>
              * function must return any of the above:</p>
              * <pre><code class="language-javascript">
@@ -2222,7 +2157,7 @@
                     try {
                         elem.removeChild(pntEl);
                     }
-                    catch (e) {}
+                    catch (thrownError) {}
                 }
 
                 if (typeof content != "string") {
@@ -2248,7 +2183,7 @@
                     try {
                         elem.appendChild(pntEl);
                     }
-                    catch (e){}
+                    catch (thrownError){}
                 }
 
                 var imgs = select("img", contentElem),
@@ -2934,7 +2869,8 @@
 
             animate: function(section, e, isOverlay) {
 
-                var a;
+                var a,
+                    skipDisplay;
 
                 if (isOverlay) {
                     a   = section == "show" ? cfg.overlay.animateShow : cfg.overlay.animateHide;
@@ -2947,6 +2883,8 @@
                     a   = a(self, e);
                 }
 
+                skipDisplay = a.skipDisplayChange || false;
+
                 if (typeof a == "boolean") {
                     a = section;
                 }
@@ -2955,7 +2893,7 @@
                 }
 
                 return animate(elem, a, function(){
-                    if (section == "show") {
+                    if (section == "show" && !skipDisplay) {
                         if (isOverlay) {
                             overlay.style.display = "";
                         }
