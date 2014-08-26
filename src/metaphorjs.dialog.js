@@ -1,3 +1,23 @@
+//#require ../../metaphorjs/src/func/extend.js
+//#require ../../metaphorjs/src/func/nextUid.js
+//#require ../../metaphorjs/src/func/bind.js
+//#require ../../metaphorjs/src/func/dom/addClass.js
+//#require ../../metaphorjs/src/func/dom/hasClass.js
+//#require ../../metaphorjs/src/func/dom/removeClass.js
+//#require ../../metaphorjs/src/func/array/isArray.js
+//#require ../../metaphorjs/src/func/dom/data.js
+//#require ../../metaphorjs/src/func/event/addListener.js
+//#require ../../metaphorjs/src/func/event/removeListener.js
+//#require ../../metaphorjs/src/func/event/normalizeEvent.js
+//#require ../../metaphorjs/src/func/dom/isVisible.js
+//#require ../../metaphorjs/src/func/dom/select.js
+//#require ../../metaphorjs/src/func/dom/is.js
+//#require ../../metaphorjs/src/func/animation/animate.js
+//#require ../../metaphorjs/src/func/animation/stopAnimation.js
+//#require ../../metaphorjs/src/vars/Observable.js
+//#require ../../metaphorjs-ajax/src/vars/ajax.js
+
+
 /**
  * @class MetaphorJs.lib.Dialog
  * @extends MetaphorJs.lib.Observable
@@ -10,31 +30,7 @@
 
     "use strict";
 
-    var m               = window.MetaphorJs,
-        extend          = m.extend,
-        nextUid         = m.nextUid,
-        bind            = m.bind,
-        hasClass        = m.hasClass,
-        addClass        = m.addClass,
-        removeClass     = m.removeClass,
-        isArray         = m.isArray,
-        addl            = m.addListener,
-        reml            = m.removeListener,
-        dataFn          = m.data,
-        normalizeEvent  = m.normalizeEvent,
-        ajax            = m.ajax || $.ajax,
-        Observable      = m.lib.Observable,
-        animate         = m.animate,
-
-        select          = m.select,
-        is              = select.is,
-
-
-        isVisible       = function(el) {
-            return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
-        },
-
-        ucf             = function(str) {
+    var ucf             = function(str) {
             return str.substr(0, 1).toUpperCase() + str.substr(1);
         },
 
@@ -155,7 +151,7 @@
 
             delegates[key].push({el: el, ls: listener, fn: fn});
 
-            addl(el, event, listener);
+            addListener(el, event, listener);
         },
 
         undelegate  = function(el, selector, event, fn) {
@@ -167,7 +163,7 @@
             if (ds = delegates[key]) {
                 for (i = -1, l = ds.length; ++i < l;) {
                     if (ds[i].el === el && ds[i].fn === fn) {
-                        reml(el, event, ds[i].ls);
+                        removeListener(el, event, ds[i].ls);
                     }
                 }
             }
@@ -527,7 +523,7 @@
                 }
             }
 
-        });
+        }, true, false);
 
         self.init();
 
@@ -1489,7 +1485,7 @@
                                 fixShorthands(dialog.defaults),
                                 fixShorthands(dialog[preset]),
                                 fixShorthands(options),
-                                true),
+                                true, true),
             defaultScope    = cfg.callback.scope || api,
             elem,
             pnt,
@@ -1839,7 +1835,7 @@
                 }
 
                 // first, we stop all current animations
-                //elem.stop(true, true); // TODO
+                stopAnimation(elem);
 
                 // as of this moment we mark dialog as visible so that hide() were able
                 // to work. also, all next steps should check for this state
@@ -1961,7 +1957,7 @@
                 }
 
                 // now we can stop all current animations
-                //elem.stop(true, true); TODO
+                stopAnimation(elem);
 
                 // and change the state
                 state.visible = false;
@@ -2191,7 +2187,7 @@
 
                 state.images = imgs.length;
 
-                for (i = -1, l = imgs.length; ++i < l; addl(imgs[i], "load", self.onImageLoad)){}
+                for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoad)){}
 
                 self.trigger('contentchange', api, content, mode);
                 self.onContentChange();
@@ -2234,7 +2230,7 @@
             loadContent: function(options) {
 
                 addClass(elem, cfg.cls.loading);
-                var opt = extend({}, cfg.ajax, options, true);
+                var opt = extend({}, cfg.ajax, options, true, true);
                 self.trigger('beforeajax', api, opt);
                 return ajax(opt).done(self.onAjaxLoad);
             },
@@ -2249,8 +2245,8 @@
 
                 self.trigger("destroy", api);
 
-                reml(window, "resize", self.onWindowResize);
-                reml(window, "scroll", self.onWindowScroll);
+                removeListener(window, "resize", self.onWindowResize);
+                removeListener(window, "scroll", self.onWindowScroll);
 
                 self.destroyElem();
 
@@ -2298,7 +2294,7 @@
                 }
             }
 
-        }/*api-end*/);
+        }/*api-end*/, true, false);
 
 
         extend(self, api, {
@@ -2328,7 +2324,7 @@
             setHandlers: function(mode, only) {
 
                 var fns     = ["show", "hide", "toggle"],
-                    lfn     = mode == "bind" ? addl : reml,
+                    lfn     = mode == "bind" ? addListener : removeListener,
                     dfn     = mode == "bind" ? delegate : undelegate,
                     fn,
                     fnCfg,
@@ -2520,17 +2516,17 @@
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
                     // to mouse's position and set mousemove event listener
-                    addl(document.documentElement, "mousemove", self.onMouseMove);
+                    addListener(document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
 
                 if (cfgPos.resize || cfgPos.screenX || cfgPos.screenY) {
-                    addl(window, "resize", self.onWindowResize);
+                    addListener(window, "resize", self.onWindowResize);
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    addl(window, "scroll", self.onWindowScroll);
+                    addListener(window, "scroll", self.onWindowScroll);
                 }
 
 
@@ -2561,8 +2557,8 @@
                     }
                     ps = select(ps);
                     for (i = -1, l = ps.length; ++i < l;
-                         addl(ps[i], "mousewheel", self.onPreventScroll) &&
-                         addl(ps[i], "touchmove", self.onPreventScroll)
+                         addListener(ps[i], "mousewheel", self.onPreventScroll) &&
+                         addListener(ps[i], "touchmove", self.onPreventScroll)
                         ){}
                 }
 
@@ -2628,17 +2624,17 @@
 
                 // if this tooltip is following the mouse, we reset event listeners
                 if (state.position == "mouse") {
-                    reml(document.documentElement, "mousemove", self.onMouseMove);
+                    removeListener(document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
 
                 if (cfgPos.resize || cfgPos.screenX || cfgPos.screenY) {
-                    reml(window, "resize", self.onWindowResize);
+                    removeListener(window, "resize", self.onWindowResize);
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    reml(window, "scroll", self.onWindowScroll);
+                    removeListener(window, "scroll", self.onWindowScroll);
                 }
 
                 // if afterdelay callback returns false we stop.
@@ -2662,8 +2658,8 @@
                     }
                     ps = select(ps);
                     for (i = -1, l = ps.length; ++i < l;
-                         reml(ps[i], "mousewheel", self.onPreventScroll) &&
-                         reml(ps[i], "touchmove", self.onPreventScroll)
+                         removeListener(ps[i], "mousewheel", self.onPreventScroll) &&
+                         removeListener(ps[i], "touchmove", self.onPreventScroll)
                         ){}
                 }
 
@@ -2723,7 +2719,7 @@
 
                 if (elem && cfg.hide.destroy) {
                     window.setTimeout(function(){
-                        dataFn(elem, cfg.instanceName, null);
+                        data(elem, cfg.instanceName, null);
                         self.destroy();
                     }, 0);
                 }
@@ -2802,7 +2798,7 @@
 
                     document.body.appendChild(overlay);
 
-                    addl(overlay, "click", self.onOverlayClick);
+                    addListener(overlay, "click", self.onOverlayClick);
 
                     if (rnd.zIndex) {
                         css(overlay, {zIndex: rnd.zIndex});
@@ -2848,9 +2844,9 @@
                     for (btnId in cfg.buttons) {
                         btn = select(cfg.buttons[btnId], elem).shift();
                         if (btn) {
-                            dataFn(btn, "metaphorjsTooltip-button-id", btnId);
-                            addl(btn, "click", self.onButtonClick);
-                            addl(btn, "keyup", self.onButtonKeyup);
+                            data(btn, "metaphorjsTooltip-button-id", btnId);
+                            addListener(btn, "click", self.onButtonClick);
+                            addListener(btn, "keyup", self.onButtonKeyup);
                         }
                     }
                 }
@@ -2911,10 +2907,10 @@
 
                 if (trg) {
                     if (state === false) {
-                        dataFn(trg, "tmp-title", trg.getAttribute("title"));
+                        data(trg, "tmp-title", trg.getAttribute("title"));
                         trg.removeAttribute('title');
                     }
-                    else if (title = dataFn(trg, "tmp-title")) {
+                    else if (title = data(trg, "tmp-title")) {
                         trg.setAttribute("title", title);
                     }
                 }
@@ -3256,7 +3252,7 @@
             onButtonClick: function(e) {
 
                 var target  = normalizeEvent(e).target,
-                    btnId   = dataFn(target, "metaphorjsTooltip-button-id");
+                    btnId   = data(target, "metaphorjsTooltip-button-id");
 
                 if (btnId) {
                     self.trigger("button", api, btnId, e);
@@ -3266,7 +3262,7 @@
             onButtonKeyup: function(e) {
                 if (e.keyCode == 13 || e.keyCode == 32) {
                     var target  = e.target,
-                        btnId   = dataFn(target, "metaphorjsTooltip-button-id");
+                        btnId   = data(target, "metaphorjsTooltip-button-id");
 
                     if (btnId) {
                         self.trigger("button", api, btnId, normalizeEvent(e));
@@ -3318,7 +3314,7 @@
             }
 
 
-        });
+        }, true, false);
 
         delete cfg.callback.scope;
 
@@ -3366,14 +3362,8 @@
     });
 
 
-    if (window.MetaphorJs && MetaphorJs.ns) {
-        MetaphorJs.ns.register("MetaphorJs.lib.Dialog", dialog);
-    }
-    else {
-        window.MetaphorJs   = window.MetaphorJs || {};
-        MetaphorJs.lib      = MetaphorJs.lib || {};
-        MetaphorJs.lib.Dialog   = dialog;
-    }
+    MetaphorJs.lib.Dialog   = dialog;
+
 
     /**
     * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
@@ -3419,16 +3409,16 @@
             this.each(function() {
 
                 var el  = this,
-                    t   = dataFn(el, dataName);
+                    t   = data(el, dataName);
 
                 if (!t) {
                     options.target          = el;
                     options.instanceName    = dataName;
-                    dataFn(el, dataName, new dialog(preset, options));
+                    data(el, dataName, new dialog(preset, options));
                 }
                 else if (options == "destroy") {
                     t.destroy();
-                    dataFn(el, dataName, null);
+                    data(el, dataName, null);
                 }
                 else {
                     throw new Error("MetaphorJs tooltip already instantiated for this html element");

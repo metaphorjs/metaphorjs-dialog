@@ -1,0 +1,22 @@
+{
+    "metaphorjs": {
+        "files": [
+            "src/cmp/*"
+        ]
+    },
+
+    "standalone": {
+        "wrap": true,
+        "auto": true,
+        "target": "dist/metaphorjs.dialog.js",
+        "files": [
+            "../metaphorjs/src/MetaphorJs.js",
+            "src/metaphorjs.dialog.js"
+        ]
+    },
+
+    "compile-standalone": {
+        "target": "dist/metaphorjs.dialog.min.js",
+        "compile": "standalone"
+    }
+}
