@@ -1,6 +1,7 @@
-//#require ../vars/Dialog.js
-//#require ../../../metaphorjs/src/func/extend.js
-//#require ../../../metaphorjs/src/func/class/defineClass.js
+
+var Dialog = require("../metaphorjs.dialog.js"),
+    extend  = require("../../../metaphorjs/src/func/extend.js"),
+    defineClass = require("../../../metaphorjs-class/src/func/defineClass.js");
 
 defineClass("MetaphorJs.cmp.Dialog", "MetaphorJs.cmp.Component", {
 

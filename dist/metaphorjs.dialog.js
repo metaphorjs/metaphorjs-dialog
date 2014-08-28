@@ -1,17 +1,34 @@
 (function(){
-"use strict"
+"use strict";
 
-window.MetaphorJs = {
+var MetaphorJs = {
     lib: {}
 };
 
 
-var slice = Array.prototype.slice;/**
+
+
+var slice = Array.prototype.slice;
+/**
  * @param {*} obj
  * @returns {boolean}
  */
-var isPlainObject = MetaphorJs.isPlainObject = function(obj) {
+var isPlainObject = function(obj) {
     return !!(obj && obj.constructor === Object);
+};
+
+var isBool = function(value) {
+    return typeof value == "boolean";
+};
+var strUndef = "undefined";
+
+
+var isUndefined = function(any) {
+    return typeof any == strUndef;
+};
+
+var isNull = function(value) {
+    return value === null;
 };
 
 
@@ -23,7 +40,7 @@ var isPlainObject = MetaphorJs.isPlainObject = function(obj) {
  * @param {boolean} deep = false
  * @returns {*}
  */
-var extend = MetaphorJs.extend = function extend() {
+var extend = function extend() {
 
 
     var override    = false,
@@ -34,10 +51,10 @@ var extend = MetaphorJs.extend = function extend() {
         k,
         value;
 
-    if (typeof args[args.length - 1] == "boolean") {
+    if (isBool(args[args.length - 1])) {
         override    = args.pop();
     }
-    if (typeof args[args.length - 1] == "boolean") {
+    if (isBool(args[args.length - 1])) {
         deep        = override;
         override    = args.pop();
     }
@@ -46,14 +63,14 @@ var extend = MetaphorJs.extend = function extend() {
         if (src = args.shift()) {
             for (k in src) {
 
-                if (src.hasOwnProperty(k) && typeof (value = src[k]) != "undefined") {
+                if (src.hasOwnProperty(k) && !isUndefined((value = src[k]))) {
 
                     if (deep) {
                         if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
                             extend(dst[k], value, override, deep);
                         }
                         else {
-                            if (override === true || typeof dst[k] == "undefined" || dst[k] === null) {
+                            if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
                                 if (isPlainObject(value)) {
                                     dst[k] = {};
                                     extend(dst[k], value, override, true);
@@ -65,7 +82,7 @@ var extend = MetaphorJs.extend = function extend() {
                         }
                     }
                     else {
-                        if (override === true || typeof dst[k] == "undefined" || dst[k] === null) {
+                        if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
                             dst[k] = value;
                         }
                     }
@@ -76,10 +93,13 @@ var extend = MetaphorJs.extend = function extend() {
 
     return dst;
 };
+
+
+
 /**
- * @return {String}
+ * @returns {String}
  */
-var nextUid = MetaphorJs.nextUid = function(){
+var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
@@ -104,11 +124,13 @@ var nextUid = MetaphorJs.nextUid = function(){
         uid.unshift('0');
         return uid.join('');
     };
-}();/**
+}();
+
+/**
  * @param {Function} fn
  * @param {*} context
  */
-var bind = MetaphorJs.bind = Function.prototype.bind ?
+var bind = Function.prototype.bind ?
               function(fn, context){
                   return fn.bind(context);
               } :
@@ -116,7 +138,9 @@ var bind = MetaphorJs.bind = Function.prototype.bind ?
                   return function() {
                       return fn.apply(context, arguments);
                   };
-              };/**
+              };
+
+/**
  * @param {String} expr
  */
 var getRegExp = function(){
@@ -128,72 +152,83 @@ var getRegExp = function(){
     };
 }();
 
+
 /**
  * @param {String} cls
  * @returns {RegExp}
  */
-var getClsReg   = function(cls) {
+var getClsReg = function(cls) {
     return getRegExp('(?:^|\\s)'+cls+'(?!\\S)');
 };
+
 
 /**
  * @param {Element} el
  * @param {String} cls
  * @returns {boolean}
  */
-var hasClass = MetaphorJs.hasClass = function(el, cls) {
+var hasClass = function(el, cls) {
     return cls ? getClsReg(cls).test(el.className) : false;
 };
+
 
 /**
  * @param {Element} el
  * @param {String} cls
  */
-var addClass = MetaphorJs.addClass = function(el, cls) {
+var addClass = function(el, cls) {
     if (cls && !hasClass(el, cls)) {
         el.className += " " + cls;
     }
 };
 
+
 /**
  * @param {Element} el
  * @param {String} cls
  */
-var removeClass = MetaphorJs.removeClass = function(el, cls) {
+var removeClass = function(el, cls) {
     if (cls) {
         el.className = el.className.replace(getClsReg(cls), '');
     }
 };
-var toString    = Object.prototype.toString;
+var toString = Object.prototype.toString;
+var isObject = function(value) {
+    return value != null && typeof value === 'object';
+};
+var isNumber = function(value) {
+    return typeof value == "number" && !isNaN(value);
+};
+
 
 /**
  * @param {*} value
  * @returns {boolean}
  */
-var isArray = MetaphorJs.isArray = function(value) {
-    return !!(value && typeof value == 'object' &&
-              typeof value.length == 'number' &&
+var isArray = function(value) {
+    return !!(value && isObject(value) && isNumber(value.length) &&
                 toString.call(value) == '[object Array]' || false);
 };
+
 
 /**
  * @param {Element} el
  * @param {String} key
  * @param {*} value optional
  */
-var data = MetaphorJs.data = function(){
+var data = function(){
 
     var dataCache   = {},
 
         getNodeId   = function(el) {
-            return el._mjsId || (el._mjsId = nextUid());
+            return el._mjsid || (el._mjsid = nextUid());
         };
 
     return function(el, key, value) {
         var id  = getNodeId(el),
             obj = dataCache[id];
 
-        if (typeof value != "undefined") {
+        if (!isUndefined(value)) {
             if (!obj) {
                 obj = dataCache[id] = {};
             }
@@ -206,7 +241,7 @@ var data = MetaphorJs.data = function(){
     };
 
 }();
-var addListener = MetaphorJs.addListener = function(el, event, func) {
+var addListener = function(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
     } else {
@@ -214,160 +249,159 @@ var addListener = MetaphorJs.addListener = function(el, event, func) {
     }
 };
 
-var removeListener = MetaphorJs.removeListener = function(el, event, func) {
+var removeListener = function(el, event, func) {
     if (el.detachEvent) {
         el.detachEvent('on' + event, func);
     } else {
         el.removeEventListener(event, func, false);
     }
 };
-var returnFalse = MetaphorJs.returnFalse = function() {
+var returnFalse = function() {
     return false;
 };
 
-var returnTrue = MetaphorJs.returnTrue = function() {
+var returnTrue = function() {
     return true;
 };
 
 
 // from jQuery
 
-(function(){
+var NormalizedEvent = function(src) {
 
-    var NormalizedEvent = function(src) {
+    if (src instanceof NormalizedEvent) {
+        return src;
+    }
 
-        if (src instanceof NormalizedEvent) {
-            return src;
-        }
-
-        // Allow instantiation without the 'new' keyword
-        if (!(this instanceof NormalizedEvent)) {
-            return new NormalizedEvent(src);
-        }
+    // Allow instantiation without the 'new' keyword
+    if (!(this instanceof NormalizedEvent)) {
+        return new NormalizedEvent(src);
+    }
 
 
-        var self    = this;
+    var self    = this;
 
-        for (var i in src) {
-            if (!self[i]) {
-                try {
-                    self[i] = src[i];
-                }
-                catch (thrownError){}
+    for (var i in src) {
+        if (!self[i]) {
+            try {
+                self[i] = src[i];
             }
+            catch (thrownError){}
+        }
+    }
+
+
+    // Event object
+    self.originalEvent = src;
+    self.type = src.type;
+
+    if (!self.target && src.srcElement) {
+        self.target = src.srcElement;
+    }
+
+
+    var eventDoc, doc, body,
+        button = src.button;
+
+    // Calculate pageX/Y if missing and clientX/Y available
+    if (isUndefined(self.pageX) && !isNull(src.clientX)) {
+        eventDoc = self.target ? self.target.ownerDocument || document : document;
+        doc = eventDoc.documentElement;
+        body = eventDoc.body;
+
+        self.pageX = src.clientX +
+                      ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
+                      ( doc && doc.clientLeft || body && body.clientLeft || 0 );
+        self.pageY = src.clientY +
+                      ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
+                      ( doc && doc.clientTop  || body && body.clientTop  || 0 );
+    }
+
+    // Add which for click: 1 === left; 2 === middle; 3 === right
+    // Note: button is not normalized, so don't use it
+    if ( !self.which && button !== undefined ) {
+        self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
+    }
+
+    // Events bubbling up the document may have been marked as prevented
+    // by a handler lower down the tree; reflect the correct value.
+    self.isDefaultPrevented = src.defaultPrevented ||
+                              isUndefined(src.defaultPrevented) &&
+                                  // Support: Android<4.0
+                              src.returnValue === false ?
+                              returnTrue :
+                              returnFalse;
+
+
+    // Create a timestamp if incoming event doesn't have one
+    self.timeStamp = src && src.timeStamp || (new Date).getTime();
+};
+
+// Event is based on DOM3 Events as specified by the ECMAScript Language Binding
+// http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
+NormalizedEvent.prototype = {
+
+    isDefaultPrevented: returnFalse,
+    isPropagationStopped: returnFalse,
+    isImmediatePropagationStopped: returnFalse,
+
+    preventDefault: function() {
+        var e = this.originalEvent;
+
+        this.isDefaultPrevented = returnTrue;
+        e.returnValue = false;
+
+        if ( e && e.preventDefault ) {
+            e.preventDefault();
+        }
+    },
+    stopPropagation: function() {
+        var e = this.originalEvent;
+
+        this.isPropagationStopped = returnTrue;
+
+        if ( e && e.stopPropagation ) {
+            e.stopPropagation();
+        }
+    },
+    stopImmediatePropagation: function() {
+        var e = this.originalEvent;
+
+        this.isImmediatePropagationStopped = returnTrue;
+
+        if ( e && e.stopImmediatePropagation ) {
+            e.stopImmediatePropagation();
         }
 
+        this.stopPropagation();
+    }
+};
 
-        // Event object
-        self.originalEvent = src;
-        self.type = src.type;
-
-        if (!self.target && src.srcElement) {
-            self.target = src.srcElement;
-        }
+MetaphorJs.lib.NormalizedEvent = NormalizedEvent;
 
 
-        var eventDoc, doc, body,
-            button = src.button;
 
-        // Calculate pageX/Y if missing and clientX/Y available
-        if (typeof self.pageX == "undefined" && src.clientX != null ) {
-            eventDoc = self.target ? self.target.ownerDocument || document : document;
-            doc = eventDoc.documentElement;
-            body = eventDoc.body;
-
-            self.pageX = src.clientX +
-                          ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
-                          ( doc && doc.clientLeft || body && body.clientLeft || 0 );
-            self.pageY = src.clientY +
-                          ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
-                          ( doc && doc.clientTop  || body && body.clientTop  || 0 );
-        }
-
-        // Add which for click: 1 === left; 2 === middle; 3 === right
-        // Note: button is not normalized, so don't use it
-        if ( !self.which && button !== undefined ) {
-            self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
-        }
-
-        // Events bubbling up the document may have been marked as prevented
-        // by a handler lower down the tree; reflect the correct value.
-        self.isDefaultPrevented = src.defaultPrevented ||
-                                  src.defaultPrevented === undefined &&
-                                      // Support: Android<4.0
-                                  src.returnValue === false ?
-                                  returnTrue :
-                                  returnFalse;
-
-
-        // Create a timestamp if incoming event doesn't have one
-        self.timeStamp = src && src.timeStamp || (new Date).getTime();
-    };
-
-    // Event is based on DOM3 Events as specified by the ECMAScript Language Binding
-    // http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-    NormalizedEvent.prototype = {
-
-        isDefaultPrevented: returnFalse,
-        isPropagationStopped: returnFalse,
-        isImmediatePropagationStopped: returnFalse,
-
-        preventDefault: function() {
-            var e = this.originalEvent;
-
-            this.isDefaultPrevented = returnTrue;
-            e.returnValue = false;
-
-            if ( e && e.preventDefault ) {
-                e.preventDefault();
-            }
-        },
-        stopPropagation: function() {
-            var e = this.originalEvent;
-
-            this.isPropagationStopped = returnTrue;
-
-            if ( e && e.stopPropagation ) {
-                e.stopPropagation();
-            }
-        },
-        stopImmediatePropagation: function() {
-            var e = this.originalEvent;
-
-            this.isImmediatePropagationStopped = returnTrue;
-
-            if ( e && e.stopImmediatePropagation ) {
-                e.stopImmediatePropagation();
-            }
-
-            this.stopPropagation();
-        }
-    };
-
-    MetaphorJs.lib.NormalizedEvent = NormalizedEvent;
-
-}());
-
-var normalizeEvent = MetaphorJs.normalizeEvent = function(){
-
-    var NormalizedEvent = MetaphorJs.lib.NormalizedEvent;
-
-    return function(originalEvent) {
-        return new NormalizedEvent(originalEvent);
-    };
-}();
+var normalizeEvent = function(originalEvent) {
+    return new NormalizedEvent(originalEvent);
+};
 /**
  * @param {Element} el
  * @returns {boolean}
  */
-var isVisible = MetaphorJs.isVisible = function(el) {
+var isVisible = function(el) {
     return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
-};/**
+};
+var isString = function(value) {
+    return typeof value == "string";
+};
+
+
+/**
  * @param {*} list
  * @returns {[]}
  */
-var toArray = MetaphorJs.toArray = function(list) {
-    if (list && list.length != undefined && typeof list != "string") {
+var toArray = function(list) {
+    if (list && !isUndefined(list.length) && !isString(list)) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
     }
@@ -379,6 +413,7 @@ var toArray = MetaphorJs.toArray = function(list) {
     }
 };
 
+
 /**
  * Modified version of YASS (http://yass.webo.in)
  */
@@ -388,7 +423,7 @@ var toArray = MetaphorJs.toArray = function(list) {
  * @param {String} selector
  * @param {Element} root to look into
  */
-var select = MetaphorJs.select = function() {
+var select = function() {
 
     var rGeneric    = /^[\w[:#.][\w\]*^|=!]*$/,
         rQuote      = /=([^\]]+)/,
@@ -944,12 +979,13 @@ var select = MetaphorJs.select = function() {
     };
 }();
 
+
 /**
  * @param {Element} el
  * @param {String} selector
  * @returns {boolean}
  */
-var is = MetaphorJs.is = function(el, selector) {
+var is = function(el, selector) {
 
     var els = select(selector, el.parentNode),
         i, l;
@@ -1012,7 +1048,8 @@ var getAnimationPrefixes = function(){
     };
 }();
 
-var getAnimationDuration = MetaphorJs.getAnimationDuration = function(){
+
+var getAnimationDuration = function(){
 
     var parseTime       = function(str) {
             if (!str) {
@@ -1066,31 +1103,57 @@ var getAnimationDuration = MetaphorJs.getAnimationDuration = function(){
 }();
 
 
+var isFunction = function(value) {
+    return typeof value === 'function';
+};
+
+
 /**
  * Returns 'then' function or false
  * @param {*} any
- * @returns {Function|false}
+ * @returns {Function|boolean}
  */
-var isThenable = MetaphorJs.isThenable = function(any) {
+var isThenable = function(any) {
     var then;
     if (!any) {
         return false;
     }
-    if (typeof any != "object" && typeof any != "function") {
+    if (!isObject(any) && !isFunction(any)) {
         return false;
     }
-    return typeof (then = any.then) == "function" ?
+    return isFunction((then = any.then)) ?
            then : false;
-};(function(){
+};
 
-    "use strict";
 
-    /**
-     * @namespace MetaphorJs
-     */
 
-    var root        = typeof window != "undefined" ? window : global,
-        cache       = {};
+
+/**
+ * @param {Object} root optional; usually window or global
+ * @param {String} rootName optional. If you want custom object to be root and
+ * this object itself if the first level of namespace:<br>
+ * <pre><code class="language-javascript">
+ * var ns = MetaphorJs.lib.Namespace(window);
+ * ns.register("My.Test", something); // -> window.My.Test
+ * var privateNs = {};
+ * var ns = new MetaphorJs.lib.Namespace(privateNs, "privateNs");
+ * ns.register("privateNs.Test", something); // -> privateNs.Test
+ * </code></pre>
+ * @constructor
+ */
+var Namespace   = function(root, rootName) {
+
+    var cache   = {},
+        self    = this;
+
+    if (!root) {
+        if (!isUndefined(global)) {
+            root    = global;
+        }
+        else {
+            root    = window;
+        }
+    }
 
     var parseNs     = function(ns) {
 
@@ -1103,21 +1166,38 @@ var isThenable = MetaphorJs.isThenable = function(any) {
             current = root;
 
         if (cache[parent]) {
-            return [cache[parent], last];
+            return [cache[parent], last, ns];
         }
 
-        for (i = 0; i < len; i++) {
+        if (len > 0) {
+            for (i = 0; i < len; i++) {
 
-            name    = tmp[i];
+                name    = tmp[i];
 
-            if (!current[name]) {
-                current[name]   = {};
+                if (rootName && i == 0) {
+                    if (name == rootName) {
+                        current = root;
+                        continue;
+                    }
+                    else {
+                        ns = rootName + "." + ns;
+                    }
+                }
+
+                if (isUndefined(current[name])) {
+                    current[name]   = {};
+                }
+
+                current = current[name];
             }
-
-            current = current[name];
+        }
+        else {
+            if (rootName) {
+                ns = rootName + "." + ns;
+            }
         }
 
-        return [current, last];
+        return [current, last, ns];
     };
 
     /**
@@ -1129,8 +1209,16 @@ var isThenable = MetaphorJs.isThenable = function(any) {
      */
     var get       = function(ns, cacheOnly) {
 
-        if (cache[ns] || cacheOnly) {
+        if (!isUndefined(cache[ns])) {
             return cache[ns];
+        }
+
+        if (rootName && !isUndefined(cache[rootName + "." + ns])) {
+            return cache[rootName + "." + ns];
+        }
+
+        if (cacheOnly) {
+            return undefined;
         }
 
         var tmp     = ns.split("."),
@@ -1143,8 +1231,15 @@ var isThenable = MetaphorJs.isThenable = function(any) {
 
             name    = tmp[i];
 
-            if (!current[name]) {
-                return null;
+            if (rootName && i == 0) {
+                if (name == rootName) {
+                    current = root;
+                    continue;
+                }
+            }
+
+            if (isUndefined(current[name])) {
+                return undefined;
             }
 
             current = current[name];
@@ -1161,18 +1256,22 @@ var isThenable = MetaphorJs.isThenable = function(any) {
      * Register class constructor
      * @function MetaphorJs.ns.register
      * @param {string} ns
-     * @param {*} fn
+     * @param {*} value
      */
-    var register    = function(ns, fn) {
+    var register    = function(ns, value) {
 
         var parse   = parseNs(ns),
             parent  = parse[0],
             name    = parse[1];
 
-        parent[name]    = fn;
-        cache[ns]       = fn;
+        if (isObject(parent) &&
+            isUndefined(parent[name])) {
 
-        return fn;
+            parent[name]        = value;
+            cache[parse[2]]     = value;
+        }
+
+        return value;
     };
 
     /**
@@ -1182,44 +1281,59 @@ var isThenable = MetaphorJs.isThenable = function(any) {
      * @returns boolean
      */
     var exists      = function(ns) {
-        return cache[ns] ? true : false;
+        return !isUndefined(cache[ns]);
     };
 
     /**
      * Add constructor to cache
      * @function MetaphorJs.ns.add
      * @param {string} ns
-     * @param {function} c
+     * @param {*} value
      */
-    var add = function(ns, c) {
-        cache[ns] = c;
-        return c;
-    };
-
-    MetaphorJs.ns = {
-        register:   register,
-        exists:     exists,
-        get:        get,
-        add:        add,
-        /**
-         * Remove constructor from cache
-         * @function MetaphorJs.ns.remove
-         * @param {string} ns
-         */
-        remove:     function(ns) {
-            delete cache[ns];
+    var add = function(ns, value) {
+        if (rootName && ns.indexOf(rootName) !== 0) {
+            ns = rootName + "." + ns;
         }
+        if (isUndefined(cache[ns])) {
+            cache[ns] = value;
+        }
+        return value;
     };
 
+    var remove = function(ns) {
+        delete cache[ns];
+    };
 
-}());//
+    self.register   = register;
+    self.exists     = exists;
+    self.get        = get;
+    self.add        = add;
+    self.remove     = remove;
+};
 
-var nsGet = MetaphorJs.ns.get;
+Namespace.prototype = {
+    register: null,
+    exists: null,
+    get: null,
+    add: null,
+    remove: null
+};
+
+MetaphorJs.lib.Namespace = Namespace;
 
 
-(function(){
 
-    "use strict";
+
+
+var ns  = new Namespace(MetaphorJs, "MetaphorJs");
+
+
+var nsGet = ns.get;
+
+
+
+
+var Promise = function(){
 
     var PENDING     = 0,
         FULFILLED   = 1,
@@ -1229,7 +1343,7 @@ var nsGet = MetaphorJs.ns.get;
         qRunning    = false,
 
 
-        nextTick    = typeof process != "undefined" ?
+        nextTick    = typeof process != strUndef ?
                         process.nextTick :
                         function(fn) {
                             setTimeout(fn, 0);
@@ -1315,9 +1429,9 @@ var nsGet = MetaphorJs.ns.get;
         self._dones      = [];
         self._fails      = [];
 
-        if (typeof fn != "undefined") {
+        if (!isUndefined(fn)) {
 
-            if (isThenable(fn) || typeof fn != "function") {
+            if (isThenable(fn) || !isFunction(fn)) {
                 self.resolve(fn);
             }
             else {
@@ -1524,14 +1638,14 @@ var nsGet = MetaphorJs.ns.get;
 
             if (state == PENDING || self._wait != 0) {
 
-                if (resolve && typeof resolve == "function") {
+                if (resolve && isFunction(resolve)) {
                     self._fulfills.push([wrapper(resolve, promise), null]);
                 }
                 else {
                     self._fulfills.push([promise.resolve, promise])
                 }
 
-                if (reject && typeof reject == "function") {
+                if (reject && isFunction(reject)) {
                     self._rejects.push([wrapper(reject, promise), null]);
                 }
                 else {
@@ -1540,7 +1654,7 @@ var nsGet = MetaphorJs.ns.get;
             }
             else if (state == FULFILLED) {
 
-                if (resolve && typeof resolve == "function") {
+                if (resolve && isFunction(resolve)) {
                     next(wrapper(resolve, promise), null, [self._value]);
                 }
                 else {
@@ -1548,7 +1662,7 @@ var nsGet = MetaphorJs.ns.get;
                 }
             }
             else if (state == REJECTED) {
-                if (reject && typeof reject == "function") {
+                if (reject && isFunction(reject)) {
                     next(wrapper(reject, promise), null, [self._reason]);
                 }
                 else {
@@ -1669,7 +1783,7 @@ var nsGet = MetaphorJs.ns.get;
                     }
                 };
 
-                if (typeof value.done == "function") {
+                if (isFunction(value.done)) {
                     value.done(done);
                 }
                 else {
@@ -1737,7 +1851,7 @@ var nsGet = MetaphorJs.ns.get;
                     })
                         .fail(p.reject, p);
                 }
-                else if (isThenable(item) || typeof item == "function") {
+                else if (isThenable(item) || isFunction(item)) {
                     (new Promise(item))
                         .done(function(value){
                             done(value, inx);
@@ -1796,7 +1910,7 @@ var nsGet = MetaphorJs.ns.get;
             if (item instanceof Promise) {
                 item.done(settle).fail(proceed);
             }
-            else if (isThenable(item) || typeof item == "function") {
+            else if (isThenable(item) || isFunction(item)) {
                 (new Promise(item)).done(settle).fail(proceed);
             }
             else {
@@ -1828,7 +1942,7 @@ var nsGet = MetaphorJs.ns.get;
             if (item instanceof Promise) {
                 item.done(p.resolve, p).fail(p.reject, p);
             }
-            else if (isThenable(item) || typeof item == "function") {
+            else if (isThenable(item) || isFunction(item)) {
                 (new Promise(item)).done(p.resolve, p).fail(p.reject, p);
             }
             else {
@@ -1843,21 +1957,16 @@ var nsGet = MetaphorJs.ns.get;
         return p;
     };
 
+    return Promise;
+}();
 
-    MetaphorJs.lib.Promise = Promise;
-
-}());
-
-var Promise = MetaphorJs.lib.Promise;
+MetaphorJs.lib.Promise = Promise;
 
 
 
 
 
-
-
-
-var animate = MetaphorJs.animate = function(){
+var animate = function(){
 
     var types           = {
             "show":     ["mjs-show"],
@@ -1998,13 +2107,13 @@ var animate = MetaphorJs.animate = function(){
 
         animation       = animation || attr;
 
-        if (checkIfEnabled && attr === null) {
+        if (checkIfEnabled && isNull(attr)) {
             animation   = null;
         }
 
         if (animation) {
 
-            if (typeof animation == "string") {
+            if (isString(animation)) {
                 if (animation.substr(0,1) == '[') {
                     stages  = (new Function('', 'return ' + animation))();
                 }
@@ -2013,11 +2122,11 @@ var animate = MetaphorJs.animate = function(){
                     animation   = nsGet && nsGet("animate." + animation, true);
                 }
             }
-            else if (typeof animation == "function") {
+            else if (isFunction(animation)) {
                 jsFn = animation;
             }
             else if (isArray(animation)) {
-                if (typeof animation[0] == "string") {
+                if (isString(animation[0])) {
                     stages = animation;
                 }
                 else {
@@ -2026,7 +2135,7 @@ var animate = MetaphorJs.animate = function(){
                 }
             }
 
-            if (animation && animation.constructor === Object) {
+            if (isPlainObject(animation)) {
                 stages      = animation.stages;
                 jsFn        = animation.fn;
                 before      = animation.before;
@@ -2070,7 +2179,7 @@ var animate = MetaphorJs.animate = function(){
 
                 duration && (options.duration = duration);
 
-                if (jsFn && typeof jsFn == "function") {
+                if (jsFn && isFunction(jsFn)) {
                     if (before) {
                         extend(el.style, before, true, false);
                     }
@@ -2086,7 +2195,7 @@ var animate = MetaphorJs.animate = function(){
                     before && j.css(before);
                     data(el, dataParam, "stop");
 
-                    if (jsFn && typeof jsFn == "string") {
+                    if (jsFn && isString(jsFn)) {
                         j[jsFn](options);
                         return deferred;
                     }
@@ -2125,7 +2234,8 @@ var animate = MetaphorJs.animate = function(){
     return animate;
 }();
 
-var stopAnimation = MetaphorJs.stopAnimation = function(el) {
+
+var stopAnimation = function(el) {
 
     var queue = data(el, "mjsAnimationQueue"),
         current,
@@ -2142,7 +2252,7 @@ var stopAnimation = MetaphorJs.stopAnimation = function(el) {
             removeClass(el, stages[position] + "-active");
         }
     }
-    else if (typeof queue == "function") {
+    else if (isFunction(queue)) {
         queue(el);
     }
     else if (queue == "stop") {
@@ -2151,25 +2261,75 @@ var stopAnimation = MetaphorJs.stopAnimation = function(el) {
 
     data(el, "mjsAnimationQueue", null);
 };
+
+
+
 /**
+ * @param {String} value
+ */
+var trim = function() {
+    // native trim is way faster: http://jsperf.com/angular-trim-test
+    // but IE doesn't have it... :-(
+    if (!String.prototype.trim) {
+        return function(value) {
+            return isString(value) ? value.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : value;
+        };
+    }
+    return function(value) {
+        return isString(value) ? value.trim() : value;
+    };
+}();/**
  * @param {Function} fn
  * @param {Object} context
  * @param {[]} args
  */
-var async = MetaphorJs.async = function(fn, context, args) {
+var async = function(fn, context, args) {
     setTimeout(function(){
         fn.apply(context, args || []);
     }, 0);
 };
 
+var emptyFn = function(){};
+
+
+var parseJSON = function() {
+
+    return isUndefined(JSON) ?
+           function(data) {
+               return JSON.parse(data);
+           } :
+           function(data) {
+               return (new Function("return " + data))();
+           };
+}();
 
 
 
 
+var parseXML = function(data, type) {
 
-(function(){
+    var xml, tmp;
 
-"use strict";
+    if (!data || !isString(data)) {
+        return null;
+    }
+
+    // Support: IE9
+    try {
+        tmp = new DOMParser();
+        xml = tmp.parseFromString(data, type || "text/xml");
+    } catch (thrownError) {
+        xml = undefined;
+    }
+
+    if (!xml || xml.getElementsByTagName("parsererror").length) {
+        throw "Invalid XML: " + data;
+    }
+
+    return xml;
+};
+
+
 
 
 /**
@@ -2382,24 +2542,6 @@ Observable.prototype = {
     },
 
     /**
-     * @returns {[]}
-     */
-    triggerAsync: function() {
-
-        var name = arguments[0],
-            events  = this.events;
-
-        name = name.toLowerCase();
-
-        if (!events[name]) {
-            return [];
-        }
-
-        var e = events[name];
-        return e.triggerAsync.apply(e, slice.call(arguments, 1));
-    },
-
-    /**
     * Trigger an event -- call all listeners.
     * @method
     * @access public
@@ -2529,7 +2671,7 @@ Observable.prototype = {
 
             var methods = [
                     "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
-                    "triggerAsync", "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
+                    "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
                     "resumeAllEvents", "destroyEvent"
                 ],
                 api = {},
@@ -2564,7 +2706,7 @@ var Event = function(name, returnResult) {
     self.uni            = '$$' + name + '_' + self.hash;
     self.suspended      = false;
     self.lid            = 0;
-    self.returnResult   = returnResult || false; // first|last|all
+    self.returnResult   = isUndefined(returnResult) ? null : returnResult; // first|last|all
 };
 
 
@@ -2714,7 +2856,7 @@ Event.prototype = {
 
             scope   = scope || fn;
 
-            if (typeof fn != "function") {
+            if (!isFunction(fn)) {
                 id  = fn;
             }
             else {
@@ -2790,82 +2932,6 @@ Event.prototype = {
     },
 
     /**
-     * Usage: Promise.all(event.triggerAsync()).done(function(returnValues){});
-     * Requires Promise class to be present
-     * @method
-     * @return {[]} Collection of promises
-     */
-    triggerAsync: function() {
-
-        if (typeof Promise == "undefined") {
-            throw Error("Promises are not defined");
-        }
-
-        var self            = this,
-            listeners       = self.listeners,
-            returnResult    = self.returnResult,
-            triggerArgs     = slice.call(arguments),
-            q               = [],
-            promises        = [],
-            args,
-            l, i, len;
-
-        if (self.suspended || listeners.length == 0) {
-            return Promise.resolve(null);
-        }
-
-        // create a snapshot of listeners list
-        for (i = 0, len = listeners.length; i < len; i++) {
-            q.push(listeners[i]);
-        }
-
-        var next = function(l) {
-
-            args = self._prepareArgs(l, triggerArgs);
-
-            return new Promise(function(resolve, reject){
-
-                async(function(){
-
-                    try {
-                        resolve(l.fn.apply(l.scope, args));
-                    }
-                    catch (thrownError) {
-                        reject(thrownError);
-                    }
-
-                    l.called++;
-
-                    if (l.called == l.limit) {
-                        self.un(l.id);
-                    }
-                }, 0);
-            });
-        };
-
-        while (l = q.shift()) {
-            // listener may already have unsubscribed
-            if (!l || !self.map[l.id]) {
-                continue;
-            }
-
-            l.count++;
-
-            if (l.count < l.start) {
-                continue;
-            }
-
-            promises.push(next(l));
-
-            if (returnResult == "first") {
-                break;
-            }
-        }
-
-        return returnResult == "last" ? [promises.pop()] : promises;
-    },
-
-    /**
      * @method
      * @return {*}
      */
@@ -2938,67 +3004,12 @@ Event.prototype = {
     }
 };
 
-
-var globalObservable    = new Observable;
-extend(MetaphorJs, globalObservable.getApi(), true, false);
+(function(){
+    var globalObservable    = new Observable;
+    extend(MetaphorJs, globalObservable.getApi(), true, false);
+}());
 
 MetaphorJs.lib.Observable = Observable;
-
-})();
-
-
-var Observable = MetaphorJs.lib.Observable;
-/**
- * @param {String} value
- */
-var trim = MetaphorJs.trim = (function() {
-    // native trim is way faster: http://jsperf.com/angular-trim-test
-    // but IE doesn't have it... :-(
-    if (!String.prototype.trim) {
-        return function(value) {
-            return typeof value == "string" ? value.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : value;
-        };
-    }
-    return function(value) {
-        return typeof value == "string" ? value.trim() : value;
-    };
-})();
-
-var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data) {
-    if (typeof JSON != "undefined") {
-        return JSON.parse(data);
-    }
-    else {
-        return (new Function("return " + data))();
-    }
-};var parseXML = function(data, type) {
-
-    var xml, tmp;
-
-    if (!data || typeof data !== "string") {
-        return null;
-    }
-
-    // Support: IE9
-    try {
-        tmp = new DOMParser();
-        xml = tmp.parseFromString(data, type || "text/xml");
-    } catch (thrownError) {
-        xml = undefined;
-    }
-
-    if (!xml || xml.getElementsByTagName("parsererror").length) {
-        throw "Invalid XML: " + data;
-    }
-
-    return xml;
-};
-
-
-
-
-
-
 
 
 
@@ -3009,9 +3020,9 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 * Contents of this file are partially taken from jQuery
 */
 
-(function(){
+var ajax = function(){
 
-    "use strict";
+    
 
     var rhash       = /#.*$/,
 
@@ -3029,7 +3040,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
             var i, len;
 
-            if (typeof data == "string" && name) {
+            if (isString(data) && name) {
                 params.push(encodeURIComponent(name) + "=" + encodeURIComponent(data));
             }
             else if (isArray(data) && name) {
@@ -3037,7 +3048,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
                     buildParams(data[i], params, name + "["+i+"]");
                 }
             }
-            else if (typeof data == "object") {
+            else if (isObject(data)) {
                 for (i in data) {
                     if (data.hasOwnProperty(i)) {
                         buildParams(data[i], params, name ? name + "["+i+"]" : i);
@@ -3068,7 +3079,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
             }
 
             if (opt.data && (!window.FormData || !(opt.data instanceof window.FormData))) {
-                opt.data = typeof opt.data != "string" ? prepareParams(opt.data) : opt.data;
+                opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
                 if (rgethead.test(opt.method)) {
                     url += (rquery.test(url) ? "&" : "?") + opt.data;
                     opt.data = null;
@@ -3150,7 +3161,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
             var i, input, len;
 
-            if (typeof data != "object" && typeof data != "function" && name) {
+            if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
                 input.setAttribute("type", "hidden");
                 input.setAttribute("name", name);
@@ -3162,7 +3173,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
                     data2form(data[i], form, name + "["+i+"]");
                 }
             }
-            else if (typeof data == "object") {
+            else if (isObject(data)) {
                 for (i in data) {
                     if (data.hasOwnProperty(i)) {
                         data2form(data[i], form, name ? name + "["+i+"]" : i);
@@ -3203,7 +3214,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
         httpSuccess     = function(r) {
             try {
-                return (!r.status && typeof location != "undefined" && location.protocol == "file:")
+                return (!r.status && !isUndefined(location) && location.protocol == "file:")
                            || (r.status >= 200 && r.status < 300)
                            || r.status === 304 || r.status === 1223; // || r.status === 0;
             } catch(thrownError){}
@@ -3216,7 +3227,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
                 selector    = opt ? opt.selector : null,
                 doc;
 
-            if (typeof data != "string") {
+            if (!isString(data)) {
                 return data;
             }
 
@@ -3258,7 +3269,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
     var AJAX    = function(opt) {
 
         var self        = this,
-            href        = typeof window != "undefined" ? window.location.href : "",
+            href        = !isUndefined(window) ? window.location.href : "",
             local       = rurl.exec(href.toLowerCase()) || [],
             parts       = rurl.exec(opt.url.toLowerCase());
 
@@ -3278,7 +3289,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
         }
         else if (opt.form) {
             self._form = opt.form;
-            if (opt.method == "POST" && (typeof window == "undefined" || !window.FormData) &&
+            if (opt.method == "POST" && (isUndefined(window) || !window.FormData) &&
                 opt.transport != "iframe") {
 
                 opt.transport = "iframe";
@@ -3398,10 +3409,10 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
             self._jsonpName = cbName;
 
-            if (typeof window != "undefined") {
+            if (!isUndefined(window)) {
                 window[cbName] = bind(self.jsonpCallback, self);
             }
-            if (typeof global != "undefined") {
+            if (!isUndefined(global)) {
                 global[cbName] = bind(self.jsonpCallback, self);
             }
 
@@ -3492,10 +3503,10 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
             delete self._form;
 
             if (self._jsonpName) {
-                if (typeof window != "undefined") {
+                if (!isUndefined(window)) {
                     delete window[self._jsonpName];
                 }
-                if (typeof global != "undefined") {
+                if (!isUndefined(global)) {
                     delete global[self._jsonpName];
                 }
             }
@@ -3508,7 +3519,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
         opt = opt || {};
 
-        if (url && typeof url != "string") {
+        if (url && !isString(url)) {
             opt = url;
         }
         else {
@@ -3570,7 +3581,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
         opt = opt || {};
 
-        if (typeof url != "string") {
+        if (!isString(url)) {
             opt = url;
         }
 
@@ -3671,7 +3682,7 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
                 if (httpSuccess(xhr)) {
 
                     self._ajax.processResponse(
-                        typeof xhr.responseText == "string" ? xhr.responseText : undefined,
+                        isString(xhr.responseText) ? xhr.responseText : undefined,
                         xhr.getResponseHeader("content-type") || ''
                     );
                 }
@@ -3872,27 +3883,168 @@ var emptyFn = MetaphorJs.emptyFn = function(){};var parseJSON   = function(data)
 
     };
 
-    MetaphorJs.ajax = ajax;
-
-}());
-
-var ajax = MetaphorJs.ajax;
+    return ajax;
+}();
 
 
 
+var ucfirst = function(str) {
+    return str.substr(0, 1).toUpperCase() + str.substr(1);
+};
+
+
+var getScrollTop = function() {
+    if(!isUndefined(window.pageYOffset)) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageYOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientHeight) {
+            return function() {
+                return D.scrollTop;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollTop;
+            };
+        }
+    }
+}();
+
+var getScrollLeft = function() {
+    if(!isUndefined(window.pageXOffset)) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageXOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientWidth) {
+            return function() {
+                return D.scrollLeft;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollLeft;
+            };
+        }
+    }
+}();
+
+
+var getElemRect = function(el) {
+
+    var rect,
+        st = getScrollTop(),
+        sl = getScrollLeft(),
+        bcr;
+
+    if (el === window) {
+
+        var doc = document.documentElement;
+
+        rect = {
+            left: 0,
+            right: doc.clientWidth,
+            top: st,
+            bottom: doc.clientHeight + st,
+            width: doc.clientWidth,
+            height: doc.clientHeight
+        };
+    }
+    else {
+        if (el.getBoundingClientRect) {
+            bcr = el.getBoundingClientRect();
+            rect = {
+                left: bcr.left + sl,
+                top: bcr.top + st,
+                right: bcr.right + sl,
+                bottom: bcr.bottom + st
+            };
+
+            rect.width = rect.right - rect.left;
+            rect.height = rect.bottom - rect.top;
+        }
+        else {
+            var style = el.style;
+            rect = {
+                left: (parseInt(style.left, 10) || 0) + sl,
+                top: (parseInt(style.top, 10) || 0) + st,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                right: 0,
+                bottom: 0
+            };
+        }
+    }
+
+    rect.getCenter = function() {
+        return this.width / 2;
+    };
+
+    rect.getCenterX = function() {
+        return this.left + this.width / 2;
+    };
+
+    return rect;
+};
+
+
+var getOuterWidth = function(el) {
+    return getElemRect(el).width;
+};
+
+
+var getOuterHeight = function(el) {
+    return getElemRect(el).height;
+};
+var delegates = {};
 
 
 
+var delegate = function(el, selector, event, fn) {
+
+    var key = selector + "-" + event,
+        listener    = function(e) {
+            e = normalizeEvent(e);
+            if (is(e.target, selector)) {
+                return fn(e);
+            }
+            return null;
+        };
+
+    if (!delegates[key]) {
+        delegates[key] = [];
+    }
+
+    delegates[key].push({el: el, ls: listener, fn: fn});
+
+    addListener(el, event, listener);
+};
 
 
+var undelegate = function(el, selector, event, fn) {
 
+    var key = selector + "-" + event,
+        i, l,
+        ds;
 
-
-
-
-
-
-
+    if (ds = delegates[key]) {
+        for (i = -1, l = ds.length; ++i < l;) {
+            if (ds[i].el === el && ds[i].fn === fn) {
+                removeListener(el, event, ds[i].ls);
+            }
+        }
+    }
+};
 
 
 
@@ -3904,15 +4056,11 @@ var ajax = MetaphorJs.ajax;
  * @link https://github.com/kuindji/jquery-dialog
  * @link http://kuindji.com/js/dialog/demo/index.html
  */
-(function(){
+var Dialog = function(){
 
-    "use strict";
+    
 
-    var ucf             = function(str) {
-            return str.substr(0, 1).toUpperCase() + str.substr(1);
-        },
-
-        css             = function(el, props) {
+    var css             = function(el, props) {
             var style = el.style,
                 i;
             for (i in props) {
@@ -3920,142 +4068,11 @@ var ajax = MetaphorJs.ajax;
             }
         },
 
-
-        getClientRect   = function(el) {
-
-            var rect,
-                st = getScrollTop(),
-                sl = getScrollLeft(),
-                bcr;
-
-            if (el === window) {
-
-                var doc = document.documentElement;
-
-                rect = {
-                    left: 0,
-                    right: doc.clientWidth,
-                    top: st,
-                    bottom: doc.clientHeight + st,
-                    width: doc.clientWidth,
-                    height: doc.clientHeight
-                };
-            }
-            else {
-                if (el.getBoundingClientRect) {
-                    bcr = el.getBoundingClientRect();
-                    rect = {
-                        left: bcr.left + sl,
-                        top: bcr.top + st,
-                        right: bcr.right + sl,
-                        bottom: bcr.bottom + st
-                    };
-
-                    rect.width = rect.right - rect.left;
-                    rect.height = rect.bottom - rect.top;
-                }
-                else {
-                    var style = el.style;
-                    rect = {
-                        left: (parseInt(style.left, 10) || 0) + sl,
-                        top: (parseInt(style.top, 10) || 0) + st,
-                        width: el.offsetWidth,
-                        height: el.offsetHeight,
-                        right: 0,
-                        bottom: 0
-                    };
-                }
-            }
-
-            rect.getCenter = function() {
-                return this.width / 2;
-            };
-
-            rect.getCenterX = function() {
-                return this.left + this.width / 2;
-            };
-
-            return rect;
-        },
-
-        getScrollTop    = function() {
-            if(typeof window.pageYOffset!= 'undefined'){
-                //most browsers except IE before #9
-                return window.pageYOffset;
-            }
-            else{
-                var B= document.body; //IE 'quirks'
-                var D= document.documentElement; //IE with doctype
-                return (D.clientHeight ? D: B).scrollTop;
-            }
-        },
-
-        getScrollLeft   = function() {
-            if(typeof window.pageXOffset!= 'undefined'){
-                //most browsers except IE before #9
-                return window.pageXOffset;
-            }
-            else{
-                var B= document.body; //IE 'quirks'
-                var D= document.documentElement; //IE with doctype
-                return (D.clientWidth ? D: B).scrollLeft;
-            }
-        },
-
-        getOuterWidth      = function(el) {
-            return getClientRect(el).width;
-        },
-        getOuterHeight     = function(el) {
-            return getClientRect(el).height;
-        },
-
-
-        delegates   = {},
-
-        delegate    = function(el, selector, event, fn) {
-
-            var key = selector + "-" + event,
-                listener    = function(e) {
-                    e = normalizeEvent(e);
-                    if (is(e.target, selector)) {
-                        return fn(e);
-                    }
-                    return null;
-                };
-
-            if (!delegates[key]) {
-                delegates[key] = [];
-            }
-
-            delegates[key].push({el: el, ls: listener, fn: fn});
-
-            addListener(el, event, listener);
-        },
-
-        undelegate  = function(el, selector, event, fn) {
-
-            var key = selector + "-" + event,
-                i, l,
-                ds;
-
-            if (ds = delegates[key]) {
-                for (i = -1, l = ds.length; ++i < l;) {
-                    if (ds[i].el === el && ds[i].fn === fn) {
-                        removeListener(el, event, ds[i].ls);
-                    }
-                }
-            }
-        };
-
-
-
-
-
-    var opposite    = {t: "b", r: "l", b: "t", l: "r"},
+        opposite    = {t: "b", r: "l", b: "t", l: "r"},
         names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
-        sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']};
+        sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-    var ie6         = document.all && !window.XMLHttpRequest;
+        ie6         = document.all && !window.XMLHttpRequest;
 
     /*
      * Manager
@@ -4122,7 +4139,7 @@ var ajax = MetaphorJs.ajax;
     /*
      * Pointer
      */
-    var pointer     = function(dlg, cfg, inner) {
+    var Pointer     = function(dlg, cfg, inner) {
 
         var el,
             self    = this,
@@ -4173,7 +4190,7 @@ var ajax = MetaphorJs.ajax;
                 delete newcfg.borderCls;
                 delete newcfg.offset;
 
-                sub = new pointer(dlg, newcfg, cfg.border);
+                sub = new Pointer(dlg, newcfg, cfg.border);
             },
 
             detectPointerPosition: function() {
@@ -4207,22 +4224,22 @@ var ajax = MetaphorJs.ajax;
                 // in ie6 "solid" wouldn't make transparency :(
 
                 // this is always height : border which is opposite to direction
-                borders['border'+ucf(names[opposite[pri]])] = size + "px solid "+color;
+                borders['border'+ucfirst(names[opposite[pri]])] = size + "px solid "+color;
                 // border which is similar to direction is always 0
-                borders['border'+ucf(names[pri])] = "0 "+style+" transparent";
+                borders['border'+ucfirst(names[pri])] = "0 "+style+" transparent";
 
                 if (!dsec) {
                     // if pointer's direction matches pointer primary position (p: l|lt|lb, d: l)
                     // then we set both side borders to a half of the width;
                     var side = Math.floor(width/2);
-                    borders['border' + ucf(names[sides[dpri][0]])] = side + "px "+style+" transparent";
-                    borders['border' + ucf(names[sides[dpri][1]])] = side + "px "+style+" transparent";
+                    borders['border' + ucfirst(names[sides[dpri][0]])] = side + "px "+style+" transparent";
+                    borders['border' + ucfirst(names[sides[dpri][1]])] = side + "px "+style+" transparent";
                 }
                 else {
                     // if pointer's direction doesn't match with primary position (p: l|lt|lb, d: t|b)
                     // we set the border opposite to direction to the full width;
-                    borders['border'+ucf(names[dsec])] = "0 solid transparent";
-                    borders['border'+ucf(names[opposite[dsec]])] = width + "px "+style+" transparent";
+                    borders['border'+ucfirst(names[dsec])] = "0 solid transparent";
+                    borders['border'+ucfirst(names[opposite[dsec]])] = width + "px "+style+" transparent";
                 }
 
                 return borders;
@@ -4285,7 +4302,7 @@ var ajax = MetaphorJs.ajax;
                         }
                     }
 
-                    offsets['margin' + ucf(names[opposite[auto]])] = margin + "px";
+                    offsets['margin' + ucfirst(names[opposite[auto]])] = margin + "px";
 
                     var positionOffset;
 
@@ -4367,7 +4384,7 @@ var ajax = MetaphorJs.ajax;
                     }
                 }
                 else {
-                    if (typeof cfg.el == "string") {
+                    if (isString(cfg.el)) {
                         var tmp = document.createElement("div");
                         tmp.innerHTML = cfg.el;
                         el = tmp.firstChild;
@@ -4424,21 +4441,21 @@ var ajax = MetaphorJs.ajax;
             var value   = options[level1],
                 yes     = false;
 
-            if (value === undefined) {
+            if (isUndefined(value)) {
                 return;
             }
 
             switch (type) {
                 case "string": {
-                    yes     = typeof value == "string";
+                    yes     = isString(value);
                     break;
                 }
                 case "function": {
-                    yes     = typeof value == "function";
+                    yes     = isFunction(value);
                     break;
                 }
                 case "number": {
-                    yes     = typeof value == "number" || value == parseInt(value);
+                    yes     = isNumber(value) || value == parseInt(value);
                     break;
                 }
                 case "dom": {
@@ -5348,7 +5365,7 @@ var ajax = MetaphorJs.ajax;
      */
     var dialog  = function(preset, options) {
 
-        if (preset && typeof preset != "string") {
+        if (preset && !isString(preset)) {
             options         = preset;
             preset          = null;
         }
@@ -5420,7 +5437,7 @@ var ajax = MetaphorJs.ajax;
                     return [""];
                 }
                 else {
-                    return typeof cfg.group == "string" ?
+                    return isString(cfg.group) ?
                         [cfg.group] : cfg.group;
                 }
             },
@@ -5449,7 +5466,7 @@ var ajax = MetaphorJs.ajax;
                     change = true;
                 }
 
-                if (typeof newTarget == "string") {
+                if (isString(newTarget)) {
                     state.dynamicTarget = true;
                     state.target        = null;
                 }
@@ -5870,7 +5887,7 @@ var ajax = MetaphorJs.ajax;
             setPositionType: function(type) {
 
                 if (type) {
-                    if (typeof type == "function") {
+                    if (isString(type)) {
                         cfg.position.get     = type;
                         cfg.position.type   = false;
                     }
@@ -6034,7 +6051,7 @@ var ajax = MetaphorJs.ajax;
                     catch (thrownError) {}
                 }
 
-                if (typeof content != "string") {
+                if (!isString(content)) {
                     for (var i in content) {
                         var sel     = cfg.selector[i];
                         if (sel) {
@@ -6189,7 +6206,7 @@ var ajax = MetaphorJs.ajax;
                 self.setTarget(cfg.target);
 
                 if (cfg.pointer.size || cfg.pointer.el) {
-                    pnt = new pointer(self, cfg.pointer);
+                    pnt = new Pointer(self, cfg.pointer);
                 }
 
                 if (!cfg.render.lazy) {
@@ -6219,7 +6236,7 @@ var ajax = MetaphorJs.ajax;
                         continue;
                     }
 
-                    if (typeof fnCfg == "string" || isArray(fnCfg)) {
+                    if (isString(fnCfg) || isArray(fnCfg)) {
                         if (state.dynamicTarget) {
                             var tmp     = {};
                             tmp[fnCfg]  = cfg.target;
@@ -6294,7 +6311,7 @@ var ajax = MetaphorJs.ajax;
                             continue;
                         }
 
-                        if (typeof evs == 'string') {
+                        if (isString(evs)) {
                             evs     = [evs];
                         }
 
@@ -6622,11 +6639,11 @@ var ajax = MetaphorJs.ajax;
                 // custom rendering function
                 if (rnd.fn) {
                     var res = rnd.fn.call(defaultScope, api);
-                    rnd[typeof res == 'string' ? 'tpl' : 'el'] = res;
+                    rnd[isString(res) ? 'tpl' : 'el'] = res;
                 }
 
                 if (rnd.el) {
-                    if (typeof rnd.el == "string") {
+                    if (isString(rnd.el)) {
                         elem = select(rnd.el).shift();
                         rnd.keepInDOM = true;
                     }
@@ -6753,16 +6770,16 @@ var ajax = MetaphorJs.ajax;
                     a 	= cfg[section].animate;
                 }
 
-                if (typeof a == "function") {
+                if (isFunction(a)) {
                     a   = a(self, e);
                 }
 
                 skipDisplay = a.skipDisplayChange || false;
 
-                if (typeof a == "boolean") {
+                if (isBool(a)) {
                     a = section;
                 }
-                else if (typeof a == "string") {
+                else if (isString(a)) {
                     a = [a];
                 }
 
@@ -6851,7 +6868,7 @@ var ajax = MetaphorJs.ajax;
                 }
 
                 var size    = self.getDialogSize(),
-                    offset  = getClientRect(target),
+                    offset  = getElemRect(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -7225,86 +7242,85 @@ var ajax = MetaphorJs.ajax;
         /**
          * Use this object to set default options for
          * all dialogs.
+         * You can create any number of presets -- objects with options -- and pass its name to the constructor.
          * @type {object}
          * @name MetaphorJs.lib.Dialog.defaults
          */
         defaults:   {}
-
-        /**
-        * You can create any number of presets --
-        * objects with options -- and pass its name to the constructor.
-        * @type {object}
-        * @name MetaphorJs.lib.Dialog.presetName
-        */
-
     });
 
+    return dialog;
 
-    MetaphorJs.lib.Dialog   = dialog;
+}();
 
 
-    /**
-    * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-    * @function jQuery.fn.metaphorjsTooltip
-    * @param {object|string} options See constructor. Pass "destroy" instead of options
-    * to destroy dialog.
-    * @param {string} instanceName {
+MetaphorJs.lib.Dialog   = Dialog;
+
+
+
+/**
+ * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
+ * @function jQuery.fn.metaphorjsTooltip
+ * @param {object|string} options See constructor. Pass "destroy" instead of options
+ * to destroy dialog.
+ * @param {string} instanceName {
     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
     *   @default "default"
-    * }
-    * @return jQuery
-    */
+ * }
+ * @return jQuery
+ */
 
-    if (window.jQuery) {
+if (window.jQuery) {
 
-        /**
-        * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-        * @function
-        * @param {string} preset
-        * @param {object} options See constructor.
-        * @param {string} instanceName {
+    /**
+     * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
+     * @function
+     * @param {string} preset
+     * @param {object} options See constructor.
+     * @param {string} instanceName {
         *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
         *   @default "default"
-        * }
-        * @return jQuery
-        */
-        jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
+     * }
+     * @return jQuery
+     */
+    jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
 
-            var dataName    = "dialog",
-                preset;
+        var dataName    = "dialog",
+            preset;
 
-            if (typeof options == "string" && options != "destroy") {
-                preset          = options;
-                options         = arguments[1];
-                instanceName    = arguments[2];
+        if (typeof options == "string" && options != "destroy") {
+            preset          = options;
+            options         = arguments[1];
+            instanceName    = arguments[2];
+        }
+
+        instanceName    = instanceName || "default";
+        options         = options || {};
+
+        dataName        += "-" + instanceName;
+
+        this.each(function() {
+
+            var el  = this,
+                t   = data(el, dataName);
+
+            if (!t) {
+                options.target          = el;
+                options.instanceName    = dataName;
+                data(el, dataName, new Dialog(preset, options));
             }
+            else if (options == "destroy") {
+                t.destroy();
+                data(el, dataName, null);
+            }
+            else {
+                throw new Error("MetaphorJs tooltip already instantiated for this html element");
+            }
+        });
+    };
 
-            instanceName    = instanceName || "default";
-            options         = options || {};
+}
 
-            dataName        += "-" + instanceName;
+typeof global != "undefined" ? (global.MetaphorJs = MetaphorJs) : (window.MetaphorJs = MetaphorJs);
 
-            this.each(function() {
-
-                var el  = this,
-                    t   = data(el, dataName);
-
-                if (!t) {
-                    options.target          = el;
-                    options.instanceName    = dataName;
-                    data(el, dataName, new dialog(preset, options));
-                }
-                else if (options == "destroy") {
-                    t.destroy();
-                    data(el, dataName, null);
-                }
-                else {
-                    throw new Error("MetaphorJs tooltip already instantiated for this html element");
-                }
-            });
-        };
-
-    }
-
-}());
 }());

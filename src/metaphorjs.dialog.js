@@ -1,21 +1,40 @@
-//#require ../../metaphorjs/src/func/extend.js
-//#require ../../metaphorjs/src/func/nextUid.js
-//#require ../../metaphorjs/src/func/bind.js
-//#require ../../metaphorjs/src/func/dom/addClass.js
-//#require ../../metaphorjs/src/func/dom/hasClass.js
-//#require ../../metaphorjs/src/func/dom/removeClass.js
-//#require ../../metaphorjs/src/func/array/isArray.js
-//#require ../../metaphorjs/src/func/dom/data.js
-//#require ../../metaphorjs/src/func/event/addListener.js
-//#require ../../metaphorjs/src/func/event/removeListener.js
-//#require ../../metaphorjs/src/func/event/normalizeEvent.js
-//#require ../../metaphorjs/src/func/dom/isVisible.js
-//#require ../../metaphorjs/src/func/dom/select.js
-//#require ../../metaphorjs/src/func/dom/is.js
-//#require ../../metaphorjs/src/func/animation/animate.js
-//#require ../../metaphorjs/src/func/animation/stopAnimation.js
-//#require ../../metaphorjs/src/vars/Observable.js
-//#require ../../metaphorjs-ajax/src/vars/ajax.js
+
+var MetaphorJs      = require("../../metaphorjs/src/MetaphorJs.js"),
+    extend          = require("../../metaphorjs/src/func/extend.js"),
+    nextUid         = require("../../metaphorjs/src/func/nextUid.js"),
+    bind            = require("../../metaphorjs/src/func/bind.js"),
+    addClass        = require("../../metaphorjs/src/func/dom/addClass.js"),
+    hasClass        = require("../../metaphorjs/src/func/dom/hasClass.js"),
+    removeClass     = require("../../metaphorjs/src/func/dom/removeClass.js"),
+    isArray         = require("../../metaphorjs/src/func/isArray.js"),
+    data            = require("../../metaphorjs/src/func/dom/data.js"),
+    addListener     = require("../../metaphorjs/src/func/event/addListener.js"),
+    removeListener  = require("../../metaphorjs/src/func/event/removeListener.js"),
+    normalizeEvent  = require("../../metaphorjs/src/func/event/normalizeEvent.js"),
+    isVisible       = require("../../metaphorjs/src/func/dom/isVisible.js"),
+    select          = require("../../metaphorjs/src/func/dom/select.js"),
+    is              = require("../../metaphorjs/src/func/dom/is.js"),
+    animate         = require("../../metaphorjs/src/func/animation/animate.js"),
+    stopAnimation   = require("../../metaphorjs/src/func/animation/stopAnimation.js"),
+
+    ajax            = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
+    Observable      = require("../../metaphorjs-observable/src/metaphorjs.observable.js"),
+
+    isString        = require("../../metaphorjs/src/func/isString.js"),
+    isFunction      = require("../../metaphorjs/src/func/isFunction.js"),
+    isNumber        = require("../../metaphorjs/src/func/isNumber.js"),
+    isUndefined     = require("../../metaphorjs/src/func/isUndefined.js"),
+    isBool          = require("../../metaphorjs/src/func/isBool.js"),
+
+    ucfirst         = require("../../metaphorjs/src/func/ucfirst.js"),
+    getScrollTop    = require("../../metaphorjs/src/func/dom/getScrollTop.js"),
+    getScrollLeft   = require("../../metaphorjs/src/func/dom/getScrollLeft.js"),
+    getElemRect     = require("../../metaphorjs/src/func/dom/getElemRect.js"),
+    getOuterWidth   = require("../../metaphorjs/src/func/dom/getOuterWidth.js"),
+    getOuterHeight  = require("../../metaphorjs/src/func/dom/getOuterHeight.js"),
+
+    delegate        = require("../../metaphorjs/src/func/dom/delegate.js"),
+    undelegate      = require("../../metaphorjs/src/func/dom/undelegate.js");
 
 
 /**
@@ -26,15 +45,11 @@
  * @link https://github.com/kuindji/jquery-dialog
  * @link http://kuindji.com/js/dialog/demo/index.html
  */
-(function(){
+var Dialog = function(){
 
     "use strict";
 
-    var ucf             = function(str) {
-            return str.substr(0, 1).toUpperCase() + str.substr(1);
-        },
-
-        css             = function(el, props) {
+    var css             = function(el, props) {
             var style = el.style,
                 i;
             for (i in props) {
@@ -42,142 +57,11 @@
             }
         },
 
-
-        getClientRect   = function(el) {
-
-            var rect,
-                st = getScrollTop(),
-                sl = getScrollLeft(),
-                bcr;
-
-            if (el === window) {
-
-                var doc = document.documentElement;
-
-                rect = {
-                    left: 0,
-                    right: doc.clientWidth,
-                    top: st,
-                    bottom: doc.clientHeight + st,
-                    width: doc.clientWidth,
-                    height: doc.clientHeight
-                };
-            }
-            else {
-                if (el.getBoundingClientRect) {
-                    bcr = el.getBoundingClientRect();
-                    rect = {
-                        left: bcr.left + sl,
-                        top: bcr.top + st,
-                        right: bcr.right + sl,
-                        bottom: bcr.bottom + st
-                    };
-
-                    rect.width = rect.right - rect.left;
-                    rect.height = rect.bottom - rect.top;
-                }
-                else {
-                    var style = el.style;
-                    rect = {
-                        left: (parseInt(style.left, 10) || 0) + sl,
-                        top: (parseInt(style.top, 10) || 0) + st,
-                        width: el.offsetWidth,
-                        height: el.offsetHeight,
-                        right: 0,
-                        bottom: 0
-                    };
-                }
-            }
-
-            rect.getCenter = function() {
-                return this.width / 2;
-            };
-
-            rect.getCenterX = function() {
-                return this.left + this.width / 2;
-            };
-
-            return rect;
-        },
-
-        getScrollTop    = function() {
-            if(typeof window.pageYOffset!= 'undefined'){
-                //most browsers except IE before #9
-                return window.pageYOffset;
-            }
-            else{
-                var B= document.body; //IE 'quirks'
-                var D= document.documentElement; //IE with doctype
-                return (D.clientHeight ? D: B).scrollTop;
-            }
-        },
-
-        getScrollLeft   = function() {
-            if(typeof window.pageXOffset!= 'undefined'){
-                //most browsers except IE before #9
-                return window.pageXOffset;
-            }
-            else{
-                var B= document.body; //IE 'quirks'
-                var D= document.documentElement; //IE with doctype
-                return (D.clientWidth ? D: B).scrollLeft;
-            }
-        },
-
-        getOuterWidth      = function(el) {
-            return getClientRect(el).width;
-        },
-        getOuterHeight     = function(el) {
-            return getClientRect(el).height;
-        },
-
-
-        delegates   = {},
-
-        delegate    = function(el, selector, event, fn) {
-
-            var key = selector + "-" + event,
-                listener    = function(e) {
-                    e = normalizeEvent(e);
-                    if (is(e.target, selector)) {
-                        return fn(e);
-                    }
-                    return null;
-                };
-
-            if (!delegates[key]) {
-                delegates[key] = [];
-            }
-
-            delegates[key].push({el: el, ls: listener, fn: fn});
-
-            addListener(el, event, listener);
-        },
-
-        undelegate  = function(el, selector, event, fn) {
-
-            var key = selector + "-" + event,
-                i, l,
-                ds;
-
-            if (ds = delegates[key]) {
-                for (i = -1, l = ds.length; ++i < l;) {
-                    if (ds[i].el === el && ds[i].fn === fn) {
-                        removeListener(el, event, ds[i].ls);
-                    }
-                }
-            }
-        };
-
-
-
-
-
-    var opposite    = {t: "b", r: "l", b: "t", l: "r"},
+        opposite    = {t: "b", r: "l", b: "t", l: "r"},
         names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
-        sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']};
+        sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-    var ie6         = document.all && !window.XMLHttpRequest;
+        ie6         = document.all && !window.XMLHttpRequest;
 
     /*
      * Manager
@@ -244,7 +128,7 @@
     /*
      * Pointer
      */
-    var pointer     = function(dlg, cfg, inner) {
+    var Pointer     = function(dlg, cfg, inner) {
 
         var el,
             self    = this,
@@ -295,7 +179,7 @@
                 delete newcfg.borderCls;
                 delete newcfg.offset;
 
-                sub = new pointer(dlg, newcfg, cfg.border);
+                sub = new Pointer(dlg, newcfg, cfg.border);
             },
 
             detectPointerPosition: function() {
@@ -329,22 +213,22 @@
                 // in ie6 "solid" wouldn't make transparency :(
 
                 // this is always height : border which is opposite to direction
-                borders['border'+ucf(names[opposite[pri]])] = size + "px solid "+color;
+                borders['border'+ucfirst(names[opposite[pri]])] = size + "px solid "+color;
                 // border which is similar to direction is always 0
-                borders['border'+ucf(names[pri])] = "0 "+style+" transparent";
+                borders['border'+ucfirst(names[pri])] = "0 "+style+" transparent";
 
                 if (!dsec) {
                     // if pointer's direction matches pointer primary position (p: l|lt|lb, d: l)
                     // then we set both side borders to a half of the width;
                     var side = Math.floor(width/2);
-                    borders['border' + ucf(names[sides[dpri][0]])] = side + "px "+style+" transparent";
-                    borders['border' + ucf(names[sides[dpri][1]])] = side + "px "+style+" transparent";
+                    borders['border' + ucfirst(names[sides[dpri][0]])] = side + "px "+style+" transparent";
+                    borders['border' + ucfirst(names[sides[dpri][1]])] = side + "px "+style+" transparent";
                 }
                 else {
                     // if pointer's direction doesn't match with primary position (p: l|lt|lb, d: t|b)
                     // we set the border opposite to direction to the full width;
-                    borders['border'+ucf(names[dsec])] = "0 solid transparent";
-                    borders['border'+ucf(names[opposite[dsec]])] = width + "px "+style+" transparent";
+                    borders['border'+ucfirst(names[dsec])] = "0 solid transparent";
+                    borders['border'+ucfirst(names[opposite[dsec]])] = width + "px "+style+" transparent";
                 }
 
                 return borders;
@@ -407,7 +291,7 @@
                         }
                     }
 
-                    offsets['margin' + ucf(names[opposite[auto]])] = margin + "px";
+                    offsets['margin' + ucfirst(names[opposite[auto]])] = margin + "px";
 
                     var positionOffset;
 
@@ -489,7 +373,7 @@
                     }
                 }
                 else {
-                    if (typeof cfg.el == "string") {
+                    if (isString(cfg.el)) {
                         var tmp = document.createElement("div");
                         tmp.innerHTML = cfg.el;
                         el = tmp.firstChild;
@@ -546,21 +430,21 @@
             var value   = options[level1],
                 yes     = false;
 
-            if (value === undefined) {
+            if (isUndefined(value)) {
                 return;
             }
 
             switch (type) {
                 case "string": {
-                    yes     = typeof value == "string";
+                    yes     = isString(value);
                     break;
                 }
                 case "function": {
-                    yes     = typeof value == "function";
+                    yes     = isFunction(value);
                     break;
                 }
                 case "number": {
-                    yes     = typeof value == "number" || value == parseInt(value);
+                    yes     = isNumber(value) || value == parseInt(value);
                     break;
                 }
                 case "dom": {
@@ -1470,7 +1354,7 @@
      */
     var dialog  = function(preset, options) {
 
-        if (preset && typeof preset != "string") {
+        if (preset && !isString(preset)) {
             options         = preset;
             preset          = null;
         }
@@ -1542,7 +1426,7 @@
                     return [""];
                 }
                 else {
-                    return typeof cfg.group == "string" ?
+                    return isString(cfg.group) ?
                         [cfg.group] : cfg.group;
                 }
             },
@@ -1571,7 +1455,7 @@
                     change = true;
                 }
 
-                if (typeof newTarget == "string") {
+                if (isString(newTarget)) {
                     state.dynamicTarget = true;
                     state.target        = null;
                 }
@@ -1992,7 +1876,7 @@
             setPositionType: function(type) {
 
                 if (type) {
-                    if (typeof type == "function") {
+                    if (isString(type)) {
                         cfg.position.get     = type;
                         cfg.position.type   = false;
                     }
@@ -2156,7 +2040,7 @@
                     catch (thrownError) {}
                 }
 
-                if (typeof content != "string") {
+                if (!isString(content)) {
                     for (var i in content) {
                         var sel     = cfg.selector[i];
                         if (sel) {
@@ -2311,7 +2195,7 @@
                 self.setTarget(cfg.target);
 
                 if (cfg.pointer.size || cfg.pointer.el) {
-                    pnt = new pointer(self, cfg.pointer);
+                    pnt = new Pointer(self, cfg.pointer);
                 }
 
                 if (!cfg.render.lazy) {
@@ -2341,7 +2225,7 @@
                         continue;
                     }
 
-                    if (typeof fnCfg == "string" || isArray(fnCfg)) {
+                    if (isString(fnCfg) || isArray(fnCfg)) {
                         if (state.dynamicTarget) {
                             var tmp     = {};
                             tmp[fnCfg]  = cfg.target;
@@ -2416,7 +2300,7 @@
                             continue;
                         }
 
-                        if (typeof evs == 'string') {
+                        if (isString(evs)) {
                             evs     = [evs];
                         }
 
@@ -2744,11 +2628,11 @@
                 // custom rendering function
                 if (rnd.fn) {
                     var res = rnd.fn.call(defaultScope, api);
-                    rnd[typeof res == 'string' ? 'tpl' : 'el'] = res;
+                    rnd[isString(res) ? 'tpl' : 'el'] = res;
                 }
 
                 if (rnd.el) {
-                    if (typeof rnd.el == "string") {
+                    if (isString(rnd.el)) {
                         elem = select(rnd.el).shift();
                         rnd.keepInDOM = true;
                     }
@@ -2875,16 +2759,16 @@
                     a 	= cfg[section].animate;
                 }
 
-                if (typeof a == "function") {
+                if (isFunction(a)) {
                     a   = a(self, e);
                 }
 
                 skipDisplay = a.skipDisplayChange || false;
 
-                if (typeof a == "boolean") {
+                if (isBool(a)) {
                     a = section;
                 }
-                else if (typeof a == "string") {
+                else if (isString(a)) {
                     a = [a];
                 }
 
@@ -2973,7 +2857,7 @@
                 }
 
                 var size    = self.getDialogSize(),
-                    offset  = getClientRect(target),
+                    offset  = getElemRect(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -3347,85 +3231,19 @@
         /**
          * Use this object to set default options for
          * all dialogs.
+         * You can create any number of presets -- objects with options -- and pass its name to the constructor.
          * @type {object}
          * @name MetaphorJs.lib.Dialog.defaults
          */
         defaults:   {}
-
-        /**
-        * You can create any number of presets --
-        * objects with options -- and pass its name to the constructor.
-        * @type {object}
-        * @name MetaphorJs.lib.Dialog.presetName
-        */
-
     });
 
+    return dialog;
 
-    MetaphorJs.lib.Dialog   = dialog;
+}();
 
 
-    /**
-    * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-    * @function jQuery.fn.metaphorjsTooltip
-    * @param {object|string} options See constructor. Pass "destroy" instead of options
-    * to destroy dialog.
-    * @param {string} instanceName {
-    *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-    *   @default "default"
-    * }
-    * @return jQuery
-    */
+MetaphorJs.lib.Dialog   = Dialog;
 
-    if (window.jQuery) {
 
-        /**
-        * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-        * @function
-        * @param {string} preset
-        * @param {object} options See constructor.
-        * @param {string} instanceName {
-        *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-        *   @default "default"
-        * }
-        * @return jQuery
-        */
-        jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
-
-            var dataName    = "dialog",
-                preset;
-
-            if (typeof options == "string" && options != "destroy") {
-                preset          = options;
-                options         = arguments[1];
-                instanceName    = arguments[2];
-            }
-
-            instanceName    = instanceName || "default";
-            options         = options || {};
-
-            dataName        += "-" + instanceName;
-
-            this.each(function() {
-
-                var el  = this,
-                    t   = data(el, dataName);
-
-                if (!t) {
-                    options.target          = el;
-                    options.instanceName    = dataName;
-                    data(el, dataName, new dialog(preset, options));
-                }
-                else if (options == "destroy") {
-                    t.destroy();
-                    data(el, dataName, null);
-                }
-                else {
-                    throw new Error("MetaphorJs tooltip already instantiated for this html element");
-                }
-            });
-        };
-
-    }
-
-}());
+module.exports = Dialog;

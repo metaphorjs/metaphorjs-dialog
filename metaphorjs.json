@@ -8,10 +8,11 @@
     "standalone": {
         "wrap": true,
         "auto": true,
+        "global": true,
         "target": "dist/metaphorjs.dialog.js",
         "files": [
-            "../metaphorjs/src/MetaphorJs.js",
-            "src/metaphorjs.dialog.js"
+            "src/metaphorjs.dialog.js",
+            "src/jquery/plugin.js"
         ]
     },
 
