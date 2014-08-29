@@ -1,0 +1,29 @@
+{
+  "name": "metaphorjs-dialog",
+  "version": "1.0.0",
+  "description": "Dialog and tooltip plugin (plus jquery plugin)",
+  "main": "dist/metaphorjs.dialog.npm.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kuindji/metaphorjs-dialog.git"
+  },
+  "author": "kuindji",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kuindji/metaphorjs-dialog/issues"
+  },
+  "homepage": "https://github.com/kuindji/metaphorjs-dialog",
+  "dependencies": {
+      "metaphorjs-observable": "*",
+      "metaphorjs-promise": "*",
+      "metaphorjs-ajax": "*",
+      "metaphorjs-select": "*",
+      "metaphorjs-animate": "*"
+  }
+}
