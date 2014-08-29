@@ -1,39 +1,560 @@
+define("metaphorjs-dialog", ['metaphorjs-observable', 'metaphorjs-promise', 'metaphorjs-ajax', 'metaphorjs-select', 'metaphorjs-animate'], function(Observable, Promise, ajax, select, animate) {
 
-var extend          = require("../../metaphorjs/src/func/extend.js"),
-    nextUid         = require("../../metaphorjs/src/func/nextUid.js"),
-    bind            = require("../../metaphorjs/src/func/bind.js"),
-    addClass        = require("../../metaphorjs/src/func/dom/addClass.js"),
-    hasClass        = require("../../metaphorjs/src/func/dom/hasClass.js"),
-    removeClass     = require("../../metaphorjs/src/func/dom/removeClass.js"),
-    isArray         = require("../../metaphorjs/src/func/isArray.js"),
-    data            = require("../../metaphorjs/src/func/dom/data.js"),
-    addListener     = require("../../metaphorjs/src/func/event/addListener.js"),
-    removeListener  = require("../../metaphorjs/src/func/event/removeListener.js"),
-    normalizeEvent  = require("../../metaphorjs/src/func/event/normalizeEvent.js"),
-    isVisible       = require("../../metaphorjs/src/func/dom/isVisible.js"),
-    select          = require("../../metaphorjs-select/src/metaphorjs.select.js"),
-    is              = require("../../metaphorjs-select/src/func/is.js"),
-    animate         = require("../../metaphorjs-animate/src/metaphorjs.animate.js"),
-    stopAnimation   = require("../../metaphorjs-animate/src/func/stopAnimation.js"),
+var stopAnimation = animate.stop;
 
-    ajax            = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
-    Observable      = require("../../metaphorjs-observable/src/metaphorjs.observable.js"),
+var slice = Array.prototype.slice;
+/**
+ * @param {*} obj
+ * @returns {boolean}
+ */
+var isPlainObject = function(obj) {
+    return !!(obj && obj.constructor === Object);
+};
 
-    isString        = require("../../metaphorjs/src/func/isString.js"),
-    isFunction      = require("../../metaphorjs/src/func/isFunction.js"),
-    isNumber        = require("../../metaphorjs/src/func/isNumber.js"),
-    isUndefined     = require("../../metaphorjs/src/func/isUndefined.js"),
-    isBool          = require("../../metaphorjs/src/func/isBool.js"),
+var isBool = function(value) {
+    return typeof value == "boolean";
+};
+var strUndef = "undefined";
 
-    ucfirst         = require("../../metaphorjs/src/func/ucfirst.js"),
-    getScrollTop    = require("../../metaphorjs/src/func/dom/getScrollTop.js"),
-    getScrollLeft   = require("../../metaphorjs/src/func/dom/getScrollLeft.js"),
-    getElemRect     = require("../../metaphorjs/src/func/dom/getElemRect.js"),
-    getOuterWidth   = require("../../metaphorjs/src/func/dom/getOuterWidth.js"),
-    getOuterHeight  = require("../../metaphorjs/src/func/dom/getOuterHeight.js"),
 
-    delegate        = require("../../metaphorjs/src/func/dom/delegate.js"),
-    undelegate      = require("../../metaphorjs/src/func/dom/undelegate.js");
+var isUndefined = function(any) {
+    return typeof any == strUndef;
+};
+
+var isNull = function(value) {
+    return value === null;
+};
+
+
+/**
+ * @param {Object} dst
+ * @param {Object} src
+ * @param {Object} src2 ... srcN
+ * @param {boolean} override = false
+ * @param {boolean} deep = false
+ * @returns {*}
+ */
+var extend = function extend() {
+
+
+    var override    = false,
+        deep        = false,
+        args        = slice.call(arguments),
+        dst         = args.shift(),
+        src,
+        k,
+        value;
+
+    if (isBool(args[args.length - 1])) {
+        override    = args.pop();
+    }
+    if (isBool(args[args.length - 1])) {
+        deep        = override;
+        override    = args.pop();
+    }
+
+    while (args.length) {
+        if (src = args.shift()) {
+            for (k in src) {
+
+                if (src.hasOwnProperty(k) && !isUndefined((value = src[k]))) {
+
+                    if (deep) {
+                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                            extend(dst[k], value, override, deep);
+                        }
+                        else {
+                            if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                                if (isPlainObject(value)) {
+                                    dst[k] = {};
+                                    extend(dst[k], value, override, true);
+                                }
+                                else {
+                                    dst[k] = value;
+                                }
+                            }
+                        }
+                    }
+                    else {
+                        if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                            dst[k] = value;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return dst;
+};
+
+
+
+/**
+ * @returns {String}
+ */
+var nextUid = function(){
+    var uid = ['0', '0', '0'];
+
+    // from AngularJs
+    return function() {
+        var index = uid.length;
+        var digit;
+
+        while(index) {
+            index--;
+            digit = uid[index].charCodeAt(0);
+            if (digit == 57 /*'9'*/) {
+                uid[index] = 'A';
+                return uid.join('');
+            }
+            if (digit == 90  /*'Z'*/) {
+                uid[index] = '0';
+            } else {
+                uid[index] = String.fromCharCode(digit + 1);
+                return uid.join('');
+            }
+        }
+        uid.unshift('0');
+        return uid.join('');
+    };
+}();
+
+/**
+ * @param {Function} fn
+ * @param {*} context
+ */
+var bind = Function.prototype.bind ?
+              function(fn, context){
+                  return fn.bind(context);
+              } :
+              function(fn, context) {
+                  return function() {
+                      return fn.apply(context, arguments);
+                  };
+              };
+
+/**
+ * @param {String} expr
+ */
+var getRegExp = function(){
+
+    var cache = {};
+
+    return function(expr) {
+        return cache[expr] || (cache[expr] = new RegExp(expr));
+    };
+}();
+
+
+/**
+ * @param {String} cls
+ * @returns {RegExp}
+ */
+var getClsReg = function(cls) {
+    return getRegExp('(?:^|\\s)'+cls+'(?!\\S)');
+};
+
+
+/**
+ * @param {Element} el
+ * @param {String} cls
+ * @returns {boolean}
+ */
+var hasClass = function(el, cls) {
+    return cls ? getClsReg(cls).test(el.className) : false;
+};
+
+
+/**
+ * @param {Element} el
+ * @param {String} cls
+ */
+var addClass = function(el, cls) {
+    if (cls && !hasClass(el, cls)) {
+        el.className += " " + cls;
+    }
+};
+
+
+/**
+ * @param {Element} el
+ * @param {String} cls
+ */
+var removeClass = function(el, cls) {
+    if (cls) {
+        el.className = el.className.replace(getClsReg(cls), '');
+    }
+};
+var toString = Object.prototype.toString;
+var isObject = function(value) {
+    return value != null && typeof value === 'object';
+};
+var isNumber = function(value) {
+    return typeof value == "number" && !isNaN(value);
+};
+
+
+/**
+ * @param {*} value
+ * @returns {boolean}
+ */
+var isArray = function(value) {
+    return !!(value && isObject(value) && isNumber(value.length) &&
+                toString.call(value) == '[object Array]' || false);
+};
+
+
+/**
+ * @param {Element} el
+ * @param {String} key
+ * @param {*} value optional
+ */
+var data = function(){
+
+    var dataCache   = {},
+
+        getNodeId   = function(el) {
+            return el._mjsid || (el._mjsid = nextUid());
+        };
+
+    return function(el, key, value) {
+        var id  = getNodeId(el),
+            obj = dataCache[id];
+
+        if (!isUndefined(value)) {
+            if (!obj) {
+                obj = dataCache[id] = {};
+            }
+            obj[key] = value;
+            return value;
+        }
+        else {
+            return obj ? obj[key] : undefined;
+        }
+    };
+
+}();
+var addListener = function(el, event, func) {
+    if (el.attachEvent) {
+        el.attachEvent('on' + event, func);
+    } else {
+        el.addEventListener(event, func, false);
+    }
+};
+
+var removeListener = function(el, event, func) {
+    if (el.detachEvent) {
+        el.detachEvent('on' + event, func);
+    } else {
+        el.removeEventListener(event, func, false);
+    }
+};
+var returnFalse = function() {
+    return false;
+};
+
+var returnTrue = function() {
+    return true;
+};
+
+
+// from jQuery
+
+var NormalizedEvent = function(src) {
+
+    if (src instanceof NormalizedEvent) {
+        return src;
+    }
+
+    // Allow instantiation without the 'new' keyword
+    if (!(this instanceof NormalizedEvent)) {
+        return new NormalizedEvent(src);
+    }
+
+
+    var self    = this;
+
+    for (var i in src) {
+        if (!self[i]) {
+            try {
+                self[i] = src[i];
+            }
+            catch (thrownError){}
+        }
+    }
+
+
+    // Event object
+    self.originalEvent = src;
+    self.type = src.type;
+
+    if (!self.target && src.srcElement) {
+        self.target = src.srcElement;
+    }
+
+
+    var eventDoc, doc, body,
+        button = src.button;
+
+    // Calculate pageX/Y if missing and clientX/Y available
+    if (isUndefined(self.pageX) && !isNull(src.clientX)) {
+        eventDoc = self.target ? self.target.ownerDocument || document : document;
+        doc = eventDoc.documentElement;
+        body = eventDoc.body;
+
+        self.pageX = src.clientX +
+                      ( doc && doc.scrollLeft || body && body.scrollLeft || 0 ) -
+                      ( doc && doc.clientLeft || body && body.clientLeft || 0 );
+        self.pageY = src.clientY +
+                      ( doc && doc.scrollTop  || body && body.scrollTop  || 0 ) -
+                      ( doc && doc.clientTop  || body && body.clientTop  || 0 );
+    }
+
+    // Add which for click: 1 === left; 2 === middle; 3 === right
+    // Note: button is not normalized, so don't use it
+    if ( !self.which && button !== undefined ) {
+        self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
+    }
+
+    // Events bubbling up the document may have been marked as prevented
+    // by a handler lower down the tree; reflect the correct value.
+    self.isDefaultPrevented = src.defaultPrevented ||
+                              isUndefined(src.defaultPrevented) &&
+                                  // Support: Android<4.0
+                              src.returnValue === false ?
+                              returnTrue :
+                              returnFalse;
+
+
+    // Create a timestamp if incoming event doesn't have one
+    self.timeStamp = src && src.timeStamp || (new Date).getTime();
+};
+
+// Event is based on DOM3 Events as specified by the ECMAScript Language Binding
+// http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
+NormalizedEvent.prototype = {
+
+    isDefaultPrevented: returnFalse,
+    isPropagationStopped: returnFalse,
+    isImmediatePropagationStopped: returnFalse,
+
+    preventDefault: function() {
+        var e = this.originalEvent;
+
+        this.isDefaultPrevented = returnTrue;
+        e.returnValue = false;
+
+        if ( e && e.preventDefault ) {
+            e.preventDefault();
+        }
+    },
+    stopPropagation: function() {
+        var e = this.originalEvent;
+
+        this.isPropagationStopped = returnTrue;
+
+        if ( e && e.stopPropagation ) {
+            e.stopPropagation();
+        }
+    },
+    stopImmediatePropagation: function() {
+        var e = this.originalEvent;
+
+        this.isImmediatePropagationStopped = returnTrue;
+
+        if ( e && e.stopImmediatePropagation ) {
+            e.stopImmediatePropagation();
+        }
+
+        this.stopPropagation();
+    }
+};
+
+
+
+var normalizeEvent = function(originalEvent) {
+    return new NormalizedEvent(originalEvent);
+};
+/**
+ * @param {Element} el
+ * @returns {boolean}
+ */
+var isVisible = function(el) {
+    return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
+};
+
+
+/**
+ * @param {Element} el
+ * @param {String} selector
+ * @returns {boolean}
+ */
+var is = select.is;
+var isString = function(value) {
+    return typeof value == "string";
+};
+var isFunction = function(value) {
+    return typeof value === 'function';
+};
+var ucfirst = function(str) {
+    return str.substr(0, 1).toUpperCase() + str.substr(1);
+};
+
+
+var getScrollTop = function() {
+    if(!isUndefined(window.pageYOffset)) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageYOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientHeight) {
+            return function() {
+                return D.scrollTop;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollTop;
+            };
+        }
+    }
+}();
+
+var getScrollLeft = function() {
+    if(!isUndefined(window.pageXOffset)) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageXOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientWidth) {
+            return function() {
+                return D.scrollLeft;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollLeft;
+            };
+        }
+    }
+}();
+
+
+var getElemRect = function(el) {
+
+    var rect,
+        st = getScrollTop(),
+        sl = getScrollLeft(),
+        bcr;
+
+    if (el === window) {
+
+        var doc = document.documentElement;
+
+        rect = {
+            left: 0,
+            right: doc.clientWidth,
+            top: st,
+            bottom: doc.clientHeight + st,
+            width: doc.clientWidth,
+            height: doc.clientHeight
+        };
+    }
+    else {
+        if (el.getBoundingClientRect) {
+            bcr = el.getBoundingClientRect();
+            rect = {
+                left: bcr.left + sl,
+                top: bcr.top + st,
+                right: bcr.right + sl,
+                bottom: bcr.bottom + st
+            };
+
+            rect.width = rect.right - rect.left;
+            rect.height = rect.bottom - rect.top;
+        }
+        else {
+            var style = el.style;
+            rect = {
+                left: (parseInt(style.left, 10) || 0) + sl,
+                top: (parseInt(style.top, 10) || 0) + st,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                right: 0,
+                bottom: 0
+            };
+        }
+    }
+
+    rect.getCenter = function() {
+        return this.width / 2;
+    };
+
+    rect.getCenterX = function() {
+        return this.left + this.width / 2;
+    };
+
+    return rect;
+};
+
+
+var getOuterWidth = function(el) {
+    return getElemRect(el).width;
+};
+
+
+var getOuterHeight = function(el) {
+    return getElemRect(el).height;
+};
+var delegates = {};
+
+
+
+var delegate = function(el, selector, event, fn) {
+
+    var key = selector + "-" + event,
+        listener    = function(e) {
+            e = normalizeEvent(e);
+            if (is(e.target, selector)) {
+                return fn(e);
+            }
+            return null;
+        };
+
+    if (!delegates[key]) {
+        delegates[key] = [];
+    }
+
+    delegates[key].push({el: el, ls: listener, fn: fn});
+
+    addListener(el, event, listener);
+};
+
+
+var undelegate = function(el, selector, event, fn) {
+
+    var key = selector + "-" + event,
+        i, l,
+        ds;
+
+    if (ds = delegates[key]) {
+        for (i = -1, l = ds.length; ++i < l;) {
+            if (ds[i].el === el && ds[i].fn === fn) {
+                removeListener(el, event, ds[i].ls);
+            }
+        }
+    }
+};
+
 
 
 
@@ -45,9 +566,9 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
  * @link https://github.com/kuindji/jquery-dialog
  * @link http://kuindji.com/js/dialog/demo/index.html
  */
-module.exports = function(){
+var Dialog = function(){
 
-    "use strict";
+    
 
     var css             = function(el, props) {
             var style = el.style,
@@ -3241,3 +3762,69 @@ module.exports = function(){
     return dialog;
 
 }();
+
+/**
+ * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
+ * @function jQuery.fn.metaphorjsTooltip
+ * @param {object|string} options See constructor. Pass "destroy" instead of options
+ * to destroy dialog.
+ * @param {string} instanceName {
+    *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
+    *   @default "default"
+ * }
+ * @return jQuery
+ */
+
+if (window.jQuery) {
+
+    /**
+     * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
+     * @function
+     * @param {string} preset
+     * @param {object} options See constructor.
+     * @param {string} instanceName {
+        *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
+        *   @default "default"
+     * }
+     * @return jQuery
+     */
+    jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
+
+        var dataName    = "dialog",
+            preset;
+
+        if (typeof options == "string" && options != "destroy") {
+            preset          = options;
+            options         = arguments[1];
+            instanceName    = arguments[2];
+        }
+
+        instanceName    = instanceName || "default";
+        options         = options || {};
+
+        dataName        += "-" + instanceName;
+
+        this.each(function() {
+
+            var el  = this,
+                t   = data(el, dataName);
+
+            if (!t) {
+                options.target          = el;
+                options.instanceName    = dataName;
+                data(el, dataName, new Dialog(preset, options));
+            }
+            else if (options == "destroy") {
+                t.destroy();
+                data(el, dataName, null);
+            }
+            else {
+                throw new Error("MetaphorJs tooltip already instantiated for this html element");
+            }
+        });
+    };
+
+}
+
+return Dialog;
+});
