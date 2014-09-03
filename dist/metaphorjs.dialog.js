@@ -9,24 +9,74 @@ var MetaphorJs = {
 
 
 var slice = Array.prototype.slice;
-/**
- * @param {*} obj
- * @returns {boolean}
- */
-var isPlainObject = function(obj) {
-    return !!(obj && obj.constructor === Object);
+var toString = Object.prototype.toString;
+var undf = undefined;
+
+
+
+var varType = function(){
+
+    var types = {
+        '[object String]': 0,
+        '[object Number]': 1,
+        '[object Boolean]': 2,
+        '[object Object]': 3,
+        '[object Function]': 4,
+        '[object Array]': 5,
+        '[object RegExp]': 9,
+        '[object Date]': 10
+    };
+
+
+    /**
+        'string': 0,
+        'number': 1,
+        'boolean': 2,
+        'object': 3,
+        'function': 4,
+        'array': 5,
+        'null': 6,
+        'undefined': 7,
+        'NaN': 8,
+        'regexp': 9,
+        'date': 10
+    */
+
+    return function(val) {
+
+        if (!val) {
+            if (val === null) {
+                return 6;
+            }
+            if (val === undf) {
+                return 7;
+            }
+        }
+
+        var num = types[toString.call(val)];
+
+        if (num === undf) {
+            return -1;
+        }
+
+        if (num == 1 && isNaN(val)) {
+            num = 8;
+        }
+
+        return num;
+    };
+
+}();
+
+
+var isPlainObject = function(value) {
+    return varType(value) === 3;
 };
+
 
 var isBool = function(value) {
-    return typeof value == "boolean";
+    return varType(value) === 2;
 };
-var strUndef = "undefined";
-
-
-var isUndefined = function(any) {
-    return typeof any == strUndef;
-};
-
 var isNull = function(value) {
     return value === null;
 };
@@ -63,14 +113,14 @@ var extend = function extend() {
         if (src = args.shift()) {
             for (k in src) {
 
-                if (src.hasOwnProperty(k) && !isUndefined((value = src[k]))) {
+                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
                     if (deep) {
                         if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
                             extend(dst[k], value, override, deep);
                         }
                         else {
-                            if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                            if (override === true || dst[k] == undf) { // == checks for null and undefined
                                 if (isPlainObject(value)) {
                                     dst[k] = {};
                                     extend(dst[k], value, override, true);
@@ -82,7 +132,7 @@ var extend = function extend() {
                         }
                     }
                     else {
-                        if (override === true || isUndefined(dst[k]) || isNull(dst[k])) {
+                        if (override === true || dst[k] == undf) {
                             dst[k] = value;
                         }
                     }
@@ -192,13 +242,6 @@ var removeClass = function(el, cls) {
         el.className = el.className.replace(getClsReg(cls), '');
     }
 };
-var toString = Object.prototype.toString;
-var isObject = function(value) {
-    return value != null && typeof value === 'object';
-};
-var isNumber = function(value) {
-    return typeof value == "number" && !isNaN(value);
-};
 
 
 /**
@@ -206,8 +249,7 @@ var isNumber = function(value) {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return !!(value && isObject(value) && isNumber(value.length) &&
-                toString.call(value) == '[object Array]' || false);
+    return varType(value) === 5;
 };
 
 
@@ -228,7 +270,7 @@ var data = function(){
         var id  = getNodeId(el),
             obj = dataCache[id];
 
-        if (!isUndefined(value)) {
+        if (value !== undf) {
             if (!obj) {
                 obj = dataCache[id] = {};
             }
@@ -236,7 +278,7 @@ var data = function(){
             return value;
         }
         else {
-            return obj ? obj[key] : undefined;
+            return obj ? obj[key] : undf;
         }
     };
 
@@ -304,7 +346,7 @@ var NormalizedEvent = function(src) {
         button = src.button;
 
     // Calculate pageX/Y if missing and clientX/Y available
-    if (isUndefined(self.pageX) && !isNull(src.clientX)) {
+    if (self.pageX === undf && !isNull(src.clientX)) {
         eventDoc = self.target ? self.target.ownerDocument || document : document;
         doc = eventDoc.documentElement;
         body = eventDoc.body;
@@ -319,14 +361,14 @@ var NormalizedEvent = function(src) {
 
     // Add which for click: 1 === left; 2 === middle; 3 === right
     // Note: button is not normalized, so don't use it
-    if ( !self.which && button !== undefined ) {
+    if ( !self.which && button !== undf ) {
         self.which = ( button & 1 ? 1 : ( button & 2 ? 3 : ( button & 4 ? 2 : 0 ) ) );
     }
 
     // Events bubbling up the document may have been marked as prevented
     // by a handler lower down the tree; reflect the correct value.
     self.isDefaultPrevented = src.defaultPrevented ||
-                              isUndefined(src.defaultPrevented) &&
+                              src.defaultPrevented === undf &&
                                   // Support: Android<4.0
                               src.returnValue === false ?
                               returnTrue :
@@ -389,8 +431,10 @@ var normalizeEvent = function(originalEvent) {
 var isVisible = function(el) {
     return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
 };
+
+
 var isString = function(value) {
-    return typeof value == "string";
+    return varType(value) === 0;
 };
 
 
@@ -399,7 +443,7 @@ var isString = function(value) {
  * @returns {[]}
  */
 var toArray = function(list) {
-    if (list && !isUndefined(list.length) && !isString(list)) {
+    if (list && !list.length != undf && !isString(list)) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
     }
@@ -999,6 +1043,8 @@ var select = function() {
  * @returns {boolean}
  */
 var is = select.is;
+
+
 var getAnimationPrefixes = function(){
 
     var domPrefixes         = ['Moz', 'Webkit', 'ms', 'O', 'Khtml'],
@@ -1006,6 +1052,7 @@ var getAnimationPrefixes = function(){
         animationDuration   = "animationDuration",
         transitionDelay     = "transitionDelay",
         transitionDuration  = "transitionDuration",
+        transform           = "transform",
         prefixes            = null,
 
 
@@ -1016,18 +1063,19 @@ var getAnimationPrefixes = function(){
                 pfx,
                 i, len;
 
-            if (el.style['animationName'] !== undefined) {
+            if (el.style['animationName'] !== undf) {
                 animation = true;
             }
             else {
                 for(i = 0, len = domPrefixes.length; i < len; i++) {
                     pfx = domPrefixes[i];
-                    if (el.style[ pfx + 'AnimationName' ] !== undefined) {
+                    if (el.style[ pfx + 'AnimationName' ] !== undf) {
                         animation           = true;
                         animationDelay      = pfx + "AnimationDelay";
                         animationDuration   = pfx + "AnimationDuration";
                         transitionDelay     = pfx + "TransitionDelay";
                         transitionDuration  = pfx + "TransitionDuration";
+                        transform           = pfx + "Transform";
                         break;
                     }
                 }
@@ -1041,7 +1089,8 @@ var getAnimationPrefixes = function(){
             animationDelay: animationDelay,
             animationDuration: animationDuration,
             transitionDelay: transitionDelay,
-            transitionDuration: transitionDuration
+            transitionDuration: transitionDuration,
+            transform: transform
         };
     }
 
@@ -1106,7 +1155,7 @@ var getAnimationDuration = function(){
 
 
 var isFunction = function(value) {
-    return typeof value === 'function';
+    return typeof value == 'function';
 };
 
 
@@ -1120,11 +1169,16 @@ var stopAnimation = function(el) {
     if (isArray(queue) && queue.length) {
         current = queue[0];
 
-        if (current && current.stages) {
-            position = current.position;
-            stages = current.stages;
-            removeClass(el, stages[position]);
-            removeClass(el, stages[position] + "-active");
+        if (current) {
+            if (current.stages) {
+                position = current.position;
+                stages = current.stages;
+                removeClass(el, stages[position]);
+                removeClass(el, stages[position] + "-active");
+            }
+            if (current.deferred) {
+                current.deferred.reject(current.el);
+            }
         }
     }
     else if (isFunction(queue)) {
@@ -1139,6 +1193,11 @@ var stopAnimation = function(el) {
 
 
 
+var isObject = function(value) {
+    return value !== null && typeof value == "object" && varType(value) > 2;
+};
+
+
 /**
  * Returns 'then' function or false
  * @param {*} any
@@ -1146,14 +1205,39 @@ var stopAnimation = function(el) {
  */
 var isThenable = function(any) {
     var then;
-    if (!any) {
-        return false;
-    }
-    if (!isObject(any) && !isFunction(any)) {
+    if (!any || (!isObject(any) && !isFunction(any))) {
         return false;
     }
     return isFunction((then = any.then)) ?
            then : false;
+};
+var strUndef = "undefined";/**
+ * @param {Function} fn
+ * @param {Object} context
+ * @param {[]} args
+ */
+var async = function(fn, context, args) {
+    setTimeout(function(){
+        fn.apply(context, args || []);
+    }, 0);
+};
+
+
+var error = function(e) {
+
+    var stack = e.stack || (new Error).stack;
+
+    if (typeof console != strUndef && console.log) {
+        async(function(){
+            console.log(e);
+            if (stack) {
+                console.log(stack);
+            }
+        });
+    }
+    else {
+        throw e;
+    }
 };
 
 
@@ -1248,19 +1332,29 @@ var Promise = function(){
             return new Promise(fn, fnScope);
         }
 
-        var self = this;
+        var self = this,
+            then;
 
         self._fulfills   = [];
         self._rejects    = [];
         self._dones      = [];
         self._fails      = [];
 
-        if (!isUndefined(fn)) {
+        if (arguments.length > 0) {
 
-            if (isThenable(fn) || !isFunction(fn)) {
-                self.resolve(fn);
+            if (then = isThenable(fn)) {
+                if (fn instanceof Promise) {
+                    fn.then(
+                        bind(self.resolve, self),
+                        bind(self.reject, self));
+                }
+                else {
+                    (new Promise(then, fn)).then(
+                        bind(self.resolve, self),
+                        bind(self.reject, self));
+                }
             }
-            else {
+            else if (isFunction(fn)) {
                 try {
                     fn.call(fnScope,
                             bind(self.resolve, self),
@@ -1269,6 +1363,9 @@ var Promise = function(){
                 catch (thrownError) {
                     self.reject(thrownError);
                 }
+            }
+            else {
+                self.resolve(fn);
             }
         }
     };
@@ -1514,7 +1611,12 @@ var Promise = function(){
                 cb;
 
             while (cb = cbs.shift()) {
-                cb[0].call(cb[1] || null, self._value);
+                try {
+                    cb[0].call(cb[1] || null, self._value);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
         },
 
@@ -1544,7 +1646,12 @@ var Promise = function(){
                 cb;
 
             while (cb = cbs.shift()) {
-                cb[0].call(cb[1] || null, self._reason);
+                try {
+                    cb[0].call(cb[1] || null, self._reason);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
         },
 
@@ -1621,12 +1728,19 @@ var Promise = function(){
         }
     };
 
+
+    Promise.fcall = function(fn, context, args) {
+        return Promise.resolve(fn.apply(context, args || []));
+    };
+
     /**
      * @param {*} value
      * @returns {Promise}
      */
     Promise.resolve = function(value) {
-        return new Promise(value);
+        var p = new Promise;
+        p.resolve(value);
+        return p;
     };
 
 
@@ -1783,10 +1897,144 @@ var Promise = function(){
         return p;
     };
 
+    /**
+     * @param {[]} functions -- array of promises or resolve values or functions
+     * @returns {Promise}
+     */
+    Promise.waterfall = function(functions) {
+
+        if (!functions.length) {
+            return Promise.resolve(null);
+        }
+
+        var promise = Promise.fcall(functions.shift()),
+            fn;
+
+        while (fn = functions.shift()) {
+            if (isThenable(fn)) {
+                promise = promise.then(function(fn){
+                    return function(){
+                        return fn;
+                    };
+                }(fn));
+            }
+            else {
+                promise = promise.then(fn);
+            }
+        }
+
+        return promise;
+    };
+
     return Promise;
 }();
 
 
+
+
+var getScrollTop = function() {
+    if(window.pageYOffset !== undf) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageYOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientHeight) {
+            return function() {
+                return D.scrollTop;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollTop;
+            };
+        }
+    }
+}();
+
+
+var getScrollLeft = function() {
+    if(window.pageXOffset !== undf) {
+        //most browsers except IE before #9
+        return function(){
+            return window.pageXOffset;
+        };
+    }
+    else{
+        var B = document.body; //IE 'quirks'
+        var D = document.documentElement; //IE with doctype
+        if (D.clientWidth) {
+            return function() {
+                return D.scrollLeft;
+            };
+        }
+        else {
+            return function() {
+                return B.scrollLeft;
+            };
+        }
+    }
+}();
+
+
+var getElemRect = function(el) {
+
+    var rect,
+        st = getScrollTop(),
+        sl = getScrollLeft(),
+        bcr;
+
+    if (el === window) {
+
+        var doc = document.documentElement;
+
+        rect = {
+            left: 0,
+            right: doc.clientWidth,
+            top: st,
+            bottom: doc.clientHeight + st,
+            width: doc.clientWidth,
+            height: doc.clientHeight
+        };
+    }
+    else {
+        if (el.getBoundingClientRect) {
+            bcr = el.getBoundingClientRect();
+            rect = {
+                left: bcr.left + sl,
+                top: bcr.top + st,
+                right: bcr.right + sl,
+                bottom: bcr.bottom + st
+            };
+
+            rect.width = rect.right - rect.left;
+            rect.height = rect.bottom - rect.top;
+        }
+        else {
+            rect = {
+                left: el.offsetLeft + sl,
+                top: el.offsetTop + st,
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                right: 0,
+                bottom: 0
+            };
+        }
+    }
+
+    rect.getCenter = function() {
+        return this.width / 2;
+    };
+
+    rect.getCenterX = function() {
+        return this.left + this.width / 2;
+    };
+
+    return rect;
+};
 
 
 
@@ -1802,10 +2050,12 @@ var animate = function(){
 
         animId          = 0,
 
-        cssAnimations   = !!getAnimationPrefixes(),
+        prefixes        = getAnimationPrefixes(),
+
+        cssAnimations   = !!prefixes,
 
         animFrame       = window.requestAnimationFrame ? window.requestAnimationFrame : function(cb) {
-            window.setTimeout(cb, 0);
+            setTimeout(cb, 0);
         },
 
         dataParam       = "mjsAnimationQueue",
@@ -1830,14 +2080,15 @@ var animate = function(){
                 next;
             if (queue.length) {
                 next = queue[0];
-                animationStage(next.el, next.stages, 0, next.start, next.deferred, false, next.id);
+                animationStage(next.el, next.stages, 0, next.start, next.deferred, false, next.id, next.step);
             }
             else {
                 data(el, dataParam, null);
             }
         },
 
-        animationStage  = function animationStage(el, stages, position, startCallback, deferred, first, id) {
+        animationStage  = function animationStage(el, stages, position, startCallback,
+                                                  deferred, first, id, stepCallback) {
 
             var stopped   = function() {
                 var q = data(el, dataParam);
@@ -1865,7 +2116,7 @@ var animate = function(){
                 }
                 else {
                     data(el, dataParam)[0].position = position;
-                    animationStage(el, stages, position, null, deferred);
+                    animationStage(el, stages, position, null, deferred, false, id, stepCallback);
                 }
 
                 removeClass(el, stages[thisPosition]);
@@ -1879,6 +2130,8 @@ var animate = function(){
                 }
 
                 addClass(el, stages[position] + "-active");
+
+                stepCallback && stepCallback(el, position, "active");
 
                 var duration = getAnimationDuration(el);
 
@@ -1898,6 +2151,8 @@ var animate = function(){
 
                 addClass(el, stages[position]);
 
+                stepCallback && stepCallback(el, position, "start");
+
                 var promise;
 
                 if (startCallback) {
@@ -1913,11 +2168,13 @@ var animate = function(){
                 }
             };
 
+
+
             first ? animFrame(start) : start();
         };
 
 
-    var animate = function animate(el, animation, startCallback, checkIfEnabled, namespace) {
+    var animate = function animate(el, animation, startCallback, checkIfEnabled, namespace, stepCallback) {
 
         var deferred    = new Promise,
             queue       = data(el, dataParam) || [],
@@ -1977,6 +2234,7 @@ var animate = function(){
                     el: el,
                     stages: stages,
                     start: startCallback,
+                    step: stepCallback,
                     deferred: deferred,
                     position: 0,
                     id: id
@@ -1984,7 +2242,7 @@ var animate = function(){
                 data(el, dataParam, queue);
 
                 if (queue.length == 1) {
-                    animationStage(el, stages, 0, startCallback, deferred, true, id);
+                    animationStage(el, stages, 0, startCallback, deferred, true, id, stepCallback);
                 }
 
                 return deferred;
@@ -2056,6 +2314,8 @@ var animate = function(){
     };
 
     animate.stop = stopAnimation;
+    animate.prefixes = prefixes;
+    animate.cssAnimations = cssAnimations;
 
     return animate;
 }();
@@ -2075,23 +2335,14 @@ var trim = function() {
     return function(value) {
         return isString(value) ? value.trim() : value;
     };
-}();/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- */
-var async = function(fn, context, args) {
-    setTimeout(function(){
-        fn.apply(context, args || []);
-    }, 0);
-};
+}();
 
 var emptyFn = function(){};
 
 
 var parseJSON = function() {
 
-    return isUndefined(JSON) ?
+    return typeof JSON != strUndef ?
            function(data) {
                return JSON.parse(data);
            } :
@@ -2116,7 +2367,7 @@ var parseXML = function(data, type) {
         tmp = new DOMParser();
         xml = tmp.parseFromString(data, type || "text/xml");
     } catch (thrownError) {
-        xml = undefined;
+        xml = undf;
     }
 
     if (!xml || xml.getElementsByTagName("parsererror").length) {
@@ -2503,7 +2754,7 @@ var Event = function(name, returnResult) {
     self.uni            = '$$' + name + '_' + self.hash;
     self.suspended      = false;
     self.lid            = 0;
-    self.returnResult   = isUndefined(returnResult) ? null : returnResult; // first|last|all
+    self.returnResult   = returnResult === undf ? null : returnResult; // first|last|all
 };
 
 
@@ -3005,7 +3256,7 @@ var ajax = function(){
 
         httpSuccess     = function(r) {
             try {
-                return (!r.status && !isUndefined(location) && location.protocol == "file:")
+                return (!r.status && location && location.protocol == "file:")
                            || (r.status >= 200 && r.status < 300)
                            || r.status === 304 || r.status === 1223; // || r.status === 0;
             } catch(thrownError){}
@@ -3060,7 +3311,7 @@ var ajax = function(){
     var AJAX    = function(opt) {
 
         var self        = this,
-            href        = !isUndefined(window) ? window.location.href : "",
+            href        = window ? window.location.href : "",
             local       = rurl.exec(href.toLowerCase()) || [],
             parts       = rurl.exec(opt.url.toLowerCase());
 
@@ -3080,9 +3331,7 @@ var ajax = function(){
         }
         else if (opt.form) {
             self._form = opt.form;
-            if (opt.method == "POST" && (isUndefined(window) || !window.FormData) &&
-                opt.transport != "iframe") {
-
+            if (opt.method == "POST" && (!window || !window.FormData)) {
                 opt.transport = "iframe";
             }
         }
@@ -3200,10 +3449,10 @@ var ajax = function(){
 
             self._jsonpName = cbName;
 
-            if (!isUndefined(window)) {
+            if (window) {
                 window[cbName] = bind(self.jsonpCallback, self);
             }
-            if (!isUndefined(global)) {
+            if (global) {
                 global[cbName] = bind(self.jsonpCallback, self);
             }
 
@@ -3243,15 +3492,18 @@ var ajax = function(){
         processResponse: function(data, contentType) {
 
             var self        = this,
-                deferred    = self._deferred;
+                deferred    = self._deferred,
+                result;
 
             if (!self._opt.jsonp) {
                 try {
-                    deferred.resolve(self.processResponseData(data, contentType));
+                    result = self.processResponseData(data, contentType)
                 }
                 catch (thrownError) {
                     deferred.reject(thrownError);
                 }
+
+                deferred.resolve(result);
             }
             else {
                 if (!data) {
@@ -3294,10 +3546,10 @@ var ajax = function(){
             delete self._form;
 
             if (self._jsonpName) {
-                if (!isUndefined(window)) {
+                if (window) {
                     delete window[self._jsonpName];
                 }
-                if (!isUndefined(global)) {
+                if (global) {
                     delete global[self._jsonpName];
                 }
             }
@@ -3425,8 +3677,22 @@ var ajax = function(){
             addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.callbackScope));
         }
 
-        try {
-            var i;
+        xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+    };
+
+    XHRTransport.prototype = {
+
+        _xhr: null,
+        _deferred: null,
+        _ajax: null,
+
+        setHeaders: function() {
+
+            var self = this,
+                opt = self._opt,
+                xhr = self._xhr,
+                i;
+
             if (opt.xhrFields) {
                 for (i in opt.xhrFields) {
                     xhr[i] = opt.xhrFields[i];
@@ -3444,16 +3710,8 @@ var ajax = function(){
             for (i in opt.headers) {
                 xhr.setRequestHeader(i, opt.headers[i]);
             }
-        } catch(thrownError){}
 
-        xhr.onreadystatechange = bind(self.onReadyStateChange, self);
-    };
-
-    XHRTransport.prototype = {
-
-        _xhr: null,
-        _deferred: null,
-        _ajax: null,
+        },
 
         onReadyStateChange: function() {
 
@@ -3473,7 +3731,7 @@ var ajax = function(){
                 if (httpSuccess(xhr)) {
 
                     self._ajax.processResponse(
-                        isString(xhr.responseText) ? xhr.responseText : undefined,
+                        isString(xhr.responseText) ? xhr.responseText : undf,
                         xhr.getResponseHeader("content-type") || ''
                     );
                 }
@@ -3496,6 +3754,7 @@ var ajax = function(){
 
             try {
                 self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
+                self.setHeaders();
                 self._xhr.send(opt.data);
             }
             catch (thrownError) {
@@ -3679,113 +3938,13 @@ var ajax = function(){
 
 
 
+
+
+var isNumber = function(value) {
+    return varType(value) === 1;
+};
 var ucfirst = function(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
-};
-
-
-var getScrollTop = function() {
-    if(!isUndefined(window.pageYOffset)) {
-        //most browsers except IE before #9
-        return function(){
-            return window.pageYOffset;
-        };
-    }
-    else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientHeight) {
-            return function() {
-                return D.scrollTop;
-            };
-        }
-        else {
-            return function() {
-                return B.scrollTop;
-            };
-        }
-    }
-}();
-
-var getScrollLeft = function() {
-    if(!isUndefined(window.pageXOffset)) {
-        //most browsers except IE before #9
-        return function(){
-            return window.pageXOffset;
-        };
-    }
-    else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientWidth) {
-            return function() {
-                return D.scrollLeft;
-            };
-        }
-        else {
-            return function() {
-                return B.scrollLeft;
-            };
-        }
-    }
-}();
-
-
-var getElemRect = function(el) {
-
-    var rect,
-        st = getScrollTop(),
-        sl = getScrollLeft(),
-        bcr;
-
-    if (el === window) {
-
-        var doc = document.documentElement;
-
-        rect = {
-            left: 0,
-            right: doc.clientWidth,
-            top: st,
-            bottom: doc.clientHeight + st,
-            width: doc.clientWidth,
-            height: doc.clientHeight
-        };
-    }
-    else {
-        if (el.getBoundingClientRect) {
-            bcr = el.getBoundingClientRect();
-            rect = {
-                left: bcr.left + sl,
-                top: bcr.top + st,
-                right: bcr.right + sl,
-                bottom: bcr.bottom + st
-            };
-
-            rect.width = rect.right - rect.left;
-            rect.height = rect.bottom - rect.top;
-        }
-        else {
-            var style = el.style;
-            rect = {
-                left: (parseInt(style.left, 10) || 0) + sl,
-                top: (parseInt(style.top, 10) || 0) + st,
-                width: el.offsetWidth,
-                height: el.offsetHeight,
-                right: 0,
-                bottom: 0
-            };
-        }
-    }
-
-    rect.getCenter = function() {
-        return this.width / 2;
-    };
-
-    rect.getCenterX = function() {
-        return this.left + this.width / 2;
-    };
-
-    return rect;
 };
 
 
@@ -4233,7 +4392,7 @@ var Dialog = function(){
             var value   = options[level1],
                 yes     = false;
 
-            if (isUndefined(value)) {
+            if (value === undf) {
                 return;
             }
 
@@ -5779,13 +5938,13 @@ var Dialog = function(){
 
                 if (pos) {
 
-                    if (pos.x != undefined) {
+                    if (pos.x != undf) {
                         css(elem, {left: pos.x+"px"});
                     }
-                    if (pos.y != undefined) {
+                    if (pos.y != undf) {
                         css(elem, {top: pos.y+"px"});
                     }
-                    if (pos.x == undefined && pos.y == undefined) {
+                    if (pos.x == undf && pos.y == undf) {
                         css(elem, pos);
                     }
                 }
@@ -7045,6 +7204,58 @@ var Dialog = function(){
 
 }();
 
+
+
+/**
+ * @param {Function} fn
+ */
+var onReady = function(fn) {
+
+    var done    = false,
+        top     = true,
+        win     = window,
+        doc     = win.document,
+        root    = doc.documentElement,
+
+        init    = function(e) {
+            if (e.type == 'readystatechange' && doc.readyState != 'complete') {
+                return;
+            }
+
+            removeListener(e.type == 'load' ? win : doc, e.type, init);
+
+            if (!done && (done = true)) {
+                fn.call(win, e.type || e);
+            }
+        },
+
+        poll = function() {
+            try {
+                root.doScroll('left');
+            } catch(thrownError) {
+                setTimeout(poll, 50);
+                return;
+            }
+
+            init('poll');
+        };
+
+    if (doc.readyState == 'complete') {
+        fn.call(win, 'lazy');
+    }
+    else {
+        if (doc.createEventObject && root.doScroll) {
+            try {
+                top = !win.frameElement;
+            } catch(thrownError) {}
+
+            top && poll();
+        }
+        addListener(doc, 'DOMContentLoaded', init);
+        addListener(doc, 'readystatechange', init);
+        addListener(win, 'load', init);
+    }
+};
 /**
  * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
  * @function jQuery.fn.metaphorjsTooltip
@@ -7109,6 +7320,7 @@ if (window.jQuery) {
 }
 
 MetaphorJs.lib['Dialog'] = Dialog;
+MetaphorJs['onReady'] = onReady;
 
 typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJs) : (window['MetaphorJs'] = MetaphorJs);
 

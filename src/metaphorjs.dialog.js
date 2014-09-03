@@ -22,7 +22,7 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     isString        = require("../../metaphorjs/src/func/isString.js"),
     isFunction      = require("../../metaphorjs/src/func/isFunction.js"),
     isNumber        = require("../../metaphorjs/src/func/isNumber.js"),
-    isUndefined     = require("../../metaphorjs/src/func/isUndefined.js"),
+    undf            = require("../../metaphorjs/src/var/undf.js"),
     isBool          = require("../../metaphorjs/src/func/isBool.js"),
 
     ucfirst         = require("../../metaphorjs/src/func/ucfirst.js"),
@@ -430,7 +430,7 @@ module.exports = function(){
             var value   = options[level1],
                 yes     = false;
 
-            if (isUndefined(value)) {
+            if (value === undf) {
                 return;
             }
 
@@ -1976,13 +1976,13 @@ module.exports = function(){
 
                 if (pos) {
 
-                    if (pos.x != undefined) {
+                    if (pos.x != undf) {
                         css(elem, {left: pos.x+"px"});
                     }
-                    if (pos.y != undefined) {
+                    if (pos.y != undf) {
                         css(elem, {top: pos.y+"px"});
                     }
-                    if (pos.x == undefined && pos.y == undefined) {
+                    if (pos.x == undf && pos.y == undf) {
                         css(elem, pos);
                     }
                 }
