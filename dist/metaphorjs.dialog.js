@@ -60,7 +60,7 @@ var varType = function(){
         }
 
         if (num == 1 && isNaN(val)) {
-            num = 8;
+            return 8;
         }
 
         return num;
@@ -70,12 +70,13 @@ var varType = function(){
 
 
 var isPlainObject = function(value) {
-    return varType(value) === 3;
+    // IE < 9 returns [object Object] from toString(htmlElement)
+    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
 };
 
 
 var isBool = function(value) {
-    return varType(value) === 2;
+    return value === true || value === false;
 };
 var isNull = function(value) {
     return value === null;
@@ -90,61 +91,64 @@ var isNull = function(value) {
  * @param {boolean} deep = false
  * @returns {*}
  */
-var extend = function extend() {
+var extend = function(){
+
+    var extend = function extend() {
 
 
-    var override    = false,
-        deep        = false,
-        args        = slice.call(arguments),
-        dst         = args.shift(),
-        src,
-        k,
-        value;
+        var override    = false,
+            deep        = false,
+            args        = slice.call(arguments),
+            dst         = args.shift(),
+            src,
+            k,
+            value;
 
-    if (isBool(args[args.length - 1])) {
-        override    = args.pop();
-    }
-    if (isBool(args[args.length - 1])) {
-        deep        = override;
-        override    = args.pop();
-    }
+        if (isBool(args[args.length - 1])) {
+            override    = args.pop();
+        }
+        if (isBool(args[args.length - 1])) {
+            deep        = override;
+            override    = args.pop();
+        }
 
-    while (args.length) {
-        if (src = args.shift()) {
-            for (k in src) {
+        while (args.length) {
+            if (src = args.shift()) {
+                for (k in src) {
 
-                if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
+                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
-                    if (deep) {
-                        if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                            extend(dst[k], value, override, deep);
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                if (isPlainObject(value)) {
-                                    dst[k] = {};
-                                    extend(dst[k], value, override, true);
-                                }
-                                else {
-                                    dst[k] = value;
+                        if (deep) {
+                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                                extend(dst[k], value, override, deep);
+                            }
+                            else {
+                                if (override === true || dst[k] == undf) { // == checks for null and undefined
+                                    if (isPlainObject(value)) {
+                                        dst[k] = {};
+                                        extend(dst[k], value, override, true);
+                                    }
+                                    else {
+                                        dst[k] = value;
+                                    }
                                 }
                             }
                         }
-                    }
-                    else {
-                        if (override === true || dst[k] == undf) {
-                            dst[k] = value;
+                        else {
+                            if (override === true || dst[k] == undf) {
+                                dst[k] = value;
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    return dst;
-};
+        return dst;
+    };
 
-
+    return extend;
+}();
 
 /**
  * @returns {String}
@@ -249,7 +253,7 @@ var removeClass = function(el, cls) {
  * @returns {boolean}
  */
 var isArray = function(value) {
-    return varType(value) === 5;
+    return typeof value == "object" && varType(value) === 5;
 };
 
 
@@ -434,7 +438,7 @@ var isVisible = function(el) {
 
 
 var isString = function(value) {
-    return varType(value) === 0;
+    return typeof value == "string" || varType(value) === 0;
 };
 
 
@@ -609,7 +613,7 @@ var select = function() {
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
             '': function (child, attr) {
-                return !!child.getAttribute(attr);
+                return child.getAttribute(attr) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
@@ -1194,7 +1198,11 @@ var stopAnimation = function(el) {
 
 
 var isObject = function(value) {
-    return value !== null && typeof value == "object" && varType(value) > 2;
+    if (value === null || typeof value != "object") {
+        return false;
+    }
+    var vt = varType(value);
+    return vt > 2 || vt == -1;
 };
 
 
@@ -1907,7 +1915,8 @@ var Promise = function(){
             return Promise.resolve(null);
         }
 
-        var promise = Promise.fcall(functions.shift()),
+        var first   = functions.shift(),
+            promise = isFunction(first) ? Promise.fcall(first) : Promise.resolve(fn),
             fn;
 
         while (fn = functions.shift()) {
@@ -1918,10 +1927,27 @@ var Promise = function(){
                     };
                 }(fn));
             }
-            else {
+            else if (isFunction(fn)) {
                 promise = promise.then(fn);
             }
+            else {
+                promise.resolve(fn);
+            }
         }
+
+        return promise;
+    };
+
+    Promise.counter = function(cnt) {
+
+        var promise     = new Promise;
+
+        promise.countdown = function() {
+            cnt--;
+            if (cnt == 0) {
+                promise.resolve();
+            }
+        };
 
         return promise;
     };
@@ -2037,6 +2063,13 @@ var getElemRect = function(el) {
 };
 
 
+var animFrame = function(){
+
+    return typeof window != strUndef && window.requestAnimationFrame ?
+           window.requestAnimationFrame : async;
+}();
+
+
 
 var animate = function(){
 
@@ -2053,10 +2086,6 @@ var animate = function(){
         prefixes        = getAnimationPrefixes(),
 
         cssAnimations   = !!prefixes,
-
-        animFrame       = window.requestAnimationFrame ? window.requestAnimationFrame : function(cb) {
-            setTimeout(cb, 0);
-        },
 
         dataParam       = "mjsAnimationQueue",
 
@@ -2125,46 +2154,42 @@ var animate = function(){
 
             var setStage = function() {
 
-                if (stopped()) {
-                    return;
+                if (!stopped()) {
+                    addClass(el, stages[position] + "-active");
+
+                    Promise.resolve(stepCallback && stepCallback(el, position, "active"))
+                        .done(function(){
+                            if (!stopped()) {
+
+                                var duration = getAnimationDuration(el);
+
+                                if (duration) {
+                                    callTimeout(finishStage, (new Date).getTime(), duration);
+                                }
+                                else {
+                                    animFrame(finishStage);
+                                    //finishStage();
+                                }
+                            }
+                        });
                 }
 
-                addClass(el, stages[position] + "-active");
-
-                stepCallback && stepCallback(el, position, "active");
-
-                var duration = getAnimationDuration(el);
-
-                if (duration) {
-                    callTimeout(finishStage, (new Date).getTime(), duration);
-                }
-                else {
-                    finishStage();
-                }
             };
 
             var start = function(){
 
-                if (stopped()) {
-                    return;
-                }
+                if (!stopped()) {
+                    addClass(el, stages[position]);
 
-                addClass(el, stages[position]);
-
-                stepCallback && stepCallback(el, position, "start");
-
-                var promise;
-
-                if (startCallback) {
-                    promise = startCallback(el);
-                    startCallback = null;
-                }
-
-                if (isThenable(promise)) {
-                    promise.done(setStage);
-                }
-                else {
-                    animFrame(setStage);
+                    Promise.waterfall([
+                            stepCallback && stepCallback(el, position, "start"),
+                            function(){
+                                return startCallback ? startCallback(el) : null;
+                            }
+                        ])
+                        .done(function(){
+                            !stopped() && animFrame(setStage);
+                        });
                 }
             };
 
@@ -3056,6 +3081,12 @@ Event.prototype = {
 
 
 
+var isPrimitive = function(value) {
+    var vt = varType(value);
+    return vt < 3 && vt > -1;
+};
+
+
 
 
 /*
@@ -3076,14 +3107,12 @@ var ajax = function(){
 
         rgethead    = /^(?:GET|HEAD)$/i,
 
-        jsonpCb     = 0,
-
         buildParams     = function(data, params, name) {
 
             var i, len;
 
-            if (isString(data) && name) {
-                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(data));
+            if (isPrimitive(data) && name) {
+                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(""+data));
             }
             else if (isArray(data) && name) {
                 for (i = 0, len = data.length; i < len; i++) {
@@ -3121,7 +3150,9 @@ var ajax = function(){
             }
 
             if (opt.data && (!window.FormData || !(opt.data instanceof window.FormData))) {
+
                 opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
+
                 if (rgethead.test(opt.method)) {
                     url += (rquery.test(url) ? "&" : "?") + opt.data;
                     opt.data = null;
@@ -3317,10 +3348,12 @@ var ajax = function(){
 
         self._opt       = opt;
 
-        opt.crossDomain = !!(parts &&
-                             (parts[1] !== local[1] || parts[2] !== local[2] ||
-                              (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
-                              (local[3] || (local[1] === "http:" ? "80" : "443"))));
+        if (opt.crossDomain !== true) {
+            opt.crossDomain = !!(parts &&
+                                 (parts[1] !== local[1] || parts[2] !== local[2] ||
+                                  (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
+                                  (local[3] || (local[1] === "http:" ? "80" : "443"))));
+        }
 
         var deferred    = new Promise,
             transport;
@@ -3443,16 +3476,16 @@ var ajax = function(){
             var self        = this,
                 opt         = self._opt,
                 paramName   = opt.jsonpParam || "callback",
-                cbName      = opt.jsonpCallback || "jsonp_" + (++jsonpCb);
+                cbName      = opt.jsonpCallback || "jsonp_" + nextUid();
 
             opt.url += (rquery.test(opt.url) ? "&" : "?") + paramName + "=" + cbName;
 
             self._jsonpName = cbName;
 
-            if (window) {
+            if (typeof window != strUndef) {
                 window[cbName] = bind(self.jsonpCallback, self);
             }
-            if (global) {
+            if (typeof global != strUndef) {
                 global[cbName] = bind(self.jsonpCallback, self);
             }
 
@@ -3461,13 +3494,23 @@ var ajax = function(){
 
         jsonpCallback: function(data) {
 
-            var self    = this;
+            var self    = this,
+                res;
 
             try {
-                self._deferred.resolve(self.processResponseData(data));
+                res = self.processResponseData(data);
             }
             catch (thrownError) {
-                self._deferred.reject(thrownError);
+                if (self._deferred) {
+                    self._deferred.reject(thrownError);
+                }
+                else {
+                    error(thrownError);
+                }
+            }
+
+            if (self._deferred) {
+                self._deferred.resolve(res);
             }
         },
 
@@ -3546,10 +3589,10 @@ var ajax = function(){
             delete self._form;
 
             if (self._jsonpName) {
-                if (window) {
+                if (typeof window != strUndef) {
                     delete window[self._jsonpName];
                 }
-                if (global) {
+                if (typeof global != strUndef) {
                     delete global[self._jsonpName];
                 }
             }
@@ -3867,7 +3910,7 @@ var ajax = function(){
 
             var self    = this,
                 frame   = document.createElement("iframe"),
-                id      = "frame-" + (++jsonpCb),
+                id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
             frame.setAttribute("id", id);

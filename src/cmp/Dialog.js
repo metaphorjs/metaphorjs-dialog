@@ -11,6 +11,7 @@ defineClass("MetaphorJs.cmp.Dialog", "MetaphorJs.cmp.Component", {
 
     initComponent: function() {
 
+
         var self    = this;
 
         self.supr();
@@ -23,7 +24,7 @@ defineClass("MetaphorJs.cmp.Dialog", "MetaphorJs.cmp.Component", {
 
         var self    = this;
 
-        return extend({}, self.dialogCfg || {}, {
+        return extend({}, self.dialogCfg, {
             render: {
                 el: self.node,
                 keepInDOM: true
