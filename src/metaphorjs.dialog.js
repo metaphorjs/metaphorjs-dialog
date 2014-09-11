@@ -7,6 +7,7 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     removeClass     = require("../../metaphorjs/src/func/dom/removeClass.js"),
     isArray         = require("../../metaphorjs/src/func/isArray.js"),
     data            = require("../../metaphorjs/src/func/dom/data.js"),
+    attr            = require("../../metaphorjs/src/func/dom/attr.js"),
     addListener     = require("../../metaphorjs/src/func/event/addListener.js"),
     removeListener  = require("../../metaphorjs/src/func/event/removeListener.js"),
     normalizeEvent  = require("../../metaphorjs/src/func/event/normalizeEvent.js"),
@@ -2091,12 +2092,12 @@ module.exports = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = el.getAttribute(cfg.content.attr);
+                        content = attr(el, cfg.content.attr);
                     }
                     else {
-                        content = el.getAttribute('tooltip') ||
-                                  el.getAttribute('title') ||
-                                  el.getAttribute('alt');
+                        content = attr(el, 'tooltip') ||
+                                  attr(el, 'title') ||
+                                  attr(el, 'alt');
                     }
                 }
 
@@ -2651,7 +2652,7 @@ module.exports = function(){
                 }
 
                 if (rnd.id) {
-                    elem.setAttribute('id', rnd.id);
+                    attr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -2791,11 +2792,11 @@ module.exports = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", trg.getAttribute("title"));
-                        trg.removeAttribute('title');
+                        data(trg, "tmp-title", attr(trg, "title"));
+                        attr(trg, 'title', null);
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        trg.setAttribute("title", title);
+                        attr(trg, "title", title);
                     }
                 }
             },
@@ -3207,7 +3208,7 @@ module.exports = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = cfg.target.getAttribute("href");
+            var href = attr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }

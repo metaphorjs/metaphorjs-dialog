@@ -287,6 +287,22 @@ var data = function(){
     };
 
 }();
+
+
+var attr = function(el, name, value) {
+    if (!el || !el.getAttribute) {
+        return null;
+    }
+    if (value === undf) {
+        return el.getAttribute(name);
+    }
+    else if (value === null) {
+        return el.removeAttribute(name);
+    }
+    else {
+        return el.setAttribute(name, value);
+    }
+};
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -612,56 +628,65 @@ var select = function() {
 
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
-            '': function (child, attr) {
-                return child.getAttribute(attr) !== null;
+            '': function (child, name) {
+                return attr(child, name) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
              exactly equal to "value"
              */
-            '=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr)) && attr === value;
+            '=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name)) && attrValue === value;
             },
             /*
              from w3.prg "an E element whose "attr" attribute value is
              a list of space-separated values, one of which is exactly
              equal to "value"
              */
-            '&=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr)) && getAttrReg(value).test(attr);
+            '&=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name)) && getAttrReg(value).test(attrValue);
             },
             /*
              from w3.prg "an E element whose "attr" attribute value
              begins exactly with the string "value"
              */
-            '^=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && !attr.indexOf(value);
+            '^=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') && !attrValue.indexOf(value);
             },
             /*
              W3C "an E element whose "attr" attribute value
              ends exactly with the string "value"
              */
-            '$=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && attr.indexOf(value) == attr.length - value.length;
+            '$=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') &&
+                       attrValue.indexOf(value) == attrValue.length - value.length;
             },
             /*
              W3C "an E element whose "attr" attribute value
              contains the substring "value"
              */
-            '*=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && attr.indexOf(value) != -1;
+            '*=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') && attrValue.indexOf(value) != -1;
             },
             /*
              W3C "an E element whose "attr" attribute has
              a hyphen-separated list of values beginning (from the
              left) with "value"
              */
-            '|=': function (child, attr, value) {
-                return (attr = child.getAttribute(attr) + '') && (attr === value || !!attr.indexOf(value + '-'));
+            '|=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = attr(child, name) + '') &&
+                       (attrValue === value || !!attrValue.indexOf(value + '-'));
             },
             /* attr doesn't contain given value */
-            '!=': function (child, attr, value) {
-                return !(attr = child.getAttribute(attr)) || !getAttrReg(value).test(attr);
+            '!=': function (child, name, value) {
+                var attrValue;
+                return !(attrValue = attr(child, name)) || !getAttrReg(value).test(attrValue);
             }
         };
 
@@ -676,7 +701,7 @@ var select = function() {
             qsaErr  = null,
             idx, cls, nodes,
             i, node, ind, mod,
-            attrs, attr, eql, value;
+            attrs, attrName, eql, value;
 
         if (qsa) {
             /* replace not quoted args with quoted one -- Safari doesn't understand either */
@@ -764,14 +789,14 @@ var select = function() {
                         nodes   = root.getElementsByTagName('*');
                         i       = 0;
                         attrs   = rGetSquare.exec(selector);
-                        attr    = attrs[1];
+                        attrName    = attrs[1];
                         eql     = attrs[2] || '';
                         value   = attrs[3];
 
                         while (node = nodes[i++]) {
                             /* check either attr is defined for given node or it's equal to given value */
-                            if (attrMods[eql] && (attrMods[eql](node, attr, value) ||
-                                                  (attr === 'class' && attrMods[eql](node, 'className', value)))) {
+                            if (attrMods[eql] && (attrMods[eql](node, attrName, value) ||
+                                                  (attrName === 'class' && attrMods[eql](node, 'className', value)))) {
                                 sets[idx++] = node;
                             }
                         }
@@ -838,7 +863,7 @@ var select = function() {
                             tag     = single[1] || '*';
                             id      = single[2];
                             klass   = single[3] ? ' ' + single[3] + ' ' : '';
-                            attr    = single[4];
+                            attrName    = single[4];
                             eql     = single[5] || '';
                             mod     = single[7];
 
@@ -889,9 +914,9 @@ var select = function() {
                                              */
                                             if ((!id || item.id === id) &&
                                                 (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
 
@@ -917,9 +942,9 @@ var select = function() {
                                                 (tag === '*' || child.nodeName.toLowerCase() === tag) &&
                                                 (!id || child.id === id) &&
                                                 (!klass || (' ' + child.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !child.yeasss &&
                                                 !(mods[mod] ? mods[mod](child, ind) : mod)) {
@@ -939,9 +964,9 @@ var select = function() {
                                             (child.nodeName.toLowerCase() === tag.toLowerCase() || tag === '*') &&
                                             (!id || child.id === id) &&
                                             (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                            (!attr ||
-                                             (attrMods[eql] && (attrMods[eql](item, attr, single[6]) ||
-                                                                (attr === 'class' &&
+                                            (!attrName ||
+                                             (attrMods[eql] && (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
                                                                  attrMods[eql](item, 'className', single[6]))))) &&
                                             !child.yeasss && !(mods[mod] ? mods[mod](child, ind) : mod)) {
 
@@ -960,9 +985,9 @@ var select = function() {
                                             if (item.parentNode === child &&
                                                 (!id || item.id === id) &&
                                                 (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attr || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attr, single[6]) ||
-                                                            (attr === 'class' &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
                                                              attrMods[eql](item, 'className', single[6]))))) &&
                                                 !item.yeasss &&
                                                 !(mods[mod] ? mods[mod](item, ind) : mod)) {
@@ -1958,52 +1983,52 @@ var Promise = function(){
 
 
 
-var getScrollTop = function() {
-    if(window.pageYOffset !== undf) {
+var getScrollTopOrLeft = function(vertical) {
+
+    var defaultST,
+        wProp = vertical ? "pageYOffset" : "pageXOffset",
+        sProp = vertical ? "scrollTop" : "scrollLeft",
+        doc = document,
+        body = doc.body,
+        html = doc.documentElement;
+
+    if(window[wProp] !== undf) {
         //most browsers except IE before #9
-        return function(){
-            return window.pageYOffset;
+        defaultST = function(){
+            return window[wProp];
         };
     }
     else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientHeight) {
-            return function() {
-                return D.scrollTop;
+        if (html.clientHeight) {
+            defaultST = function() {
+                return html[sProp];
             };
         }
         else {
-            return function() {
-                return B.scrollTop;
+            defaultST = function() {
+                return body[sProp];
             };
         }
     }
-}();
 
+    return function(node) {
+        if (node && node.nodeType == 1 &&
+            node !== body && node !== html) {
 
-var getScrollLeft = function() {
-    if(window.pageXOffset !== undf) {
-        //most browsers except IE before #9
-        return function(){
-            return window.pageXOffset;
-        };
-    }
-    else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientWidth) {
-            return function() {
-                return D.scrollLeft;
-            };
+            return node[sProp];
         }
         else {
-            return function() {
-                return B.scrollLeft;
-            };
+            return defaultST();
         }
     }
-}();
+
+};
+
+
+var getScrollTop = getScrollTopOrLeft(true);
+
+
+var getScrollLeft = getScrollTopOrLeft(false);
 
 
 var getElemRect = function(el) {
@@ -2063,10 +2088,37 @@ var getElemRect = function(el) {
 };
 
 
-var animFrame = function(){
+var raf = function() {
 
-    return typeof window != strUndef && window.requestAnimationFrame ?
-           window.requestAnimationFrame : async;
+    var raf,
+        cancel;
+
+    if (typeof window != strUndef) {
+        var w   = window;
+        raf     = w.requestAnimationFrame ||
+                    w.webkitRequestAnimationFrame ||
+                    w.mozRequestAnimationFrame;
+        cancel  = w.cancelAnimationFrame ||
+                    w.webkitCancelAnimationFrame ||
+                    w.mozCancelAnimationFrame ||
+                    w.webkitCancelRequestAnimationFrame;
+
+        if (raf) {
+            return function(fn) {
+                var id = raf(fn);
+                return function() {
+                    cancel(id);
+                };
+            };
+        }
+    }
+
+    return function(fn) {
+        var id = setTimeout(fn, 0);
+        return function() {
+            clearTimeout(id);
+        }
+    };
 }();
 
 
@@ -2096,10 +2148,10 @@ var animate = function(){
                     fn();
                 }
                 else {
-                    animFrame(tick);
+                    raf(tick);
                 }
             };
-            animFrame(tick);
+            raf(tick);
         },
 
 
@@ -2167,7 +2219,7 @@ var animate = function(){
                                     callTimeout(finishStage, (new Date).getTime(), duration);
                                 }
                                 else {
-                                    animFrame(finishStage);
+                                    raf(finishStage);
                                     //finishStage();
                                 }
                             }
@@ -2188,14 +2240,14 @@ var animate = function(){
                             }
                         ])
                         .done(function(){
-                            !stopped() && animFrame(setStage);
+                            !stopped() && raf(setStage);
                         });
                 }
             };
 
 
 
-            first ? animFrame(start) : start();
+            first ? raf(start) : start();
         };
 
 
@@ -2204,16 +2256,16 @@ var animate = function(){
         var deferred    = new Promise,
             queue       = data(el, dataParam) || [],
             id          = ++animId,
-            attr        = el.getAttribute("mjs-animate"),
+            attrValue   = attr(el, "mjs-animate"),
             stages,
             jsFn,
             before, after,
             options, context,
             duration;
 
-        animation       = animation || attr;
+        animation       = animation || attrValue;
 
-        if (checkIfEnabled && isNull(attr)) {
+        if (checkIfEnabled && isNull(attrValue)) {
             animation   = null;
         }
 
@@ -3236,9 +3288,9 @@ var ajax = function(){
 
             if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
-                input.setAttribute("type", "hidden");
-                input.setAttribute("name", name);
-                input.setAttribute("value", data);
+                attr(input, "type", "hidden");
+                attr(input, "name", name);
+                attr(input, "value", data);
                 form.appendChild(input);
             }
             else if (isArray(data) && name) {
@@ -3264,12 +3316,12 @@ var ajax = function(){
 
                 oField = form.elements[nItem];
 
-                if (!oField.hasAttribute("name")) {
+                if (attr(oField, "name") === null) {
                     continue;
                 }
 
                 sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             oField.getAttribute("type").toUpperCase() : "TEXT";
+                             attr(oField, "type").toUpperCase() : "TEXT";
 
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
@@ -3461,7 +3513,7 @@ var ajax = function(){
                 form    = document.createElement("form");
 
             form.style.display = "none";
-            form.setAttribute("method", self._opt.method);
+            attr(form, "method", self._opt.method);
 
             data2form(self._opt.data, form, null);
 
@@ -3614,7 +3666,7 @@ var ajax = function(){
 
         if (!opt.url) {
             if (opt.form) {
-                opt.url = opt.form.getAttribute("action");
+                opt.url = attr(opt.form, "action");
             }
             if (!opt.url) {
                 throw "Must provide url";
@@ -3626,7 +3678,7 @@ var ajax = function(){
 
         if (!opt.method) {
             if (opt.form) {
-                opt.method = opt.form.getAttribute("method").toUpperCase() || "GET";
+                opt.method = attr(opt.form, "method").toUpperCase() || "GET";
             }
             else {
                 opt.method = "GET";
@@ -3842,9 +3894,9 @@ var ajax = function(){
             var self    = this,
                 script  = document.createElement("script");
 
-            script.setAttribute("async", "async");
-            script.setAttribute("charset", "utf-8");
-            script.setAttribute("src", self._opt.url);
+            attr(script, "async", "async");
+            attr(script, "charset", "utf-8");
+            attr(script, "src", self._opt.url);
 
             addListener(script, "load", bind(self.onLoad, self));
             addListener(script, "error", bind(self.onError, self));
@@ -3913,13 +3965,13 @@ var ajax = function(){
                 id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
-            frame.setAttribute("id", id);
-            frame.setAttribute("name", id);
+            attr(frame, "id", id);
+            attr(frame, "name", id);
             frame.style.display = "none";
             document.body.appendChild(frame);
 
-            form.setAttribute("action", self._opt.url);
-            form.setAttribute("target", id);
+            attr(form, "action", self._opt.url);
+            attr(form, "target", id);
 
             addListener(frame, "load", bind(self.onLoad, self));
             addListener(frame, "error", bind(self.onError, self));
@@ -6096,12 +6148,12 @@ var Dialog = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = el.getAttribute(cfg.content.attr);
+                        content = attr(el, cfg.content.attr);
                     }
                     else {
-                        content = el.getAttribute('tooltip') ||
-                                  el.getAttribute('title') ||
-                                  el.getAttribute('alt');
+                        content = attr(el, 'tooltip') ||
+                                  attr(el, 'title') ||
+                                  attr(el, 'alt');
                     }
                 }
 
@@ -6656,7 +6708,7 @@ var Dialog = function(){
                 }
 
                 if (rnd.id) {
-                    elem.setAttribute('id', rnd.id);
+                    attr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -6796,11 +6848,11 @@ var Dialog = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", trg.getAttribute("title"));
-                        trg.removeAttribute('title');
+                        data(trg, "tmp-title", attr(trg, "title"));
+                        attr(trg, 'title', null);
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        trg.setAttribute("title", title);
+                        attr(trg, "title", title);
                     }
                 }
             },
@@ -7212,7 +7264,7 @@ var Dialog = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = cfg.target.getAttribute("href");
+            var href = attr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }

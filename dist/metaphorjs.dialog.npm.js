@@ -284,6 +284,22 @@ var data = function(){
     };
 
 }();
+
+
+var attr = function(el, name, value) {
+    if (!el || !el.getAttribute) {
+        return null;
+    }
+    if (value === undf) {
+        return el.getAttribute(name);
+    }
+    else if (value === null) {
+        return el.removeAttribute(name);
+    }
+    else {
+        return el.setAttribute(name, value);
+    }
+};
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -458,52 +474,52 @@ var ucfirst = function(str) {
 };
 
 
-var getScrollTop = function() {
-    if(window.pageYOffset !== undf) {
+var getScrollTopOrLeft = function(vertical) {
+
+    var defaultST,
+        wProp = vertical ? "pageYOffset" : "pageXOffset",
+        sProp = vertical ? "scrollTop" : "scrollLeft",
+        doc = document,
+        body = doc.body,
+        html = doc.documentElement;
+
+    if(window[wProp] !== undf) {
         //most browsers except IE before #9
-        return function(){
-            return window.pageYOffset;
+        defaultST = function(){
+            return window[wProp];
         };
     }
     else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientHeight) {
-            return function() {
-                return D.scrollTop;
+        if (html.clientHeight) {
+            defaultST = function() {
+                return html[sProp];
             };
         }
         else {
-            return function() {
-                return B.scrollTop;
+            defaultST = function() {
+                return body[sProp];
             };
         }
     }
-}();
 
+    return function(node) {
+        if (node && node.nodeType == 1 &&
+            node !== body && node !== html) {
 
-var getScrollLeft = function() {
-    if(window.pageXOffset !== undf) {
-        //most browsers except IE before #9
-        return function(){
-            return window.pageXOffset;
-        };
-    }
-    else{
-        var B = document.body; //IE 'quirks'
-        var D = document.documentElement; //IE with doctype
-        if (D.clientWidth) {
-            return function() {
-                return D.scrollLeft;
-            };
+            return node[sProp];
         }
         else {
-            return function() {
-                return B.scrollLeft;
-            };
+            return defaultST();
         }
     }
-}();
+
+};
+
+
+var getScrollTop = getScrollTopOrLeft(true);
+
+
+var getScrollLeft = getScrollTopOrLeft(false);
 
 
 var getElemRect = function(el) {
@@ -2668,12 +2684,12 @@ module.exports = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = el.getAttribute(cfg.content.attr);
+                        content = attr(el, cfg.content.attr);
                     }
                     else {
-                        content = el.getAttribute('tooltip') ||
-                                  el.getAttribute('title') ||
-                                  el.getAttribute('alt');
+                        content = attr(el, 'tooltip') ||
+                                  attr(el, 'title') ||
+                                  attr(el, 'alt');
                     }
                 }
 
@@ -3228,7 +3244,7 @@ module.exports = function(){
                 }
 
                 if (rnd.id) {
-                    elem.setAttribute('id', rnd.id);
+                    attr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -3368,11 +3384,11 @@ module.exports = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", trg.getAttribute("title"));
-                        trg.removeAttribute('title');
+                        data(trg, "tmp-title", attr(trg, "title"));
+                        attr(trg, 'title', null);
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        trg.setAttribute("title", title);
+                        attr(trg, "title", title);
                     }
                 }
             },
@@ -3784,7 +3800,7 @@ module.exports = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = cfg.target.getAttribute("href");
+            var href = attr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }
