@@ -257,11 +257,7 @@ var isArray = function(value) {
 };
 
 
-/**
- * @param {Element} el
- * @param {String} key
- * @param {*} value optional
- */
+
 var data = function(){
 
     var dataCache   = {},
@@ -270,6 +266,11 @@ var data = function(){
             return el._mjsid || (el._mjsid = nextUid());
         };
 
+    /**
+     * @param {Element} el
+     * @param {String} key
+     * @param {*} value optional
+     */
     return function(el, key, value) {
         var id  = getNodeId(el),
             obj = dataCache[id];
@@ -287,21 +288,14 @@ var data = function(){
     };
 
 }();
-
-
-var attr = function(el, name, value) {
-    if (!el || !el.getAttribute) {
-        return null;
-    }
-    if (value === undf) {
-        return el.getAttribute(name);
-    }
-    else if (value === null) {
-        return el.removeAttribute(name);
-    }
-    else {
-        return el.setAttribute(name, value);
-    }
+var getAttr = function(el, name) {
+    return el.getAttribute(name);
+};
+var setAttr = function(el, name, value) {
+    return el.setAttribute(name, value);
+};
+var removeAttr = function(el, name) {
+    return el.removeAttribute(name);
 };
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
@@ -454,7 +448,8 @@ var isVisible = function(el) {
 
 
 var isString = function(value) {
-    return typeof value == "string" || varType(value) === 0;
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
 };
 
 
@@ -463,7 +458,7 @@ var isString = function(value) {
  * @returns {[]}
  */
 var toArray = function(list) {
-    if (list && !list.length != undf && !isString(list)) {
+    if (list && !list.length != undf && list !== ""+list) {
         for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
         return a;
     }
@@ -629,7 +624,7 @@ var select = function() {
         attrMods    = {
             /* W3C "an E element with a "attr" attribute" */
             '': function (child, name) {
-                return attr(child, name) !== null;
+                return getAttr(child, name) !== null;
             },
             /*
              W3C "an E element whose "attr" attribute value is
@@ -637,7 +632,7 @@ var select = function() {
              */
             '=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name)) && attrValue === value;
+                return (attrValue = getAttr(child, name)) && attrValue === value;
             },
             /*
              from w3.prg "an E element whose "attr" attribute value is
@@ -646,7 +641,7 @@ var select = function() {
              */
             '&=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name)) && getAttrReg(value).test(attrValue);
+                return (attrValue = getAttr(child, name)) && getAttrReg(value).test(attrValue);
             },
             /*
              from w3.prg "an E element whose "attr" attribute value
@@ -654,7 +649,7 @@ var select = function() {
              */
             '^=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') && !attrValue.indexOf(value);
+                return (attrValue = getAttr(child, name) + '') && !attrValue.indexOf(value);
             },
             /*
              W3C "an E element whose "attr" attribute value
@@ -662,7 +657,7 @@ var select = function() {
              */
             '$=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') &&
+                return (attrValue = getAttr(child, name) + '') &&
                        attrValue.indexOf(value) == attrValue.length - value.length;
             },
             /*
@@ -671,7 +666,7 @@ var select = function() {
              */
             '*=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') && attrValue.indexOf(value) != -1;
+                return (attrValue = getAttr(child, name) + '') && attrValue.indexOf(value) != -1;
             },
             /*
              W3C "an E element whose "attr" attribute has
@@ -680,13 +675,13 @@ var select = function() {
              */
             '|=': function (child, name, value) {
                 var attrValue;
-                return (attrValue = attr(child, name) + '') &&
+                return (attrValue = getAttr(child, name) + '') &&
                        (attrValue === value || !!attrValue.indexOf(value + '-'));
             },
             /* attr doesn't contain given value */
             '!=': function (child, name, value) {
                 var attrValue;
-                return !(attrValue = attr(child, name)) || !getAttrReg(value).test(attrValue);
+                return !(attrValue = getAttr(child, name)) || !getAttrReg(value).test(attrValue);
             }
         };
 
@@ -1082,6 +1077,7 @@ var getAnimationPrefixes = function(){
         transitionDelay     = "transitionDelay",
         transitionDuration  = "transitionDuration",
         transform           = "transform",
+        transitionend       = null,
         prefixes            = null,
 
 
@@ -1110,6 +1106,17 @@ var getAnimationPrefixes = function(){
                 }
             }
 
+            if (animation) {
+                if('ontransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'transitionend';
+                }
+                else if('onwebkittransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'webkitTransitionEnd';
+                }
+            }
+
             return animation;
         };
 
@@ -1119,7 +1126,8 @@ var getAnimationPrefixes = function(){
             animationDuration: animationDuration,
             transitionDelay: transitionDelay,
             transitionDuration: transitionDuration,
-            transform: transform
+            transform: transform,
+            transitionend: transitionend
         };
     }
 
@@ -1222,23 +1230,18 @@ var stopAnimation = function(el) {
 
 
 
-var isObject = function(value) {
-    if (value === null || typeof value != "object") {
-        return false;
-    }
-    var vt = varType(value);
-    return vt > 2 || vt == -1;
-};
-
-
 /**
  * Returns 'then' function or false
  * @param {*} any
  * @returns {Function|boolean}
  */
 var isThenable = function(any) {
-    var then;
-    if (!any || (!isObject(any) && !isFunction(any))) {
+    if (!any || !any.then) {
+        return false;
+    }
+    var then, t;
+    //if (!any || (!isObject(any) && !isFunction(any))) {
+    if (((t = typeof any) != "object" && t != "function")) {
         return false;
     }
     return isFunction((then = any.then)) ?
@@ -1248,11 +1251,12 @@ var strUndef = "undefined";/**
  * @param {Function} fn
  * @param {Object} context
  * @param {[]} args
+ * @param {number} timeout
  */
-var async = function(fn, context, args) {
+var async = function(fn, context, args, timeout) {
     setTimeout(function(){
         fn.apply(context, args || []);
-    }, 0);
+    }, timeout || 0);
 };
 
 
@@ -1663,7 +1667,12 @@ var Promise = function(){
                 state   = self._state;
 
             if (state == FULFILLED && self._wait == 0) {
-                fn.call(fnScope || null, self._value);
+                try {
+                    fn.call(fnScope || null, self._value);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
             else if (state == PENDING) {
                 self._dones.push([fn, fnScope]);
@@ -1699,7 +1708,12 @@ var Promise = function(){
                 state   = self._state;
 
             if (state == REJECTED && self._wait == 0) {
-                fn.call(fnScope || null, self._reason);
+                try {
+                    fn.call(fnScope || null, self._reason);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
             }
             else if (state == PENDING) {
                 self._fails.push([fn, fnScope]);
@@ -1983,111 +1997,6 @@ var Promise = function(){
 
 
 
-var getScrollTopOrLeft = function(vertical) {
-
-    var defaultST,
-        wProp = vertical ? "pageYOffset" : "pageXOffset",
-        sProp = vertical ? "scrollTop" : "scrollLeft",
-        doc = document,
-        body = doc.body,
-        html = doc.documentElement;
-
-    if(window[wProp] !== undf) {
-        //most browsers except IE before #9
-        defaultST = function(){
-            return window[wProp];
-        };
-    }
-    else{
-        if (html.clientHeight) {
-            defaultST = function() {
-                return html[sProp];
-            };
-        }
-        else {
-            defaultST = function() {
-                return body[sProp];
-            };
-        }
-    }
-
-    return function(node) {
-        if (node && node.nodeType == 1 &&
-            node !== body && node !== html) {
-
-            return node[sProp];
-        }
-        else {
-            return defaultST();
-        }
-    }
-
-};
-
-
-var getScrollTop = getScrollTopOrLeft(true);
-
-
-var getScrollLeft = getScrollTopOrLeft(false);
-
-
-var getElemRect = function(el) {
-
-    var rect,
-        st = getScrollTop(),
-        sl = getScrollLeft(),
-        bcr;
-
-    if (el === window) {
-
-        var doc = document.documentElement;
-
-        rect = {
-            left: 0,
-            right: doc.clientWidth,
-            top: st,
-            bottom: doc.clientHeight + st,
-            width: doc.clientWidth,
-            height: doc.clientHeight
-        };
-    }
-    else {
-        if (el.getBoundingClientRect) {
-            bcr = el.getBoundingClientRect();
-            rect = {
-                left: bcr.left + sl,
-                top: bcr.top + st,
-                right: bcr.right + sl,
-                bottom: bcr.bottom + st
-            };
-
-            rect.width = rect.right - rect.left;
-            rect.height = rect.bottom - rect.top;
-        }
-        else {
-            rect = {
-                left: el.offsetLeft + sl,
-                top: el.offsetTop + st,
-                width: el.offsetWidth,
-                height: el.offsetHeight,
-                right: 0,
-                bottom: 0
-            };
-        }
-    }
-
-    rect.getCenter = function() {
-        return this.width / 2;
-    };
-
-    rect.getCenterX = function() {
-        return this.left + this.width / 2;
-    };
-
-    return rect;
-};
-
-
 var raf = function() {
 
     var raf,
@@ -2124,6 +2033,7 @@ var raf = function() {
 
 
 var animate = function(){
+
 
     var types           = {
             "show":     ["mjs-show"],
@@ -2182,6 +2092,10 @@ var animate = function(){
 
             var finishStage = function() {
 
+                if (prefixes.transitionend) {
+                    removeListener(el, prefixes.transitionend, finishStage);
+                }
+
                 if (stopped()) {
                     return;
                 }
@@ -2216,11 +2130,15 @@ var animate = function(){
                                 var duration = getAnimationDuration(el);
 
                                 if (duration) {
-                                    callTimeout(finishStage, (new Date).getTime(), duration);
+                                    if (prefixes.transitionend) {
+                                        addListener(el, prefixes.transitionend, finishStage);
+                                    }
+                                    else {
+                                        callTimeout(finishStage, (new Date).getTime(), duration);
+                                    }
                                 }
                                 else {
                                     raf(finishStage);
-                                    //finishStage();
                                 }
                             }
                         });
@@ -2256,7 +2174,7 @@ var animate = function(){
         var deferred    = new Promise,
             queue       = data(el, dataParam) || [],
             id          = ++animId,
-            attrValue   = attr(el, "mjs-animate"),
+            attrValue   = getAttr(el, "mjs-animate"),
             stages,
             jsFn,
             before, after,
@@ -3133,6 +3051,15 @@ Event.prototype = {
 
 
 
+var isObject = function(value) {
+    if (value === null || typeof value != "object") {
+        return false;
+    }
+    var vt = varType(value);
+    return vt > 2 || vt == -1;
+};
+
+
 var isPrimitive = function(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
@@ -3288,9 +3215,9 @@ var ajax = function(){
 
             if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
-                attr(input, "type", "hidden");
-                attr(input, "name", name);
-                attr(input, "value", data);
+                setAttr(input, "type", "hidden");
+                setAttr(input, "name", name);
+                setAttr(input, "value", data);
                 form.appendChild(input);
             }
             else if (isArray(data) && name) {
@@ -3316,12 +3243,12 @@ var ajax = function(){
 
                 oField = form.elements[nItem];
 
-                if (attr(oField, "name") === null) {
+                if (getAttr(oField, "name") === null) {
                     continue;
                 }
 
                 sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             attr(oField, "type").toUpperCase() : "TEXT";
+                             getAttr(oField, "type").toUpperCase() : "TEXT";
 
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
@@ -3513,7 +3440,7 @@ var ajax = function(){
                 form    = document.createElement("form");
 
             form.style.display = "none";
-            attr(form, "method", self._opt.method);
+            setAttr(form, "method", self._opt.method);
 
             data2form(self._opt.data, form, null);
 
@@ -3666,7 +3593,7 @@ var ajax = function(){
 
         if (!opt.url) {
             if (opt.form) {
-                opt.url = attr(opt.form, "action");
+                opt.url = getAttr(opt.form, "action");
             }
             if (!opt.url) {
                 throw "Must provide url";
@@ -3678,7 +3605,7 @@ var ajax = function(){
 
         if (!opt.method) {
             if (opt.form) {
-                opt.method = attr(opt.form, "method").toUpperCase() || "GET";
+                opt.method = getAttr(opt.form, "method").toUpperCase() || "GET";
             }
             else {
                 opt.method = "GET";
@@ -3894,9 +3821,9 @@ var ajax = function(){
             var self    = this,
                 script  = document.createElement("script");
 
-            attr(script, "async", "async");
-            attr(script, "charset", "utf-8");
-            attr(script, "src", self._opt.url);
+            setAttr(script, "async", "async");
+            setAttr(script, "charset", "utf-8");
+            setAttr(script, "src", self._opt.url);
 
             addListener(script, "load", bind(self.onLoad, self));
             addListener(script, "error", bind(self.onError, self));
@@ -3965,13 +3892,13 @@ var ajax = function(){
                 id      = "frame-" + nextUid(),
                 form    = self._opt.form;
 
-            attr(frame, "id", id);
-            attr(frame, "name", id);
+            setAttr(frame, "id", id);
+            setAttr(frame, "name", id);
             frame.style.display = "none";
             document.body.appendChild(frame);
 
-            attr(form, "action", self._opt.url);
-            attr(form, "target", id);
+            setAttr(form, "action", self._opt.url);
+            setAttr(form, "target", id);
 
             addListener(frame, "load", bind(self.onLoad, self));
             addListener(frame, "error", bind(self.onError, self));
@@ -4043,14 +3970,286 @@ var ucfirst = function(str) {
 };
 
 
-var getOuterWidth = function(el) {
-    return getElemRect(el).width;
+var getScrollTopOrLeft = function(vertical) {
+
+    var defaultST,
+        wProp = vertical ? "pageYOffset" : "pageXOffset",
+        sProp = vertical ? "scrollTop" : "scrollLeft",
+        doc = document,
+        body = doc.body,
+        html = doc.documentElement;
+
+    if(window[wProp] !== undf) {
+        //most browsers except IE before #9
+        defaultST = function(){
+            return window[wProp];
+        };
+    }
+    else{
+        if (html.clientHeight) {
+            defaultST = function() {
+                return html[sProp];
+            };
+        }
+        else {
+            defaultST = function() {
+                return body[sProp];
+            };
+        }
+    }
+
+    return function(node) {
+        if (!node || node === window) {
+            return defaultST();
+        }
+        else if (node && node.nodeType == 1 &&
+            node !== body && node !== html) {
+            return node[sProp];
+        }
+        else {
+            return defaultST();
+        }
+    }
+
 };
 
 
-var getOuterHeight = function(el) {
-    return getElemRect(el).height;
+var getScrollTop = getScrollTopOrLeft(true);
+
+
+var getScrollLeft = getScrollTopOrLeft(false);
+
+var elHtml = document.documentElement;
+
+
+var isAttached = function(){
+    var isAttached = function(node) {
+        if (node === window) {
+            return true;
+        }
+        if (node.nodeType == 3) {
+            if (node.parentElement) {
+                return isAttached(node.parentElement);
+            }
+            else {
+                return true;
+            }
+        }
+        return node === elHtml ? true : elHtml.contains(node);
+    };
+    return isAttached;
+}();
+
+
+var getOffset = function(node) {
+
+    var box = {top: 0, left: 0};
+
+    // Make sure it's not a disconnected DOM node
+    if (!isAttached(node) || node === window) {
+        return box;
+    }
+
+    // Support: BlackBerry 5, iOS 3 (original iPhone)
+    // If we don't have gBCR, just use 0,0 rather than error
+    if (node.getBoundingClientRect ) {
+        box = node.getBoundingClientRect();
+    }
+
+    return {
+        top: box.top + getScrollTop() - elHtml.clientTop,
+        left: box.left + getScrollLeft() - elHtml.clientLeft
+    };
 };
+var getStyle = function() {
+
+    if (window.getComputedStyle) {
+        return function (node, prop, numeric) {
+            if (node === window) {
+                return prop? (numeric ? 0 : null) : {};
+            }
+            var style = getComputedStyle(node, null),
+                val = prop ? style[prop] : style;
+
+            return numeric ? parseFloat(val) || 0 : val;
+        };
+    }
+
+    return function(node, prop, numeric) {
+        var style   = node.currentStyle || node.style || {},
+            val     = prop ? style[prop] : style;
+        return numeric ? parseFloat(val) || 0 : val;
+    };
+
+}();
+
+var elBody = document.body;
+
+
+var boxSizingReliable = function() {
+
+    var boxSizingReliableVal;
+
+    var computePixelPositionAndBoxSizingReliable = function() {
+
+        var container = document.createElement("div"),
+            div = document.createElement("div");
+
+        if (!div.style || !window.getComputedStyle) {
+            return false;
+        }
+
+        container.style.cssText = "border:0;width:0;height:0;top:0;left:-9999px;margin-top:1px;" +
+                                  "position:absolute";
+        container.appendChild(div);
+
+        div.style.cssText =
+            // Support: Firefox<29, Android 2.3
+            // Vendor-prefix box-sizing
+        "-webkit-box-sizing:border-box;-moz-box-sizing:border-box;" +
+        "box-sizing:border-box;display:block;margin-top:1%;top:1%;" +
+        "border:1px;padding:1px;width:4px;position:absolute";
+        div.innerHTML = "";
+        elBody.appendChild(container);
+
+        var divStyle = window.getComputedStyle(div, null),
+            ret = divStyle.width === "4px";
+
+        elBody.removeChild(container);
+
+        return ret;
+    };
+
+    return function() {
+        if (boxSizingReliableVal === undf) {
+            boxSizingReliableVal = computePixelPositionAndBoxSizingReliable();
+        }
+
+        return boxSizingReliableVal;
+    };
+}();
+// from jQuery
+
+
+
+var getDimensions = function(type, name) {
+
+    var rnumnonpx = new RegExp( "^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$", "i"),
+        cssExpand = [ "Top", "Right", "Bottom", "Left" ],
+        defaultExtra = !type ? "content" : (type == "inner" ? "padding" : "");
+
+    var augmentWidthOrHeight = function(elem, name, extra, isBorderBox, styles) {
+        var i = extra === (isBorderBox ? "border" : "content") ?
+                // If we already have the right measurement, avoid augmentation
+                4 :
+                // Otherwise initialize for horizontal or vertical properties
+                name === "width" ? 1 : 0,
+
+            val = 0;
+
+        for (; i < 4; i += 2) {
+            // Both box models exclude margin, so add it if we want it
+            if (extra === "margin") {
+                val += parseFloat(styles[extra + cssExpand[i]]);
+            }
+
+            if (isBorderBox) {
+                // border-box includes padding, so remove it if we want content
+                if (extra === "content") {
+                    val -= parseFloat(styles["padding" + cssExpand[i]]);
+                }
+
+                // At this point, extra isn't border nor margin, so remove border
+                if (extra !== "margin") {
+                    val -= parseFloat(styles["border" + cssExpand[i] + "Width"]);
+                }
+            } else {
+                // At this point, extra isn't content, so add padding
+                val += parseFloat(styles["padding" + cssExpand[i]]);
+
+                // At this point, extra isn't content nor padding, so add border
+                if (extra !== "padding") {
+                    val += parseFloat(styles["border" + cssExpand[i] + "Width"]);
+                }
+            }
+        }
+
+        return val;
+    };
+
+    var getWidthOrHeight = function(elem, name, extra, styles) {
+
+        // Start with offset property, which is equivalent to the border-box value
+        var valueIsBorderBox = true,
+            val = name === "width" ? elem.offsetWidth : elem.offsetHeight,
+            isBorderBox = styles["boxSizing"] === "border-box";
+
+        // Some non-html elements return undefined for offsetWidth, so check for null/undefined
+        // svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
+        // MathML - https://bugzilla.mozilla.org/show_bug.cgi?id=491668
+        if ( val <= 0 || val == null ) {
+            val = elem.style[name];
+
+            // Computed unit is not pixels. Stop here and return.
+            if (rnumnonpx.test(val)) {
+                return val;
+            }
+
+            // Check for style in case a browser which returns unreliable values
+            // for getComputedStyle silently falls back to the reliable elem.style
+            valueIsBorderBox = isBorderBox &&
+                               (boxSizingReliable() || val === elem.style[name]);
+
+            // Normalize "", auto, and prepare for extra
+            val = parseFloat(val) || 0;
+        }
+
+        // Use the active box-sizing model to add/subtract irrelevant styles
+        return val +
+                 augmentWidthOrHeight(
+                     elem,
+                     name,
+                     extra || (isBorderBox ? "border" : "content"),
+                     valueIsBorderBox,
+                     styles
+                 );
+    };
+
+
+    return function(elem, margin) {
+
+        if (elem === window) {
+            return elem.document.documentElement["client" + name];
+        }
+
+        // Get document width or height
+        if (elem.nodeType === 9) {
+            var doc = elem.documentElement;
+
+            // Either scroll[Width/Height] or offset[Width/Height] or client[Width/Height],
+            // whichever is greatest
+            return Math.max(
+                elem.body["scroll" + name], doc["scroll" + name],
+                elem.body["offset" + name], doc["offset" + name],
+                doc["client" + name]
+            );
+        }
+
+        return getWidthOrHeight(
+            elem,
+            name.toLowerCase(),
+            defaultExtra || (margin === true ? "margin" : "border"),
+            getStyle(elem)
+        );
+    };
+
+};
+
+
+var getOuterWidth = getDimensions("outer", "Width");
+
+
+var getOuterHeight = getDimensions("outer", "Height");
 var delegates = {};
 
 
@@ -6148,12 +6347,12 @@ var Dialog = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = attr(el, cfg.content.attr);
+                        content = getAttr(el, cfg.content.attr);
                     }
                     else {
-                        content = attr(el, 'tooltip') ||
-                                  attr(el, 'title') ||
-                                  attr(el, 'alt');
+                        content = getAttr(el, 'tooltip') ||
+                                  getAttr(el, 'title') ||
+                                  getAttr(el, 'alt');
                     }
                 }
 
@@ -6708,7 +6907,7 @@ var Dialog = function(){
                 }
 
                 if (rnd.id) {
-                    attr(elem, 'id', rnd.id);
+                    setAttr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -6848,11 +7047,11 @@ var Dialog = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", attr(trg, "title"));
-                        attr(trg, 'title', null);
+                        data(trg, "tmp-title", getAttr(trg, "title"));
+                        removeAttr(trg, 'title');
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        attr(trg, "title", title);
+                        setAttr(trg, "title", title);
                     }
                 }
             },
@@ -6914,7 +7113,7 @@ var Dialog = function(){
                 }
 
                 var size    = self.getDialogSize(),
-                    offset  = getElemRect(target),
+                    offset  = getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -7264,7 +7463,7 @@ var Dialog = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = attr(cfg.target, "href");
+            var href = getAttr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }

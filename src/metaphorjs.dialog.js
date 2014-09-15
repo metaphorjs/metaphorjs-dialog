@@ -7,7 +7,9 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     removeClass     = require("../../metaphorjs/src/func/dom/removeClass.js"),
     isArray         = require("../../metaphorjs/src/func/isArray.js"),
     data            = require("../../metaphorjs/src/func/dom/data.js"),
-    attr            = require("../../metaphorjs/src/func/dom/attr.js"),
+    getAttr         = require("../../metaphorjs/src/func/dom/getAttr.js"),
+    setAttr         = require("../../metaphorjs/src/func/dom/setAttr.js"),
+    removeAttr      = require("../../metaphorjs/src/func/dom/removeAttr.js"),
     addListener     = require("../../metaphorjs/src/func/event/addListener.js"),
     removeListener  = require("../../metaphorjs/src/func/event/removeListener.js"),
     normalizeEvent  = require("../../metaphorjs/src/func/event/normalizeEvent.js"),
@@ -29,7 +31,7 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     ucfirst         = require("../../metaphorjs/src/func/ucfirst.js"),
     getScrollTop    = require("../../metaphorjs/src/func/dom/getScrollTop.js"),
     getScrollLeft   = require("../../metaphorjs/src/func/dom/getScrollLeft.js"),
-    getElemRect     = require("../../metaphorjs/src/func/dom/getElemRect.js"),
+    getOffset       = require("../../metaphorjs/src/func/dom/getOffset.js"),
     getOuterWidth   = require("../../metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight  = require("../../metaphorjs/src/func/dom/getOuterHeight.js"),
 
@@ -2092,12 +2094,12 @@ module.exports = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = attr(el, cfg.content.attr);
+                        content = getAttr(el, cfg.content.attr);
                     }
                     else {
-                        content = attr(el, 'tooltip') ||
-                                  attr(el, 'title') ||
-                                  attr(el, 'alt');
+                        content = getAttr(el, 'tooltip') ||
+                                  getAttr(el, 'title') ||
+                                  getAttr(el, 'alt');
                     }
                 }
 
@@ -2652,7 +2654,7 @@ module.exports = function(){
                 }
 
                 if (rnd.id) {
-                    attr(elem, 'id', rnd.id);
+                    setAttr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -2792,11 +2794,11 @@ module.exports = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", attr(trg, "title"));
-                        attr(trg, 'title', null);
+                        data(trg, "tmp-title", getAttr(trg, "title"));
+                        removeAttr(trg, 'title');
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        attr(trg, "title", title);
+                        setAttr(trg, "title", title);
                     }
                 }
             },
@@ -2858,7 +2860,7 @@ module.exports = function(){
                 }
 
                 var size    = self.getDialogSize(),
-                    offset  = getElemRect(target),
+                    offset  = getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -3208,7 +3210,7 @@ module.exports = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = attr(cfg.target, "href");
+            var href = getAttr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }

@@ -254,11 +254,7 @@ var isArray = function(value) {
 };
 
 
-/**
- * @param {Element} el
- * @param {String} key
- * @param {*} value optional
- */
+
 var data = function(){
 
     var dataCache   = {},
@@ -267,6 +263,11 @@ var data = function(){
             return el._mjsid || (el._mjsid = nextUid());
         };
 
+    /**
+     * @param {Element} el
+     * @param {String} key
+     * @param {*} value optional
+     */
     return function(el, key, value) {
         var id  = getNodeId(el),
             obj = dataCache[id];
@@ -284,21 +285,14 @@ var data = function(){
     };
 
 }();
-
-
-var attr = function(el, name, value) {
-    if (!el || !el.getAttribute) {
-        return null;
-    }
-    if (value === undf) {
-        return el.getAttribute(name);
-    }
-    else if (value === null) {
-        return el.removeAttribute(name);
-    }
-    else {
-        return el.setAttribute(name, value);
-    }
+var getAttr = function(el, name) {
+    return el.getAttribute(name);
+};
+var setAttr = function(el, name, value) {
+    return el.setAttribute(name, value);
+};
+var removeAttr = function(el, name) {
+    return el.removeAttribute(name);
 };
 var addListener = function(el, event, func) {
     if (el.attachEvent) {
@@ -459,7 +453,8 @@ var is = select.is;
 
 
 var isString = function(value) {
-    return typeof value == "string" || varType(value) === 0;
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
 };
 var isFunction = function(value) {
     return typeof value == 'function';
@@ -503,9 +498,11 @@ var getScrollTopOrLeft = function(vertical) {
     }
 
     return function(node) {
-        if (node && node.nodeType == 1 &&
+        if (!node || node === window) {
+            return defaultST();
+        }
+        else if (node && node.nodeType == 1 &&
             node !== body && node !== html) {
-
             return node[sProp];
         }
         else {
@@ -521,72 +518,237 @@ var getScrollTop = getScrollTopOrLeft(true);
 
 var getScrollLeft = getScrollTopOrLeft(false);
 
+var elHtml = document.documentElement;
 
-var getElemRect = function(el) {
 
-    var rect,
-        st = getScrollTop(),
-        sl = getScrollLeft(),
-        bcr;
+var isAttached = function(){
+    var isAttached = function(node) {
+        if (node === window) {
+            return true;
+        }
+        if (node.nodeType == 3) {
+            if (node.parentElement) {
+                return isAttached(node.parentElement);
+            }
+            else {
+                return true;
+            }
+        }
+        return node === elHtml ? true : elHtml.contains(node);
+    };
+    return isAttached;
+}();
 
-    if (el === window) {
 
-        var doc = document.documentElement;
+var getOffset = function(node) {
 
-        rect = {
-            left: 0,
-            right: doc.clientWidth,
-            top: st,
-            bottom: doc.clientHeight + st,
-            width: doc.clientWidth,
-            height: doc.clientHeight
+    var box = {top: 0, left: 0};
+
+    // Make sure it's not a disconnected DOM node
+    if (!isAttached(node) || node === window) {
+        return box;
+    }
+
+    // Support: BlackBerry 5, iOS 3 (original iPhone)
+    // If we don't have gBCR, just use 0,0 rather than error
+    if (node.getBoundingClientRect ) {
+        box = node.getBoundingClientRect();
+    }
+
+    return {
+        top: box.top + getScrollTop() - elHtml.clientTop,
+        left: box.left + getScrollLeft() - elHtml.clientLeft
+    };
+};
+var getStyle = function() {
+
+    if (window.getComputedStyle) {
+        return function (node, prop, numeric) {
+            if (node === window) {
+                return prop? (numeric ? 0 : null) : {};
+            }
+            var style = getComputedStyle(node, null),
+                val = prop ? style[prop] : style;
+
+            return numeric ? parseFloat(val) || 0 : val;
         };
     }
-    else {
-        if (el.getBoundingClientRect) {
-            bcr = el.getBoundingClientRect();
-            rect = {
-                left: bcr.left + sl,
-                top: bcr.top + st,
-                right: bcr.right + sl,
-                bottom: bcr.bottom + st
-            };
 
-            rect.width = rect.right - rect.left;
-            rect.height = rect.bottom - rect.top;
-        }
-        else {
-            rect = {
-                left: el.offsetLeft + sl,
-                top: el.offsetTop + st,
-                width: el.offsetWidth,
-                height: el.offsetHeight,
-                right: 0,
-                bottom: 0
-            };
-        }
-    }
-
-    rect.getCenter = function() {
-        return this.width / 2;
+    return function(node, prop, numeric) {
+        var style   = node.currentStyle || node.style || {},
+            val     = prop ? style[prop] : style;
+        return numeric ? parseFloat(val) || 0 : val;
     };
 
-    rect.getCenterX = function() {
-        return this.left + this.width / 2;
+}();
+
+var elBody = document.body;
+
+
+var boxSizingReliable = function() {
+
+    var boxSizingReliableVal;
+
+    var computePixelPositionAndBoxSizingReliable = function() {
+
+        var container = document.createElement("div"),
+            div = document.createElement("div");
+
+        if (!div.style || !window.getComputedStyle) {
+            return false;
+        }
+
+        container.style.cssText = "border:0;width:0;height:0;top:0;left:-9999px;margin-top:1px;" +
+                                  "position:absolute";
+        container.appendChild(div);
+
+        div.style.cssText =
+            // Support: Firefox<29, Android 2.3
+            // Vendor-prefix box-sizing
+        "-webkit-box-sizing:border-box;-moz-box-sizing:border-box;" +
+        "box-sizing:border-box;display:block;margin-top:1%;top:1%;" +
+        "border:1px;padding:1px;width:4px;position:absolute";
+        div.innerHTML = "";
+        elBody.appendChild(container);
+
+        var divStyle = window.getComputedStyle(div, null),
+            ret = divStyle.width === "4px";
+
+        elBody.removeChild(container);
+
+        return ret;
     };
 
-    return rect;
+    return function() {
+        if (boxSizingReliableVal === undf) {
+            boxSizingReliableVal = computePixelPositionAndBoxSizingReliable();
+        }
+
+        return boxSizingReliableVal;
+    };
+}();
+// from jQuery
+
+
+
+var getDimensions = function(type, name) {
+
+    var rnumnonpx = new RegExp( "^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$", "i"),
+        cssExpand = [ "Top", "Right", "Bottom", "Left" ],
+        defaultExtra = !type ? "content" : (type == "inner" ? "padding" : "");
+
+    var augmentWidthOrHeight = function(elem, name, extra, isBorderBox, styles) {
+        var i = extra === (isBorderBox ? "border" : "content") ?
+                // If we already have the right measurement, avoid augmentation
+                4 :
+                // Otherwise initialize for horizontal or vertical properties
+                name === "width" ? 1 : 0,
+
+            val = 0;
+
+        for (; i < 4; i += 2) {
+            // Both box models exclude margin, so add it if we want it
+            if (extra === "margin") {
+                val += parseFloat(styles[extra + cssExpand[i]]);
+            }
+
+            if (isBorderBox) {
+                // border-box includes padding, so remove it if we want content
+                if (extra === "content") {
+                    val -= parseFloat(styles["padding" + cssExpand[i]]);
+                }
+
+                // At this point, extra isn't border nor margin, so remove border
+                if (extra !== "margin") {
+                    val -= parseFloat(styles["border" + cssExpand[i] + "Width"]);
+                }
+            } else {
+                // At this point, extra isn't content, so add padding
+                val += parseFloat(styles["padding" + cssExpand[i]]);
+
+                // At this point, extra isn't content nor padding, so add border
+                if (extra !== "padding") {
+                    val += parseFloat(styles["border" + cssExpand[i] + "Width"]);
+                }
+            }
+        }
+
+        return val;
+    };
+
+    var getWidthOrHeight = function(elem, name, extra, styles) {
+
+        // Start with offset property, which is equivalent to the border-box value
+        var valueIsBorderBox = true,
+            val = name === "width" ? elem.offsetWidth : elem.offsetHeight,
+            isBorderBox = styles["boxSizing"] === "border-box";
+
+        // Some non-html elements return undefined for offsetWidth, so check for null/undefined
+        // svg - https://bugzilla.mozilla.org/show_bug.cgi?id=649285
+        // MathML - https://bugzilla.mozilla.org/show_bug.cgi?id=491668
+        if ( val <= 0 || val == null ) {
+            val = elem.style[name];
+
+            // Computed unit is not pixels. Stop here and return.
+            if (rnumnonpx.test(val)) {
+                return val;
+            }
+
+            // Check for style in case a browser which returns unreliable values
+            // for getComputedStyle silently falls back to the reliable elem.style
+            valueIsBorderBox = isBorderBox &&
+                               (boxSizingReliable() || val === elem.style[name]);
+
+            // Normalize "", auto, and prepare for extra
+            val = parseFloat(val) || 0;
+        }
+
+        // Use the active box-sizing model to add/subtract irrelevant styles
+        return val +
+                 augmentWidthOrHeight(
+                     elem,
+                     name,
+                     extra || (isBorderBox ? "border" : "content"),
+                     valueIsBorderBox,
+                     styles
+                 );
+    };
+
+
+    return function(elem, margin) {
+
+        if (elem === window) {
+            return elem.document.documentElement["client" + name];
+        }
+
+        // Get document width or height
+        if (elem.nodeType === 9) {
+            var doc = elem.documentElement;
+
+            // Either scroll[Width/Height] or offset[Width/Height] or client[Width/Height],
+            // whichever is greatest
+            return Math.max(
+                elem.body["scroll" + name], doc["scroll" + name],
+                elem.body["offset" + name], doc["offset" + name],
+                doc["client" + name]
+            );
+        }
+
+        return getWidthOrHeight(
+            elem,
+            name.toLowerCase(),
+            defaultExtra || (margin === true ? "margin" : "border"),
+            getStyle(elem)
+        );
+    };
+
 };
 
 
-var getOuterWidth = function(el) {
-    return getElemRect(el).width;
-};
+var getOuterWidth = getDimensions("outer", "Width");
 
 
-var getOuterHeight = function(el) {
-    return getElemRect(el).height;
-};
+var getOuterHeight = getDimensions("outer", "Height");
 var delegates = {};
 
 
@@ -2684,12 +2846,12 @@ module.exports = function(){
 
                 if (el) {
                     if (cfg.content.attr) {
-                        content = attr(el, cfg.content.attr);
+                        content = getAttr(el, cfg.content.attr);
                     }
                     else {
-                        content = attr(el, 'tooltip') ||
-                                  attr(el, 'title') ||
-                                  attr(el, 'alt');
+                        content = getAttr(el, 'tooltip') ||
+                                  getAttr(el, 'title') ||
+                                  getAttr(el, 'alt');
                     }
                 }
 
@@ -3244,7 +3406,7 @@ module.exports = function(){
                 }
 
                 if (rnd.id) {
-                    attr(elem, 'id', rnd.id);
+                    setAttr(elem, 'id', rnd.id);
                 }
 
                 if (!cfg.render.keepVisible) {
@@ -3384,11 +3546,11 @@ module.exports = function(){
 
                 if (trg) {
                     if (state === false) {
-                        data(trg, "tmp-title", attr(trg, "title"));
-                        attr(trg, 'title', null);
+                        data(trg, "tmp-title", getAttr(trg, "title"));
+                        removeAttr(trg, 'title');
                     }
                     else if (title = data(trg, "tmp-title")) {
-                        attr(trg, "title", title);
+                        setAttr(trg, "title", title);
                     }
                 }
             },
@@ -3450,7 +3612,7 @@ module.exports = function(){
                 }
 
                 var size    = self.getDialogSize(),
-                    offset  = getElemRect(target),
+                    offset  = getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -3800,7 +3962,7 @@ module.exports = function(){
         }
 
         if (cfg.target && cfg.useHref) {
-            var href = attr(cfg.target, "href");
+            var href = getAttr(cfg.target, "href");
             if (href.substr(0, 1) == "#") {
                 cfg.render.el = href;
             }
