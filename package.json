@@ -1,6 +1,6 @@
 {
     "name": "metaphorjs-dialog",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Dialog and tooltip plugin (plus jquery plugin)",
     "main": "dist/metaphorjs.dialog.npm.js",
     "directories": {

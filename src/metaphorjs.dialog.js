@@ -177,10 +177,10 @@ module.exports = function(){
                 newcfg.size 	= size - (cfg.border*2);
                 newcfg.width	= width - (cfg.border*4);
 
-                delete newcfg.border;
-                delete newcfg.borderColor;
-                delete newcfg.borderCls;
-                delete newcfg.offset;
+                newcfg.border = null;
+                newcfg.borderColor = null;
+                newcfg.borderCls = null;
+                newcfg.offset = null;
 
                 sub = new Pointer(dlg, newcfg, cfg.border);
             },
@@ -398,6 +398,9 @@ module.exports = function(){
                 self.remove();
                 self    = null;
                 sub     = null;
+                dlg     = null;
+                cfg     = null;
+                inner   = null;
             },
 
             remove: function() {

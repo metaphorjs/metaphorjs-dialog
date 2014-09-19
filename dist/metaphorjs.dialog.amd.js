@@ -36,7 +36,7 @@ var varType = function(){
         'date': 10
     */
 
-    return function(val) {
+    return function varType(val) {
 
         if (!val) {
             if (val === null) {
@@ -63,16 +63,20 @@ var varType = function(){
 }();
 
 
-var isPlainObject = function(value) {
+function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
-    return typeof value == "object" && varType(value) === 3 && !value.nodeType;
+    return typeof value == "object" &&
+           varType(value) === 3 &&
+            !value.nodeType &&
+            value.constructor === Object;
+
 };
 
 
-var isBool = function(value) {
+function isBool(value) {
     return value === true || value === false;
 };
-var isNull = function(value) {
+function isNull(value) {
     return value === null;
 };
 
@@ -151,7 +155,7 @@ var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
-    return function() {
+    return function nextUid() {
         var index = uid.length;
         var digit;
 
@@ -195,7 +199,7 @@ var getRegExp = function(){
 
     var cache = {};
 
-    return function(expr) {
+    return function getRegExp(expr) {
         return cache[expr] || (cache[expr] = new RegExp(expr));
     };
 }();
@@ -205,7 +209,7 @@ var getRegExp = function(){
  * @param {String} cls
  * @returns {RegExp}
  */
-var getClsReg = function(cls) {
+function getClsReg(cls) {
     return getRegExp('(?:^|\\s)'+cls+'(?!\\S)');
 };
 
@@ -215,7 +219,7 @@ var getClsReg = function(cls) {
  * @param {String} cls
  * @returns {boolean}
  */
-var hasClass = function(el, cls) {
+function hasClass(el, cls) {
     return cls ? getClsReg(cls).test(el.className) : false;
 };
 
@@ -224,7 +228,7 @@ var hasClass = function(el, cls) {
  * @param {Element} el
  * @param {String} cls
  */
-var addClass = function(el, cls) {
+function addClass(el, cls) {
     if (cls && !hasClass(el, cls)) {
         el.className += " " + cls;
     }
@@ -235,7 +239,7 @@ var addClass = function(el, cls) {
  * @param {Element} el
  * @param {String} cls
  */
-var removeClass = function(el, cls) {
+function removeClass(el, cls) {
     if (cls) {
         el.className = el.className.replace(getClsReg(cls), '');
     }
@@ -246,7 +250,7 @@ var removeClass = function(el, cls) {
  * @param {*} value
  * @returns {boolean}
  */
-var isArray = function(value) {
+function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
 
@@ -265,7 +269,7 @@ var data = function(){
      * @param {String} key
      * @param {*} value optional
      */
-    return function(el, key, value) {
+    return function data(el, key, value) {
         var id  = getNodeId(el),
             obj = dataCache[id];
 
@@ -282,16 +286,16 @@ var data = function(){
     };
 
 }();
-var getAttr = function(el, name) {
+function getAttr(el, name) {
     return el.getAttribute(name);
 };
-var setAttr = function(el, name, value) {
+function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
-var removeAttr = function(el, name) {
+function removeAttr(el, name) {
     return el.removeAttribute(name);
 };
-var addListener = function(el, event, func) {
+function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
     } else {
@@ -299,18 +303,18 @@ var addListener = function(el, event, func) {
     }
 };
 
-var removeListener = function(el, event, func) {
+function removeListener(el, event, func) {
     if (el.detachEvent) {
         el.detachEvent('on' + event, func);
     } else {
         el.removeEventListener(event, func, false);
     }
 };
-var returnFalse = function() {
+function returnFalse() {
     return false;
 };
 
-var returnTrue = function() {
+function returnTrue() {
     return true;
 };
 
@@ -389,7 +393,7 @@ var NormalizedEvent = function(src) {
 
 // Event is based on DOM3 Events as specified by the ECMAScript Language Binding
 // http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-NormalizedEvent.prototype = {
+extend(NormalizedEvent.prototype, {
 
     isDefaultPrevented: returnFalse,
     isPropagationStopped: returnFalse,
@@ -425,18 +429,18 @@ NormalizedEvent.prototype = {
 
         this.stopPropagation();
     }
-};
+}, true, false);
 
 
 
-var normalizeEvent = function(originalEvent) {
+function normalizeEvent(originalEvent) {
     return new NormalizedEvent(originalEvent);
 };
 /**
  * @param {Element} el
  * @returns {boolean}
  */
-var isVisible = function(el) {
+function isVisible(el) {
     return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
 };
 
@@ -449,19 +453,19 @@ var isVisible = function(el) {
 var is = select.is;
 
 
-var isString = function(value) {
+function isString(value) {
     return typeof value == "string" || value === ""+value;
     //return typeof value == "string" || varType(value) === 0;
 };
-var isFunction = function(value) {
+function isFunction(value) {
     return typeof value == 'function';
 };
 
 
-var isNumber = function(value) {
+function isNumber(value) {
     return varType(value) === 1;
 };
-var ucfirst = function(str) {
+function ucfirst(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
 
@@ -519,7 +523,7 @@ var elHtml = document.documentElement;
 
 
 var isAttached = function(){
-    var isAttached = function(node) {
+    var isAttached = function isAttached(node) {
         if (node === window) {
             return true;
         }
@@ -537,7 +541,7 @@ var isAttached = function(){
 }();
 
 
-var getOffset = function(node) {
+function getOffset(node) {
 
     var box = {top: 0, left: 0};
 
@@ -616,7 +620,7 @@ var boxSizingReliable = function() {
         return ret;
     };
 
-    return function() {
+    return function boxSizingReliable() {
         if (boxSizingReliableVal === undf) {
             boxSizingReliableVal = computePixelPositionAndBoxSizingReliable();
         }
@@ -712,7 +716,7 @@ var getDimensions = function(type, name) {
     };
 
 
-    return function(elem, margin) {
+    return function getDimensions(elem, margin) {
 
         if (elem === window) {
             return elem.document.documentElement["client" + name];
@@ -750,7 +754,7 @@ var delegates = {};
 
 
 
-var delegate = function(el, selector, event, fn) {
+function delegate(el, selector, event, fn) {
 
     var key = selector + "-" + event,
         listener    = function(e) {
@@ -771,7 +775,7 @@ var delegate = function(el, selector, event, fn) {
 };
 
 
-var undelegate = function(el, selector, event, fn) {
+function undelegate(el, selector, event, fn) {
 
     var key = selector + "-" + event,
         i, l,
@@ -926,10 +930,10 @@ var Dialog = function(){
                 newcfg.size 	= size - (cfg.border*2);
                 newcfg.width	= width - (cfg.border*4);
 
-                delete newcfg.border;
-                delete newcfg.borderColor;
-                delete newcfg.borderCls;
-                delete newcfg.offset;
+                newcfg.border = null;
+                newcfg.borderColor = null;
+                newcfg.borderCls = null;
+                newcfg.offset = null;
 
                 sub = new Pointer(dlg, newcfg, cfg.border);
             },
@@ -1147,6 +1151,9 @@ var Dialog = function(){
                 self.remove();
                 self    = null;
                 sub     = null;
+                dlg     = null;
+                cfg     = null;
+                inner   = null;
             },
 
             remove: function() {
