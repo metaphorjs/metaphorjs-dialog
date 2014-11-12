@@ -1,12 +1,13 @@
 
 var Dialog = require("../metaphorjs.dialog.js"),
     extend  = require("../../../metaphorjs/src/func/extend.js"),
-    defineClass = require("../../../metaphorjs-class/src/func/defineClass.js");
+    defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
+    Component = require("../../../metaphorjs/src/class/Component.js");
 
 defineClass({
 
-    $class: "MetaphorJs.cmp.Dialog",
-    $extends: "MetaphorJs.cmp.Component",
+    $class: "DialogComponent",
+    $extends: Component,
 
     dialog: null,
     dialogPreset: null,
@@ -17,7 +18,7 @@ defineClass({
 
         var self    = this;
 
-        self.supr();
+        self.$super();
         self._createDialog();
         self._oldShow = self.show;
         self._oldHide = self.hide;
@@ -57,7 +58,7 @@ defineClass({
 
         if (!self.destroying) {
             self.dialog = null;
-            self.destroy();
+            self.$destroy();
         }
     },
 
@@ -71,13 +72,8 @@ defineClass({
             self.dialog.destroy();
         }
 
-        self.dialog = null;
-        self.dialogCfg = null;
-        self.dialogPreset = null;
+        self.$super();
 
-        self.supr();
-
-        self.destroying = false;
     }
 
 });

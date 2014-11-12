@@ -9,12 +9,7 @@
             "global": true,
             "target": "dist/metaphorjs.dialog.js",
             "files": [
-                [
-                    "../metaphorjs/src/MetaphorJs.js",
-                    {
-                        "as": "MetaphorJs"
-                    }
-                ],
+                "../metaphorjs/src/MetaphorJs.js",
                 [
                     "src/metaphorjs.dialog.js",
                     {
@@ -30,21 +25,23 @@
                 "src/jquery/plugin.js"
             ],
             "expose": [
-                [
-                    "MetaphorJs.lib",
-                    "Dialog"
-                ],
+                "Dialog",
                 "onReady"
             ]
         },
         "npm": {
             "target": "dist/metaphorjs.dialog.npm.js",
             "compile": false,
+            "wrap": {
+                "exported": true,
+                "deferred": true,
+                "args": ["window"]
+            },
             "files": [
                 [
                     "src/metaphorjs.dialog.js",
                     {
-                        "keepExports": true
+                        "as": "Dialog"
                     }
                 ]
             ],
@@ -59,10 +56,20 @@
             "require": {
                 "metaphorjs-observable": "Observable",
                 "metaphorjs-promise": "Promise",
-                "metaphorjs-ajax": "ajax",
-                "metaphorjs-select": "select",
-                "metaphorjs-animate": "animate"
-            }
+                "metaphorjs-ajax": {
+                    "as": "ajax",
+                    "args": ["window"]
+                },
+                "metaphorjs-select": {
+                    "as": "select",
+                    "args": ["window"]
+                },
+                "metaphorjs-animate": {
+                    "as": "animate",
+                    "args": ["window"]
+                }
+            },
+            "returns": "Dialog"
         },
         "amd": {
             "target": "dist/metaphorjs.dialog.amd.js",

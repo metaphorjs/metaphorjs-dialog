@@ -1,16 +1,20 @@
 (function(){
 "use strict";
 
+
 var MetaphorJs = {
-    lib: {},
-    cmp: {},
-    view: {}
+
+
 };
 
 
+
 var slice = Array.prototype.slice;
+
 var toString = Object.prototype.toString;
+
 var undf = undefined;
+
 
 
 
@@ -29,19 +33,21 @@ var varType = function(){
 
 
     /**
-        'string': 0,
-        'number': 1,
-        'boolean': 2,
-        'object': 3,
-        'function': 4,
-        'array': 5,
-        'null': 6,
-        'undefined': 7,
-        'NaN': 8,
-        'regexp': 9,
-        'date': 10
-    */
-
+     * 'string': 0,
+     * 'number': 1,
+     * 'boolean': 2,
+     * 'object': 3,
+     * 'function': 4,
+     * 'array': 5,
+     * 'null': 6,
+     * 'undefined': 7,
+     * 'NaN': 8,
+     * 'regexp': 9,
+     * 'date': 10,
+     * unknown: -1
+     * @param {*} value
+     * @returns {number}
+     */
     return function varType(val) {
 
         if (!val) {
@@ -69,6 +75,7 @@ var varType = function(){
 }();
 
 
+
 function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
     return typeof value == "object" &&
@@ -78,25 +85,23 @@ function isPlainObject(value) {
 
 };
 
-
 function isBool(value) {
     return value === true || value === false;
 };
-function isNull(value) {
-    return value === null;
-};
 
 
-/**
- * @param {Object} dst
- * @param {Object} src
- * @param {Object} src2 ... srcN
- * @param {boolean} override = false
- * @param {boolean} deep = false
- * @returns {*}
- */
+
+
 var extend = function(){
 
+    /**
+     * @param {Object} dst
+     * @param {Object} src
+     * @param {Object} src2 ... srcN
+     * @param {boolean} override = false
+     * @param {boolean} deep = false
+     * @returns {object}
+     */
     var extend = function extend() {
 
 
@@ -154,13 +159,14 @@ var extend = function(){
     return extend;
 }();
 
-/**
- * @returns {String}
- */
+
 var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
+    /**
+     * @returns {String}
+     */
     return function nextUid() {
         var index = uid.length;
         var digit;
@@ -184,6 +190,7 @@ var nextUid = function(){
     };
 }();
 
+
 /**
  * @param {Function} fn
  * @param {*} context
@@ -198,17 +205,21 @@ var bind = Function.prototype.bind ?
                   };
               };
 
-/**
- * @param {String} expr
- */
+
+
 var getRegExp = function(){
 
     var cache = {};
 
+    /**
+     * @param {String} expr
+     * @returns RegExp
+     */
     return function getRegExp(expr) {
         return cache[expr] || (cache[expr] = new RegExp(expr));
     };
 }();
+
 
 
 /**
@@ -220,6 +231,7 @@ function getClsReg(cls) {
 };
 
 
+
 /**
  * @param {Element} el
  * @param {String} cls
@@ -228,6 +240,7 @@ function getClsReg(cls) {
 function hasClass(el, cls) {
     return cls ? getClsReg(cls).test(el.className) : false;
 };
+
 
 
 /**
@@ -241,6 +254,7 @@ function addClass(el, cls) {
 };
 
 
+
 /**
  * @param {Element} el
  * @param {String} cls
@@ -252,6 +266,7 @@ function removeClass(el, cls) {
 };
 
 
+
 /**
  * @param {*} value
  * @returns {boolean}
@@ -259,6 +274,7 @@ function removeClass(el, cls) {
 function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
+
 
 
 
@@ -292,15 +308,19 @@ var data = function(){
     };
 
 }();
+
 function getAttr(el, name) {
-    return el.getAttribute(name);
+    return el.getAttribute ? el.getAttribute(name) : null;
 };
+
 function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
+
 function removeAttr(el, name) {
     return el.removeAttribute(name);
 };
+
 function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -309,6 +329,7 @@ function addListener(el, event, func) {
     }
 };
 
+
 function removeListener(el, event, func) {
     if (el.detachEvent) {
         el.detachEvent('on' + event, func);
@@ -316,26 +337,33 @@ function removeListener(el, event, func) {
         el.removeEventListener(event, func, false);
     }
 };
+
 function returnFalse() {
     return false;
 };
+
 
 function returnTrue() {
     return true;
 };
 
+function isNull(value) {
+    return value === null;
+};
+
+
 
 // from jQuery
 
-var NormalizedEvent = function(src) {
+var DomEvent = function(src) {
 
-    if (src instanceof NormalizedEvent) {
+    if (src instanceof DomEvent) {
         return src;
     }
 
     // Allow instantiation without the 'new' keyword
-    if (!(this instanceof NormalizedEvent)) {
-        return new NormalizedEvent(src);
+    if (!(this instanceof DomEvent)) {
+        return new DomEvent(src);
     }
 
 
@@ -365,7 +393,7 @@ var NormalizedEvent = function(src) {
 
     // Calculate pageX/Y if missing and clientX/Y available
     if (self.pageX === undf && !isNull(src.clientX)) {
-        eventDoc = self.target ? self.target.ownerDocument || document : document;
+        eventDoc = self.target ? self.target.ownerDocument || window.document : window.document;
         doc = eventDoc.documentElement;
         body = eventDoc.body;
 
@@ -399,7 +427,7 @@ var NormalizedEvent = function(src) {
 
 // Event is based on DOM3 Events as specified by the ECMAScript Language Binding
 // http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-extend(NormalizedEvent.prototype, {
+extend(DomEvent.prototype, {
 
     isDefaultPrevented: returnFalse,
     isPropagationStopped: returnFalse,
@@ -439,9 +467,11 @@ extend(NormalizedEvent.prototype, {
 
 
 
+
 function normalizeEvent(originalEvent) {
-    return new NormalizedEvent(originalEvent);
+    return new DomEvent(originalEvent);
 };
+
 /**
  * @param {Element} el
  * @returns {boolean}
@@ -450,11 +480,6 @@ function isVisible(el) {
     return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
 };
 
-
-function isString(value) {
-    return typeof value == "string" || value === ""+value;
-    //return typeof value == "string" || varType(value) === 0;
-};
 
 
 /**
@@ -475,12 +500,14 @@ function toArray(list) {
 };
 
 
+
 /**
  * Modified version of YASS (http://yass.webo.in)
  */
 
 /**
- * Returns number of nodes or an empty array
+ * Returns array of nodes or an empty array
+ * @function select
  * @param {String} selector
  * @param {Element} root to look into
  */
@@ -500,7 +527,7 @@ var select = function() {
         rRepAftPrn  = /\(.*/,
         rGetSquare  = /\[([^!~^*|$ [:=]+)([$^*|]?=)?([^ :\]]+)?\]/,
 
-        doc         = document,
+        doc         = window.document,
         bcn         = !!doc.getElementsByClassName,
         qsa         = !!doc.querySelectorAll,
 
@@ -1065,12 +1092,14 @@ var select = function() {
 }();
 
 
+
 /**
  * @param {Element} el
  * @param {String} selector
  * @returns {boolean}
  */
 var is = select.is;
+
 
 
 var getAnimationPrefixes = function(){
@@ -1084,10 +1113,11 @@ var getAnimationPrefixes = function(){
         transitionend       = null,
         prefixes            = null,
 
+        probed              = false,
 
         detectCssPrefixes   = function() {
 
-            var el = document.createElement("div"),
+            var el = window.document.createElement("div"),
                 animation = false,
                 pfx,
                 i, len;
@@ -1124,21 +1154,36 @@ var getAnimationPrefixes = function(){
             return animation;
         };
 
-    if (detectCssPrefixes()) {
-        prefixes = {
-            animationDelay: animationDelay,
-            animationDuration: animationDuration,
-            transitionDelay: transitionDelay,
-            transitionDuration: transitionDuration,
-            transform: transform,
-            transitionend: transitionend
-        };
-    }
 
+    /**
+     * @function animate.getPrefixes
+     * @returns {object}
+     */
     return function() {
+
+        if (!probed) {
+            if (detectCssPrefixes()) {
+                prefixes = {
+                    animationDelay: animationDelay,
+                    animationDuration: animationDuration,
+                    transitionDelay: transitionDelay,
+                    transitionDuration: transitionDuration,
+                    transform: transform,
+                    transitionend: transitionend
+                };
+            }
+            else {
+                prefixes = {};
+            }
+
+            probed = true;
+        }
+
+
         return prefixes;
     };
 }();
+
 
 
 var getAnimationDuration = function(){
@@ -1166,14 +1211,27 @@ var getAnimationDuration = function(){
             return max;
         },
 
-        pfx                 = getAnimationPrefixes(),
-        animationDuration   = pfx ? pfx.animationDuration : null,
-        animationDelay      = pfx ? pfx.animationDelay : null,
-        transitionDuration  = pfx ? pfx.transitionDuration : null,
-        transitionDelay     = pfx ? pfx.transitionDelay : null;
+        pfx                 = false,
+        animationDuration   = null,
+        animationDelay      = null,
+        transitionDuration  = null,
+        transitionDelay     = null;
 
 
+    /**
+     * @function animate.getDuration
+     * @param {Element} el
+     * @returns {number}
+     */
     return function(el) {
+
+        if (pfx === false) {
+            pfx = getAnimationPrefixes();
+            animationDuration = pfx ? pfx.animationDuration : null;
+            animationDelay = pfx ? pfx.animationDelay : null;
+            transitionDuration = pfx ? pfx.transitionDuration : null;
+            transitionDelay = pfx ? pfx.transitionDelay : null;
+        }
 
         if (!pfx) {
             return 0;
@@ -1195,11 +1253,17 @@ var getAnimationDuration = function(){
 }();
 
 
+
 function isFunction(value) {
     return typeof value == 'function';
 };
 
 
+
+/**
+ * @function animate.stop
+ * @param {Element} el
+ */
 var stopAnimation = function(el) {
 
     var queue = data(el, "mjsAnimationQueue"),
@@ -1234,16 +1298,22 @@ var stopAnimation = function(el) {
 
 
 
+
 /**
  * Returns 'then' function or false
  * @param {*} any
  * @returns {Function|boolean}
  */
 function isThenable(any) {
-    if (!any || !any.then) {
+
+    // any.then must only be accessed once
+    // this is a promise/a+ requirement
+
+    if (!any) { //  || !any.then
         return false;
     }
     var then, t;
+
     //if (!any || (!isObject(any) && !isFunction(any))) {
     if (((t = typeof any) != "object" && t != "function")) {
         return false;
@@ -1251,7 +1321,9 @@ function isThenable(any) {
     return isFunction((then = any.then)) ?
            then : false;
 };
-var strUndef = "undefined";/**
+
+var strUndef = "undefined";
+/**
  * @param {Function} fn
  * @param {Object} context
  * @param {[]} args
@@ -1262,6 +1334,7 @@ function async(fn, context, args, timeout) {
         fn.apply(context, args || []);
     }, timeout || 0);
 };
+
 
 
 function error(e) {
@@ -1280,6 +1353,7 @@ function error(e) {
         throw e;
     }
 };
+
 
 
 
@@ -1322,6 +1396,7 @@ var Promise = function(){
          * @param {Function} fn
          * @param {Object} scope
          * @param {[]} args
+         * @ignore
          */
         next        = function(fn, scope, args) {
             args = args || [];
@@ -1343,6 +1418,7 @@ var Promise = function(){
          * @param {Function} fn
          * @param {Promise} promise
          * @returns {Function}
+         * @ignore
          */
         wrapper     = function(fn, promise) {
             return function(value) {
@@ -1357,19 +1433,54 @@ var Promise = function(){
 
 
     /**
-     * @param {Function} fn -- function(resolve, reject)
-     * @param {Object} fnScope
+     * @class Promise
+     */
+
+
+    /**
+     * @method Promise
+     * @param {Function} fn {
+     *  @description Function that accepts two parameters: resolve and reject functions.
+     *  @param {function} resolve {
+     *      @param {*} value
+     *  }
+     *  @param {function} reject {
+     *      @param {*} reason
+     *  }
+     * }
+     * @param {Object} context
      * @returns {Promise}
      * @constructor
      */
-    var Promise = function(fn, fnScope) {
+
+    /**
+     * @method Promise
+     * @param {Thenable} thenable
+     * @returns {Promise}
+     * @constructor
+     */
+
+    /**
+     * @method Promise
+     * @param {*} value Value to resolve promise with
+     * @returns {Promise}
+     * @constructor
+     */
+
+
+    /**
+     * @method Promise
+     * @returns {Promise}
+     * @constructor
+     */
+    var Promise = function(fn, context) {
 
         if (fn instanceof Promise) {
             return fn;
         }
 
         if (!(this instanceof Promise)) {
-            return new Promise(fn, fnScope);
+            return new Promise(fn, context);
         }
 
         var self = this,
@@ -1396,7 +1507,7 @@ var Promise = function(){
             }
             else if (isFunction(fn)) {
                 try {
-                    fn.call(fnScope,
+                    fn.call(context,
                             bind(self.resolve, self),
                             bind(self.reject, self));
                 }
@@ -1662,23 +1773,23 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise is resolved
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @returns {Promise} same promise
          */
-        done: function(fn, fnScope) {
+        done: function(fn, context) {
             var self    = this,
                 state   = self._state;
 
             if (state == FULFILLED && self._wait == 0) {
                 try {
-                    fn.call(fnScope || null, self._value);
+                    fn.call(context || null, self._value);
                 }
                 catch (thrown) {
                     error(thrown);
                 }
             }
             else if (state == PENDING) {
-                self._dones.push([fn, fnScope]);
+                self._dones.push([fn, context]);
             }
 
             return self;
@@ -1702,24 +1813,24 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise is rejected.
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @returns {Promise} same promise
          */
-        fail: function(fn, fnScope) {
+        fail: function(fn, context) {
 
             var self    = this,
                 state   = self._state;
 
             if (state == REJECTED && self._wait == 0) {
                 try {
-                    fn.call(fnScope || null, self._reason);
+                    fn.call(context || null, self._reason);
                 }
                 catch (thrown) {
                     error(thrown);
                 }
             }
             else if (state == PENDING) {
-                self._fails.push([fn, fnScope]);
+                self._fails.push([fn, context]);
             }
 
             return self;
@@ -1727,17 +1838,17 @@ var Promise = function(){
 
         /**
          * @param {Function} fn -- function to call when promise resolved or rejected
-         * @param {Object} fnScope -- function's "this" object
+         * @param {Object} context -- function's "this" object
          * @return {Promise} same promise
          */
-        always: function(fn, fnScope) {
-            this.done(fn, fnScope);
-            this.fail(fn, fnScope);
+        always: function(fn, context) {
+            this.done(fn, context);
+            this.fail(fn, context);
             return this;
         },
 
         /**
-         * @returns {{then: function, done: function, fail: function, always: function}}
+         * @returns {object} then: function, done: function, fail: function, always: function
          */
         promise: function() {
             var self = this;
@@ -1779,6 +1890,13 @@ var Promise = function(){
     }, true, false);
 
 
+    /**
+     * @param {function} fn
+     * @param {object} context
+     * @param {[]} args
+     * @returns {Promise}
+     * @static
+     */
     Promise.fcall = function(fn, context, args) {
         return Promise.resolve(fn.apply(context, args || []));
     };
@@ -1786,6 +1904,7 @@ var Promise = function(){
     /**
      * @param {*} value
      * @returns {Promise}
+     * @static
      */
     Promise.resolve = function(value) {
         var p = new Promise;
@@ -1797,6 +1916,7 @@ var Promise = function(){
     /**
      * @param {*} reason
      * @returns {Promise}
+     * @static
      */
     Promise.reject = function(reason) {
         var p = new Promise;
@@ -1808,6 +1928,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.all = function(promises) {
 
@@ -1862,6 +1983,7 @@ var Promise = function(){
      * @param {Promise|*} promise2
      * @param {Promise|*} promiseN
      * @returns {Promise}
+     * @static
      */
     Promise.when = function() {
         return Promise.all(arguments);
@@ -1870,6 +1992,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.allResolved = function(promises) {
 
@@ -1914,6 +2037,7 @@ var Promise = function(){
     /**
      * @param {[]} promises -- array of promises or resolve values
      * @returns {Promise}
+     * @static
      */
     Promise.race = function(promises) {
 
@@ -1950,6 +2074,7 @@ var Promise = function(){
     /**
      * @param {[]} functions -- array of promises or resolve values or functions
      * @returns {Promise}
+     * @static
      */
     Promise.waterfall = function(functions) {
 
@@ -2000,6 +2125,14 @@ var Promise = function(){
 
 
 
+
+function isString(value) {
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
+};
+
+
+
 var raf = function() {
 
     var raf,
@@ -2035,6 +2168,7 @@ var raf = function() {
 
 
 
+
 var animate = function(){
 
 
@@ -2048,9 +2182,8 @@ var animate = function(){
 
         animId          = 0,
 
-        prefixes        = getAnimationPrefixes(),
-
-        cssAnimations   = !!prefixes,
+        prefixes        = false,
+        cssAnimations   = false,
 
         dataParam       = "mjsAnimationQueue",
 
@@ -2065,6 +2198,15 @@ var animate = function(){
                 }
             };
             raf(tick);
+        },
+
+
+        cssAnimSupported= function(){
+            if (prefixes === false) {
+                prefixes        = getAnimationPrefixes();
+                cssAnimations   = !!prefixes;
+            }
+            return cssAnimations;
         },
 
 
@@ -2175,6 +2317,22 @@ var animate = function(){
         };
 
 
+    /**
+     * @function animate
+     * @param {Element} el Element being animated
+     * @param {string|function|[]|object} animation {
+     *  'string' - registered animation name,<br>
+     *  'function' - fn(el, callback) - your own animation<br>
+     *  'array' - array or stages (class names)<br>
+     *  'array' - [{before}, {after}] - jquery animation<br>
+     *  'object' - {stages, fn, before, after, options, context, duration, start}
+     * }
+     * @param {function} startCallback call this function before animation begins
+     * @param {bool} checkIfEnabled check if mjs-animate attribute is present
+     * @param {MetaphorJs.Namespace} namespace registered animations storage
+     * @param {function} stepCallback call this function between stages
+     * @returns {MetaphorJs.Promise}
+     */
     var animate = function animate(el, animation, startCallback, checkIfEnabled, namespace, stepCallback) {
 
         var deferred    = new Promise,
@@ -2229,7 +2387,7 @@ var animate = function(){
             }
 
 
-            if (cssAnimations && stages) {
+            if (cssAnimSupported() && stages) {
 
                 queue.push({
                     el: el,
@@ -2315,15 +2473,24 @@ var animate = function(){
     };
 
     animate.stop = stopAnimation;
-    animate.prefixes = prefixes;
-    animate.cssAnimations = cssAnimations;
+    animate.getPrefixes = getAnimationPrefixes;
+    animate.getDuration = getAnimationDuration;
+
+    /**
+     * @function animate.cssAnimationSupported
+     * @returns {bool}
+     */
+    animate.cssAnimationSupported = cssAnimSupported;
 
     return animate;
 }();
 
 
+
 /**
+ * @function trim
  * @param {String} value
+ * @returns {string}
  */
 var trim = function() {
     // native trim is way faster: http://jsperf.com/angular-trim-test
@@ -2338,7 +2505,9 @@ var trim = function() {
     };
 }();
 
+
 function emptyFn(){};
+
 
 
 var parseJSON = function() {
@@ -2351,6 +2520,7 @@ var parseJSON = function() {
                return (new Function("return " + data))();
            };
 }();
+
 
 
 
@@ -2381,19 +2551,18 @@ function parseXML(data, type) {
 
 
 
+
 /**
  * <p>A javascript event system implementing two patterns - observable and collector.</p>
  *
  * <p>Observable:</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * o.on("event", function(x, y, z){ console.log([x, y, z]) });
  * o.trigger("event", 1, 2, 3); // [1, 2, 3]
  * </code></pre>
  *
  * <p>Collector:</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * o.createEvent("collectStuff", "all");
  * o.on("collectStuff", function(){ return 1; });
  * o.on("collectStuff", function(){ return 2; });
@@ -2402,15 +2571,13 @@ function parseXML(data, type) {
  *
  * <p>Although all methods are public there is getApi() method that allows you
  * extending your own objects without overriding "destroy" (which you probably have)</p>
- * <pre><code class="language-javascript">
- * var o = new MetaphorJs.lib.Observable;
+ * <pre><code class="language-javascript">var o = new Observable;
  * $.extend(this, o.getApi());
  * this.on("event", function(){ alert("ok") });
  * this.trigger("event");
  * </code></pre>
  *
- * @namespace MetaphorJs
- * @class MetaphorJs.lib.Observable
+ * @class Observable
  * @version 1.1
  * @author johann kuindji
  * @link https://github.com/kuindji/metaphorjs-observable
@@ -2425,13 +2592,11 @@ var Observable = function() {
 extend(Observable.prototype, {
 
     /**
-    * <p>You don't have to call this function unless you want to pass returnResult param.
-    * This function will be automatically called from on() with
-    * <code class="language-javascript">returnResult = false</code>,
-    * so if you want to receive handler's return values, create event first, then call on().</p>
+    * You don't have to call this function unless you want to pass returnResult param.
+    * This function will be automatically called from {@link on} with <code>returnResult = false</code>,
+    * so if you want to receive handler's return values, create event first, then call on().
     *
-    * <pre><code class="language-javascript">
-    * var observable = new MetaphorJs.lib.Observable;
+    * <pre><code class="language-javascript">var observable = new Observable;
     * observable.createEvent("collectStuff", "all");
     * observable.on("collectStuff", function(){ return 1; });
     * observable.on("collectStuff", function(){ return 2; });
@@ -2448,11 +2613,12 @@ extend(Observable.prototype, {
     *   false -- do not return results except if handler returned "false". This is how
     *   normal observables work.<br>
     *   "all" -- return all results as array<br>
+    *   "merge" -- merge all results into one array (each result must be array)<br>
     *   "first" -- return result of the first handler<br>
-    *   "last" -- return result of the last handler
+    *   "last" -- return result of the last handler<br>
     *   @required
     * }
-    * @return MetaphorJs.lib.ObservableEvent
+    * @return {ObservableEvent}
     */
     createEvent: function(name, returnResult) {
         name = name.toLowerCase();
@@ -2467,7 +2633,7 @@ extend(Observable.prototype, {
     * @method
     * @access public
     * @param {string} name Event name
-    * @return MetaphorJs.lib.ObservableEvent|undefined
+    * @return {ObservableEvent|undefined}
     */
     getEvent: function(name) {
         name = name.toLowerCase();
@@ -2478,7 +2644,6 @@ extend(Observable.prototype, {
     * Subscribe to an event or register collector function.
     * @method
     * @access public
-    * @md-save on
     * @param {string} name {
     *       Event name
     *       @required
@@ -2489,21 +2654,21 @@ extend(Observable.prototype, {
     * }
     * @param {object} context "this" object for the callback function
     * @param {object} options {
-    *       @type bool first {
+    *       @type {bool} first {
     *           True to prepend to the list of handlers
     *           @default false
     *       }
-    *       @type number limit {
+    *       @type {number} limit {
     *           Call handler this number of times; 0 for unlimited
     *           @default 0
     *       }
-    *       @type number start {
+    *       @type {number} start {
     *           Start calling handler after this number of calls. Starts from 1
     *           @default 1
     *       }
-     *      @type [] append Append parameters
-     *      @type [] prepend Prepend parameters
-     *      @type bool allowDupes allow the same handler twice
+     *      @type {[]} append Append parameters
+     *      @type {[]} prepend Prepend parameters
+     *      @type {bool} allowDupes allow the same handler twice
     * }
     */
     on: function(name, fn, context, options) {
@@ -2516,9 +2681,8 @@ extend(Observable.prototype, {
     },
 
     /**
-    * Same as on(), but options.limit is forcefully set to 1.
+    * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
     * @method
-    * @md-apply on
     * @access public
     */
     once: function(name, fn, context, options) {
@@ -2681,7 +2845,7 @@ extend(Observable.prototype, {
 
 
     /**
-    * Destroy specific event
+    * Destroy observable
     * @method
     * @md-not-inheritable
     * @access public
@@ -2741,8 +2905,9 @@ extend(Observable.prototype, {
 
 /**
  * This class is private - you can't create an event other than via Observable.
- * See MetaphorJs.lib.Observable reference.
- * @class MetaphorJs.lib.ObservableEvent
+ * See Observable reference.
+ * @class ObservableEvent
+ * @private
  */
 var Event = function(name, returnResult) {
 
@@ -2761,6 +2926,11 @@ var Event = function(name, returnResult) {
 
 extend(Event.prototype, {
 
+    /**
+     * Get event name
+     * @method
+     * @returns {string}
+     */
     getName: function() {
         return this.name;
     },
@@ -2994,7 +3164,8 @@ extend(Event.prototype, {
             return null;
         }
 
-        var ret     = returnResult == "all" ? [] : null,
+        var ret     = returnResult == "all" || returnResult == "merge" ?
+                        [] : null,
             q, l,
             res;
 
@@ -3033,17 +3204,17 @@ extend(Event.prototype, {
             if (returnResult == "all") {
                 ret.push(res);
             }
-
-            if (returnResult == "first") {
+            else if (returnResult == "merge" && res) {
+                ret = ret.concat(res);
+            }
+            else if (returnResult == "first") {
                 return res;
             }
-
-            if (returnResult == "last") {
+            else if (returnResult == "last") {
                 ret = res;
             }
-
-            if (returnResult == false && res === false) {
-                break;
+            else if (returnResult == false && res === false) {
+                return false;
             }
         }
 
@@ -3052,6 +3223,7 @@ extend(Event.prototype, {
         }
     }
 }, true, false);
+
 
 
 
@@ -3066,10 +3238,12 @@ function isObject(value) {
 };
 
 
+
 function isPrimitive(value) {
     var vt = varType(value);
     return vt < 3 && vt > -1;
 };
+
 
 
 
@@ -3968,12 +4142,15 @@ var ajax = function(){
 
 
 
+
 function isNumber(value) {
     return varType(value) === 1;
 };
+
 function ucfirst(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
+
 
 
 var getScrollTopOrLeft = function(vertical) {
@@ -3981,7 +4158,7 @@ var getScrollTopOrLeft = function(vertical) {
     var defaultST,
         wProp = vertical ? "pageYOffset" : "pageXOffset",
         sProp = vertical ? "scrollTop" : "scrollLeft",
-        doc = document,
+        doc = window.document,
         body = doc.body,
         html = doc.documentElement;
 
@@ -4020,16 +4197,16 @@ var getScrollTopOrLeft = function(vertical) {
 };
 
 
+
 var getScrollTop = getScrollTopOrLeft(true);
+
 
 
 var getScrollLeft = getScrollTopOrLeft(false);
 
-var elHtml = document.documentElement;
-
-
 var isAttached = function(){
     var isAttached = function isAttached(node) {
+
         if (node === window) {
             return true;
         }
@@ -4041,15 +4218,20 @@ var isAttached = function(){
                 return true;
             }
         }
-        return node === elHtml ? true : elHtml.contains(node);
+
+        var html = window.document.documentElement;
+
+        return node === html ? true : html.contains(node);
     };
     return isAttached;
 }();
 
 
+
 function getOffset(node) {
 
-    var box = {top: 0, left: 0};
+    var box = {top: 0, left: 0},
+        html = window.document.documentElement;
 
     // Make sure it's not a disconnected DOM node
     if (!isAttached(node) || node === window) {
@@ -4063,33 +4245,34 @@ function getOffset(node) {
     }
 
     return {
-        top: box.top + getScrollTop() - elHtml.clientTop,
-        left: box.left + getScrollLeft() - elHtml.clientLeft
+        top: box.top + getScrollTop() - html.clientTop,
+        left: box.left + getScrollLeft() - html.clientLeft
     };
 };
-var getStyle = function() {
+
+/*!window!*/
+
+var getStyle = function(node, prop, numeric) {
+
+    var style, val;
 
     if (window.getComputedStyle) {
-        return function (node, prop, numeric) {
-            if (node === window) {
-                return prop? (numeric ? 0 : null) : {};
-            }
-            var style = getComputedStyle(node, null),
-                val = prop ? style[prop] : style;
 
-            return numeric ? parseFloat(val) || 0 : val;
-        };
+        if (node === window) {
+            return prop? (numeric ? 0 : null) : {};
+        }
+        style = getComputedStyle(node, null);
+        val = prop ? style[prop] : style;
+    }
+    else {
+        style = node.currentStyle || node.style || {};
+        val = prop ? style[prop] : style;
     }
 
-    return function(node, prop, numeric) {
-        var style   = node.currentStyle || node.style || {},
-            val     = prop ? style[prop] : style;
-        return numeric ? parseFloat(val) || 0 : val;
-    };
+    return numeric ? parseFloat(val) || 0 : val;
 
-}();
+};
 
-var elBody = document.body;
 
 
 var boxSizingReliable = function() {
@@ -4098,8 +4281,10 @@ var boxSizingReliable = function() {
 
     var computePixelPositionAndBoxSizingReliable = function() {
 
-        var container = document.createElement("div"),
-            div = document.createElement("div");
+        var doc = window.document,
+            container = doc.createElement("div"),
+            div = doc.createElement("div"),
+            body = doc.body;
 
         if (!div.style || !window.getComputedStyle) {
             return false;
@@ -4116,12 +4301,12 @@ var boxSizingReliable = function() {
         "box-sizing:border-box;display:block;margin-top:1%;top:1%;" +
         "border:1px;padding:1px;width:4px;position:absolute";
         div.innerHTML = "";
-        elBody.appendChild(container);
+        body.appendChild(container);
 
         var divStyle = window.getComputedStyle(div, null),
             ret = divStyle.width === "4px";
 
-        elBody.removeChild(container);
+        body.removeChild(container);
 
         return ret;
     };
@@ -4134,6 +4319,7 @@ var boxSizingReliable = function() {
         return boxSizingReliableVal;
     };
 }();
+
 // from jQuery
 
 
@@ -4252,11 +4438,15 @@ var getDimensions = function(type, name) {
 };
 
 
+
 var getOuterWidth = getDimensions("outer", "Width");
 
 
+
 var getOuterHeight = getDimensions("outer", "Height");
+
 var delegates = {};
+
 
 
 
@@ -4281,6 +4471,7 @@ function delegate(el, selector, event, fn) {
 };
 
 
+
 function undelegate(el, selector, event, fn) {
 
     var key = selector + "-" + event,
@@ -4295,6 +4486,7 @@ function undelegate(el, selector, event, fn) {
         }
     }
 };
+
 
 
 
@@ -4323,7 +4515,7 @@ var Dialog = function(){
         names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
         sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-        ie6         = document.all && !window.XMLHttpRequest;
+        ie6         = null;
 
     /*
      * Manager
@@ -4391,6 +4583,10 @@ var Dialog = function(){
      * Pointer
      */
     var Pointer     = function(dlg, cfg, inner) {
+
+        if (ie6 === null) {
+            ie6 = window.document.all && !window.XMLHttpRequest
+        }
 
         var el,
             self    = this,
@@ -4504,7 +4700,7 @@ var Dialog = function(){
 
                 // custom element
                 if (!size) {
-                    document.body.appendChild(el);
+                    window.document.body.appendChild(el);
                     switch (pri) {
                         case "t":
                         case "b": {
@@ -4615,8 +4811,8 @@ var Dialog = function(){
 
                     var direction   = self.detectPointerDirection(position);
 
-                    el          = document.createElement('div');
-                    var cmt     = document.createComment(" ");
+                    el          = window.document.createElement('div');
+                    var cmt     = window.document.createComment(" ");
 
                     el.appendChild(cmt);
 
@@ -4636,7 +4832,7 @@ var Dialog = function(){
                 }
                 else {
                     if (isString(cfg.el)) {
-                        var tmp = document.createElement("div");
+                        var tmp = window.document.createElement("div");
                         tmp.innerHTML = cfg.el;
                         el = tmp.firstChild;
                     }
@@ -6543,11 +6739,11 @@ var Dialog = function(){
                                 break;
 
                             case "_document":
-                                el  = [document];
+                                el  = [window.document];
                                 break;
 
                             case "_html":
-                                el  = [document.documentElement];
+                                el  = [window.document.documentElement];
                                 break;
 
                             case "_overlay":
@@ -6665,7 +6861,7 @@ var Dialog = function(){
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
                     // to mouse's position and set mousemove event listener
-                    addListener(document.documentElement, "mousemove", self.onMouseMove);
+                    addListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -6773,7 +6969,7 @@ var Dialog = function(){
 
                 // if this tooltip is following the mouse, we reset event listeners
                 if (state.position == "mouse") {
-                    removeListener(document.documentElement, "mousemove", self.onMouseMove);
+                    removeListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -6906,13 +7102,13 @@ var Dialog = function(){
                     }
                 }
                 else {
-                    var tmp = document.createElement("div");
+                    var tmp = window.document.createElement("div");
                     tmp.innerHTML = rnd.tpl;
                     elem = tmp.firstChild;
                 }
 
                 if (!elem) {
-                    elem = document.createElement("div");
+                    elem = window.document.createElement("div");
                 }
 
                 if (rnd.id) {
@@ -6933,7 +7129,7 @@ var Dialog = function(){
 
                 if (cfg.overlay.enabled) {
 
-                    overlay     = document.createElement("div");
+                    overlay     = window.document.createElement("div");
                     css(overlay, {
                         display:            "none",
                         position: 			"fixed",
@@ -6945,7 +7141,7 @@ var Dialog = function(){
                         backgroundColor: 	cfg.overlay.color
                     });
 
-                    document.body.appendChild(overlay);
+                    window.document.body.appendChild(overlay);
 
                     addListener(overlay, "click", self.onOverlayClick);
 
@@ -6961,7 +7157,7 @@ var Dialog = function(){
                     rnd.appendTo.appendChild(elem);
                 }
                 else if (rnd.appendTo !== false) {
-                    document.body.appendChild(elem);
+                    window.document.body.appendChild(elem);
                 }
 
                 if (rnd.zIndex) {
@@ -7509,16 +7705,17 @@ var Dialog = function(){
 
 
 
+
 /**
  * @param {Function} fn
+ * @param {Window} w optional window object
  */
-function onReady(fn) {
+function onReady(fn, w) {
 
     var done    = false,
         top     = true,
-        win     = window,
-        doc     = win.document,
-        root    = doc.documentElement,
+        win     = w || window,
+        root, doc,
 
         init    = function(e) {
             if (e.type == 'readystatechange' && doc.readyState != 'complete') {
@@ -7543,6 +7740,9 @@ function onReady(fn) {
             init('poll');
         };
 
+    doc     = win.document;
+    root    = doc.documentElement;
+
     if (doc.readyState == 'complete') {
         fn.call(win, 'lazy');
     }
@@ -7559,28 +7759,16 @@ function onReady(fn) {
         addListener(win, 'load', init);
     }
 };
-/**
- * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
- * @function jQuery.fn.metaphorjsTooltip
- * @param {object|string} options See constructor. Pass "destroy" instead of options
- * to destroy dialog.
- * @param {string} instanceName {
-    *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-    *   @default "default"
- * }
- * @return jQuery
- */
 
 if (window.jQuery) {
 
     /**
      * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
      * @function
-     * @param {string} preset
-     * @param {object} options See constructor.
+     * @param {string|object} options See constructor.
      * @param {string} instanceName {
-        *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-        *   @default "default"
+     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
+     *   @default "default"
      * }
      * @return jQuery
      */
@@ -7622,9 +7810,8 @@ if (window.jQuery) {
 
 }
 
-MetaphorJs.lib['Dialog'] = Dialog;
+MetaphorJs['Dialog'] = Dialog;
 MetaphorJs['onReady'] = onReady;
-
 typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJs) : (window['MetaphorJs'] = MetaphorJs);
 
 }());

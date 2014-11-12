@@ -2,9 +2,13 @@ define("metaphorjs-dialog", ['metaphorjs-observable', 'metaphorjs-promise', 'met
 
 var stopAnimation = animate.stop;
 
+
 var slice = Array.prototype.slice;
+
 var toString = Object.prototype.toString;
+
 var undf = undefined;
+
 
 
 
@@ -23,19 +27,21 @@ var varType = function(){
 
 
     /**
-        'string': 0,
-        'number': 1,
-        'boolean': 2,
-        'object': 3,
-        'function': 4,
-        'array': 5,
-        'null': 6,
-        'undefined': 7,
-        'NaN': 8,
-        'regexp': 9,
-        'date': 10
-    */
-
+     * 'string': 0,
+     * 'number': 1,
+     * 'boolean': 2,
+     * 'object': 3,
+     * 'function': 4,
+     * 'array': 5,
+     * 'null': 6,
+     * 'undefined': 7,
+     * 'NaN': 8,
+     * 'regexp': 9,
+     * 'date': 10,
+     * unknown: -1
+     * @param {*} value
+     * @returns {number}
+     */
     return function varType(val) {
 
         if (!val) {
@@ -63,6 +69,7 @@ var varType = function(){
 }();
 
 
+
 function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
     return typeof value == "object" &&
@@ -72,25 +79,23 @@ function isPlainObject(value) {
 
 };
 
-
 function isBool(value) {
     return value === true || value === false;
 };
-function isNull(value) {
-    return value === null;
-};
 
 
-/**
- * @param {Object} dst
- * @param {Object} src
- * @param {Object} src2 ... srcN
- * @param {boolean} override = false
- * @param {boolean} deep = false
- * @returns {*}
- */
+
+
 var extend = function(){
 
+    /**
+     * @param {Object} dst
+     * @param {Object} src
+     * @param {Object} src2 ... srcN
+     * @param {boolean} override = false
+     * @param {boolean} deep = false
+     * @returns {object}
+     */
     var extend = function extend() {
 
 
@@ -148,13 +153,14 @@ var extend = function(){
     return extend;
 }();
 
-/**
- * @returns {String}
- */
+
 var nextUid = function(){
     var uid = ['0', '0', '0'];
 
     // from AngularJs
+    /**
+     * @returns {String}
+     */
     return function nextUid() {
         var index = uid.length;
         var digit;
@@ -178,6 +184,7 @@ var nextUid = function(){
     };
 }();
 
+
 /**
  * @param {Function} fn
  * @param {*} context
@@ -192,17 +199,21 @@ var bind = Function.prototype.bind ?
                   };
               };
 
-/**
- * @param {String} expr
- */
+
+
 var getRegExp = function(){
 
     var cache = {};
 
+    /**
+     * @param {String} expr
+     * @returns RegExp
+     */
     return function getRegExp(expr) {
         return cache[expr] || (cache[expr] = new RegExp(expr));
     };
 }();
+
 
 
 /**
@@ -214,6 +225,7 @@ function getClsReg(cls) {
 };
 
 
+
 /**
  * @param {Element} el
  * @param {String} cls
@@ -222,6 +234,7 @@ function getClsReg(cls) {
 function hasClass(el, cls) {
     return cls ? getClsReg(cls).test(el.className) : false;
 };
+
 
 
 /**
@@ -235,6 +248,7 @@ function addClass(el, cls) {
 };
 
 
+
 /**
  * @param {Element} el
  * @param {String} cls
@@ -246,6 +260,7 @@ function removeClass(el, cls) {
 };
 
 
+
 /**
  * @param {*} value
  * @returns {boolean}
@@ -253,6 +268,7 @@ function removeClass(el, cls) {
 function isArray(value) {
     return typeof value == "object" && varType(value) === 5;
 };
+
 
 
 
@@ -286,15 +302,19 @@ var data = function(){
     };
 
 }();
+
 function getAttr(el, name) {
-    return el.getAttribute(name);
+    return el.getAttribute ? el.getAttribute(name) : null;
 };
+
 function setAttr(el, name, value) {
     return el.setAttribute(name, value);
 };
+
 function removeAttr(el, name) {
     return el.removeAttribute(name);
 };
+
 function addListener(el, event, func) {
     if (el.attachEvent) {
         el.attachEvent('on' + event, func);
@@ -303,6 +323,7 @@ function addListener(el, event, func) {
     }
 };
 
+
 function removeListener(el, event, func) {
     if (el.detachEvent) {
         el.detachEvent('on' + event, func);
@@ -310,26 +331,33 @@ function removeListener(el, event, func) {
         el.removeEventListener(event, func, false);
     }
 };
+
 function returnFalse() {
     return false;
 };
+
 
 function returnTrue() {
     return true;
 };
 
+function isNull(value) {
+    return value === null;
+};
+
+
 
 // from jQuery
 
-var NormalizedEvent = function(src) {
+var DomEvent = function(src) {
 
-    if (src instanceof NormalizedEvent) {
+    if (src instanceof DomEvent) {
         return src;
     }
 
     // Allow instantiation without the 'new' keyword
-    if (!(this instanceof NormalizedEvent)) {
-        return new NormalizedEvent(src);
+    if (!(this instanceof DomEvent)) {
+        return new DomEvent(src);
     }
 
 
@@ -359,7 +387,7 @@ var NormalizedEvent = function(src) {
 
     // Calculate pageX/Y if missing and clientX/Y available
     if (self.pageX === undf && !isNull(src.clientX)) {
-        eventDoc = self.target ? self.target.ownerDocument || document : document;
+        eventDoc = self.target ? self.target.ownerDocument || window.document : window.document;
         doc = eventDoc.documentElement;
         body = eventDoc.body;
 
@@ -393,7 +421,7 @@ var NormalizedEvent = function(src) {
 
 // Event is based on DOM3 Events as specified by the ECMAScript Language Binding
 // http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
-extend(NormalizedEvent.prototype, {
+extend(DomEvent.prototype, {
 
     isDefaultPrevented: returnFalse,
     isPropagationStopped: returnFalse,
@@ -433,9 +461,11 @@ extend(NormalizedEvent.prototype, {
 
 
 
+
 function normalizeEvent(originalEvent) {
-    return new NormalizedEvent(originalEvent);
+    return new DomEvent(originalEvent);
 };
+
 /**
  * @param {Element} el
  * @returns {boolean}
@@ -443,6 +473,7 @@ function normalizeEvent(originalEvent) {
 function isVisible(el) {
     return !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
 };
+
 
 
 /**
@@ -453,21 +484,26 @@ function isVisible(el) {
 var is = select.is;
 
 
+
 function isString(value) {
     return typeof value == "string" || value === ""+value;
     //return typeof value == "string" || varType(value) === 0;
 };
+
 function isFunction(value) {
     return typeof value == 'function';
 };
 
 
+
 function isNumber(value) {
     return varType(value) === 1;
 };
+
 function ucfirst(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
+
 
 
 var getScrollTopOrLeft = function(vertical) {
@@ -475,7 +511,7 @@ var getScrollTopOrLeft = function(vertical) {
     var defaultST,
         wProp = vertical ? "pageYOffset" : "pageXOffset",
         sProp = vertical ? "scrollTop" : "scrollLeft",
-        doc = document,
+        doc = window.document,
         body = doc.body,
         html = doc.documentElement;
 
@@ -514,16 +550,16 @@ var getScrollTopOrLeft = function(vertical) {
 };
 
 
+
 var getScrollTop = getScrollTopOrLeft(true);
+
 
 
 var getScrollLeft = getScrollTopOrLeft(false);
 
-var elHtml = document.documentElement;
-
-
 var isAttached = function(){
     var isAttached = function isAttached(node) {
+
         if (node === window) {
             return true;
         }
@@ -535,15 +571,20 @@ var isAttached = function(){
                 return true;
             }
         }
-        return node === elHtml ? true : elHtml.contains(node);
+
+        var html = window.document.documentElement;
+
+        return node === html ? true : html.contains(node);
     };
     return isAttached;
 }();
 
 
+
 function getOffset(node) {
 
-    var box = {top: 0, left: 0};
+    var box = {top: 0, left: 0},
+        html = window.document.documentElement;
 
     // Make sure it's not a disconnected DOM node
     if (!isAttached(node) || node === window) {
@@ -557,33 +598,34 @@ function getOffset(node) {
     }
 
     return {
-        top: box.top + getScrollTop() - elHtml.clientTop,
-        left: box.left + getScrollLeft() - elHtml.clientLeft
+        top: box.top + getScrollTop() - html.clientTop,
+        left: box.left + getScrollLeft() - html.clientLeft
     };
 };
-var getStyle = function() {
+
+/*!window!*/
+
+var getStyle = function(node, prop, numeric) {
+
+    var style, val;
 
     if (window.getComputedStyle) {
-        return function (node, prop, numeric) {
-            if (node === window) {
-                return prop? (numeric ? 0 : null) : {};
-            }
-            var style = getComputedStyle(node, null),
-                val = prop ? style[prop] : style;
 
-            return numeric ? parseFloat(val) || 0 : val;
-        };
+        if (node === window) {
+            return prop? (numeric ? 0 : null) : {};
+        }
+        style = getComputedStyle(node, null);
+        val = prop ? style[prop] : style;
+    }
+    else {
+        style = node.currentStyle || node.style || {};
+        val = prop ? style[prop] : style;
     }
 
-    return function(node, prop, numeric) {
-        var style   = node.currentStyle || node.style || {},
-            val     = prop ? style[prop] : style;
-        return numeric ? parseFloat(val) || 0 : val;
-    };
+    return numeric ? parseFloat(val) || 0 : val;
 
-}();
+};
 
-var elBody = document.body;
 
 
 var boxSizingReliable = function() {
@@ -592,8 +634,10 @@ var boxSizingReliable = function() {
 
     var computePixelPositionAndBoxSizingReliable = function() {
 
-        var container = document.createElement("div"),
-            div = document.createElement("div");
+        var doc = window.document,
+            container = doc.createElement("div"),
+            div = doc.createElement("div"),
+            body = doc.body;
 
         if (!div.style || !window.getComputedStyle) {
             return false;
@@ -610,12 +654,12 @@ var boxSizingReliable = function() {
         "box-sizing:border-box;display:block;margin-top:1%;top:1%;" +
         "border:1px;padding:1px;width:4px;position:absolute";
         div.innerHTML = "";
-        elBody.appendChild(container);
+        body.appendChild(container);
 
         var divStyle = window.getComputedStyle(div, null),
             ret = divStyle.width === "4px";
 
-        elBody.removeChild(container);
+        body.removeChild(container);
 
         return ret;
     };
@@ -628,6 +672,7 @@ var boxSizingReliable = function() {
         return boxSizingReliableVal;
     };
 }();
+
 // from jQuery
 
 
@@ -746,11 +791,15 @@ var getDimensions = function(type, name) {
 };
 
 
+
 var getOuterWidth = getDimensions("outer", "Width");
 
 
+
 var getOuterHeight = getDimensions("outer", "Height");
+
 var delegates = {};
+
 
 
 
@@ -775,6 +824,7 @@ function delegate(el, selector, event, fn) {
 };
 
 
+
 function undelegate(el, selector, event, fn) {
 
     var key = selector + "-" + event,
@@ -789,6 +839,7 @@ function undelegate(el, selector, event, fn) {
         }
     }
 };
+
 
 
 
@@ -817,7 +868,7 @@ var Dialog = function(){
         names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
         sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-        ie6         = document.all && !window.XMLHttpRequest;
+        ie6         = null;
 
     /*
      * Manager
@@ -885,6 +936,10 @@ var Dialog = function(){
      * Pointer
      */
     var Pointer     = function(dlg, cfg, inner) {
+
+        if (ie6 === null) {
+            ie6 = window.document.all && !window.XMLHttpRequest
+        }
 
         var el,
             self    = this,
@@ -998,7 +1053,7 @@ var Dialog = function(){
 
                 // custom element
                 if (!size) {
-                    document.body.appendChild(el);
+                    window.document.body.appendChild(el);
                     switch (pri) {
                         case "t":
                         case "b": {
@@ -1109,8 +1164,8 @@ var Dialog = function(){
 
                     var direction   = self.detectPointerDirection(position);
 
-                    el          = document.createElement('div');
-                    var cmt     = document.createComment(" ");
+                    el          = window.document.createElement('div');
+                    var cmt     = window.document.createComment(" ");
 
                     el.appendChild(cmt);
 
@@ -1130,7 +1185,7 @@ var Dialog = function(){
                 }
                 else {
                     if (isString(cfg.el)) {
-                        var tmp = document.createElement("div");
+                        var tmp = window.document.createElement("div");
                         tmp.innerHTML = cfg.el;
                         el = tmp.firstChild;
                     }
@@ -3037,11 +3092,11 @@ var Dialog = function(){
                                 break;
 
                             case "_document":
-                                el  = [document];
+                                el  = [window.document];
                                 break;
 
                             case "_html":
-                                el  = [document.documentElement];
+                                el  = [window.document.documentElement];
                                 break;
 
                             case "_overlay":
@@ -3159,7 +3214,7 @@ var Dialog = function(){
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
                     // to mouse's position and set mousemove event listener
-                    addListener(document.documentElement, "mousemove", self.onMouseMove);
+                    addListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -3267,7 +3322,7 @@ var Dialog = function(){
 
                 // if this tooltip is following the mouse, we reset event listeners
                 if (state.position == "mouse") {
-                    removeListener(document.documentElement, "mousemove", self.onMouseMove);
+                    removeListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -3400,13 +3455,13 @@ var Dialog = function(){
                     }
                 }
                 else {
-                    var tmp = document.createElement("div");
+                    var tmp = window.document.createElement("div");
                     tmp.innerHTML = rnd.tpl;
                     elem = tmp.firstChild;
                 }
 
                 if (!elem) {
-                    elem = document.createElement("div");
+                    elem = window.document.createElement("div");
                 }
 
                 if (rnd.id) {
@@ -3427,7 +3482,7 @@ var Dialog = function(){
 
                 if (cfg.overlay.enabled) {
 
-                    overlay     = document.createElement("div");
+                    overlay     = window.document.createElement("div");
                     css(overlay, {
                         display:            "none",
                         position: 			"fixed",
@@ -3439,7 +3494,7 @@ var Dialog = function(){
                         backgroundColor: 	cfg.overlay.color
                     });
 
-                    document.body.appendChild(overlay);
+                    window.document.body.appendChild(overlay);
 
                     addListener(overlay, "click", self.onOverlayClick);
 
@@ -3455,7 +3510,7 @@ var Dialog = function(){
                     rnd.appendTo.appendChild(elem);
                 }
                 else if (rnd.appendTo !== false) {
-                    document.body.appendChild(elem);
+                    window.document.body.appendChild(elem);
                 }
 
                 if (rnd.zIndex) {
@@ -4001,28 +4056,16 @@ var Dialog = function(){
 
 }();
 
-/**
- * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
- * @function jQuery.fn.metaphorjsTooltip
- * @param {object|string} options See constructor. Pass "destroy" instead of options
- * to destroy dialog.
- * @param {string} instanceName {
-    *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-    *   @default "default"
- * }
- * @return jQuery
- */
 
 if (window.jQuery) {
 
     /**
      * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
      * @function
-     * @param {string} preset
-     * @param {object} options See constructor.
+     * @param {string|object} options See constructor.
      * @param {string} instanceName {
-        *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-        *   @default "default"
+     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
+     *   @default "default"
      * }
      * @return jQuery
      */
@@ -4064,5 +4107,7 @@ if (window.jQuery) {
 
 }
 
+
 return Dialog;
 });
+

@@ -64,7 +64,7 @@ module.exports = function(){
         names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
         sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-        ie6         = document.all && !window.XMLHttpRequest;
+        ie6         = null;
 
     /*
      * Manager
@@ -132,6 +132,10 @@ module.exports = function(){
      * Pointer
      */
     var Pointer     = function(dlg, cfg, inner) {
+
+        if (ie6 === null) {
+            ie6 = window.document.all && !window.XMLHttpRequest
+        }
 
         var el,
             self    = this,
@@ -245,7 +249,7 @@ module.exports = function(){
 
                 // custom element
                 if (!size) {
-                    document.body.appendChild(el);
+                    window.document.body.appendChild(el);
                     switch (pri) {
                         case "t":
                         case "b": {
@@ -356,8 +360,8 @@ module.exports = function(){
 
                     var direction   = self.detectPointerDirection(position);
 
-                    el          = document.createElement('div');
-                    var cmt     = document.createComment(" ");
+                    el          = window.document.createElement('div');
+                    var cmt     = window.document.createComment(" ");
 
                     el.appendChild(cmt);
 
@@ -377,7 +381,7 @@ module.exports = function(){
                 }
                 else {
                     if (isString(cfg.el)) {
-                        var tmp = document.createElement("div");
+                        var tmp = window.document.createElement("div");
                         tmp.innerHTML = cfg.el;
                         el = tmp.firstChild;
                     }
@@ -2284,11 +2288,11 @@ module.exports = function(){
                                 break;
 
                             case "_document":
-                                el  = [document];
+                                el  = [window.document];
                                 break;
 
                             case "_html":
-                                el  = [document.documentElement];
+                                el  = [window.document.documentElement];
                                 break;
 
                             case "_overlay":
@@ -2406,7 +2410,7 @@ module.exports = function(){
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
                     // to mouse's position and set mousemove event listener
-                    addListener(document.documentElement, "mousemove", self.onMouseMove);
+                    addListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -2514,7 +2518,7 @@ module.exports = function(){
 
                 // if this tooltip is following the mouse, we reset event listeners
                 if (state.position == "mouse") {
-                    removeListener(document.documentElement, "mousemove", self.onMouseMove);
+                    removeListener(window.document.documentElement, "mousemove", self.onMouseMove);
                 }
 
                 var cfgPos = cfg.position;
@@ -2647,13 +2651,13 @@ module.exports = function(){
                     }
                 }
                 else {
-                    var tmp = document.createElement("div");
+                    var tmp = window.document.createElement("div");
                     tmp.innerHTML = rnd.tpl;
                     elem = tmp.firstChild;
                 }
 
                 if (!elem) {
-                    elem = document.createElement("div");
+                    elem = window.document.createElement("div");
                 }
 
                 if (rnd.id) {
@@ -2674,7 +2678,7 @@ module.exports = function(){
 
                 if (cfg.overlay.enabled) {
 
-                    overlay     = document.createElement("div");
+                    overlay     = window.document.createElement("div");
                     css(overlay, {
                         display:            "none",
                         position: 			"fixed",
@@ -2686,7 +2690,7 @@ module.exports = function(){
                         backgroundColor: 	cfg.overlay.color
                     });
 
-                    document.body.appendChild(overlay);
+                    window.document.body.appendChild(overlay);
 
                     addListener(overlay, "click", self.onOverlayClick);
 
@@ -2702,7 +2706,7 @@ module.exports = function(){
                     rnd.appendTo.appendChild(elem);
                 }
                 else if (rnd.appendTo !== false) {
-                    document.body.appendChild(elem);
+                    window.document.body.appendChild(elem);
                 }
 
                 if (rnd.zIndex) {

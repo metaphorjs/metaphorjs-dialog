@@ -1,26 +1,13 @@
 
-/**
- * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
- * @function jQuery.fn.metaphorjsTooltip
- * @param {object|string} options See constructor. Pass "destroy" instead of options
- * to destroy dialog.
- * @param {string} instanceName {
-    *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-    *   @default "default"
- * }
- * @return jQuery
- */
-
 if (window.jQuery) {
 
     /**
      * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
      * @function
-     * @param {string} preset
-     * @param {object} options See constructor.
+     * @param {string|object} options See constructor.
      * @param {string} instanceName {
-        *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-        *   @default "default"
+     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
+     *   @default "default"
      * }
      * @return jQuery
      */
