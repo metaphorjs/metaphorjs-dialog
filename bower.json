@@ -4,7 +4,7 @@
     "authors": [
         "kuindji <kuindji@gmail.com>"
     ],
-    "description": "MetaphorJs Dialog -- tooltip and popup library",
+    "description": "MetaphorJs.Dialog -- tooltip and popup library",
     "main": "dist/metaphorjs.dialog.amd.min.js",
     "moduleType": [
         "amd"
@@ -15,7 +15,7 @@
         "dialog"
     ],
     "license": "MIT",
-    "homepage": "https://github.com/kuindji/metaphorjs-dialog",
+    "homepage": "https://github.com/metaphorjs/metaphorjs-dialog",
     "ignore": [
         "node_modules",
         "bower_components",
