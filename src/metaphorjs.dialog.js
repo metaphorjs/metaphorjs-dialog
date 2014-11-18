@@ -21,6 +21,7 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
 
     ajax            = require("../../metaphorjs-ajax/src/metaphorjs.ajax.js"),
     Observable      = require("../../metaphorjs-observable/src/metaphorjs.observable.js"),
+    Promise         = require("../../metaphorjs-promise/src/metaphorjs.promise.js"),
 
     isString        = require("../../metaphorjs/src/func/isString.js"),
     isFunction      = require("../../metaphorjs/src/func/isFunction.js"),
@@ -36,7 +37,9 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     getOuterHeight  = require("../../metaphorjs/src/func/dom/getOuterHeight.js"),
 
     delegate        = require("../../metaphorjs/src/func/dom/delegate.js"),
-    undelegate      = require("../../metaphorjs/src/func/dom/undelegate.js");
+    undelegate      = require("../../metaphorjs/src/func/dom/undelegate.js"),
+
+    raf             = require("../../metaphorjs-animate/src/func/raf.js");
 
 
 
@@ -962,9 +965,15 @@ module.exports = function(){
              * Prevent scrolling
              * true = "body"
              * @type {bool|string|Element}
+             */
+            preventScroll:  false,
+
+            /**
+             * When showing, set css display to this value
+             * @type {string}
              * @md-stack remove
              */
-            preventScroll:  false
+            display: "block"
         },
 
 
@@ -1465,11 +1474,16 @@ module.exports = function(){
                     change = true;
                 }
 
-                if (isString(newTarget)) {
+                var isStr = isString(newTarget);
+
+                if (isStr && newTarget.substr(0,1) != "#") {
                     state.dynamicTarget = true;
                     state.target        = null;
                 }
                 else {
+                    if (isStr) {
+                        newTarget       = select(newTarget).shift();
+                    }
                     state.dynamicTarget = false;
                     state.target        = newTarget;
                 }
@@ -1488,7 +1502,7 @@ module.exports = function(){
              * @return {Element}
              */
             getTarget: function() {
-                return state.dynamicTarget ? state.dynamicTargetEl : cfg.target;
+                return state.dynamicTarget ? state.dynamicTargetEl : state.target;
             },
 
             /**
@@ -2204,6 +2218,16 @@ module.exports = function(){
                 self.setPositionType();
                 self.setTarget(cfg.target);
 
+                if (cfg.target && cfg.useHref) {
+                    var href = getAttr(self.getTarget(), "href");
+                    if (href.substr(0, 1) == "#") {
+                        cfg.render.el = href;
+                    }
+                    else {
+                        cfg.ajax.url = href;
+                    }
+                }
+
                 if (cfg.pointer.size || cfg.pointer.el) {
                     pnt = new Pointer(self, cfg.pointer);
                 }
@@ -2484,7 +2508,7 @@ module.exports = function(){
                 addClass(elem, cfg.cls.visible);
 
                 if (!cfg.render.keepVisible) {
-                    elem.style.display = "";
+                    elem.style.display = cfg.show.display || "block";
                 }
 
 
@@ -2784,14 +2808,22 @@ module.exports = function(){
 
                 return animate(elem, a, function(){
                     if (section == "show" && !skipDisplay) {
-                        if (isOverlay) {
-                            overlay.style.display = "";
-                        }
-                        else {
-                            elem.style.display = "";
-                        }
+
+                        var p = new Promise;
+
+                        raf(function(){
+                            if (isOverlay) {
+                                overlay.style.display = "";
+                            }
+                            else {
+                                elem.style.display = cfg.show.display || "block";
+                            }
+                            p.resolve();
+                        });
+
+                        return p;
                     }
-                });
+                }, false);
             },
 
             toggleTitleAttribute: function(state) {
@@ -2827,7 +2859,7 @@ module.exports = function(){
 
                 if (hidden) {
                     css(elem, {left: "-1000px"});
-                    elem.style.display = "";
+                    elem.style.display = cfg.show.display;
                 }
 
                 size    = {
@@ -3214,16 +3246,6 @@ module.exports = function(){
 
         for (var c in cfg.callback) {
             api.on(c, cfg.callback[c], defaultScope);
-        }
-
-        if (cfg.target && cfg.useHref) {
-            var href = getAttr(cfg.target, "href");
-            if (href.substr(0, 1) == "#") {
-                cfg.render.el = href;
-            }
-            else {
-                cfg.ajax.url = href;
-            }
         }
 
         self.init();

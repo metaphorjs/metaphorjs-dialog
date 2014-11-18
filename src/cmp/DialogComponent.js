@@ -4,7 +4,7 @@ var Dialog = require("../metaphorjs.dialog.js"),
     defineClass = require("../../../metaphorjs-class/src/func/defineClass.js"),
     Component = require("../../../metaphorjs/src/class/Component.js");
 
-defineClass({
+module.exports = defineClass({
 
     $class: "DialogComponent",
     $extends: Component,
