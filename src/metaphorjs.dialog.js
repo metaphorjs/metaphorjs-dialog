@@ -39,7 +39,8 @@ var extend          = require("../../metaphorjs/src/func/extend.js"),
     delegate        = require("../../metaphorjs/src/func/dom/delegate.js"),
     undelegate      = require("../../metaphorjs/src/func/dom/undelegate.js"),
 
-    raf             = require("../../metaphorjs-animate/src/func/raf.js");
+    raf             = require("../../metaphorjs-animate/src/func/raf.js"),
+    async           = require("../../metaphorjs/src/func/async.js");
 
 
 
@@ -1009,6 +1010,12 @@ module.exports = function(){
             destroy:        false,
 
             /**
+             * Remove element from DOM after hide
+             * @type {bool}
+             */
+            remove:         false,
+
+            /**
              * See show.animate
              * @type {bool|string|array|function}
              */
@@ -1645,7 +1652,7 @@ module.exports = function(){
                 if (state.visible && state.hideTimeout) {
 
                     window.clearTimeout(state.hideTimeout);
-                    state.hideTimeout = window.setTimeout(self.hide, cfg.hide.timeout);
+                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
 
                     /*debug-start*/
                     if (cfg.debug) {
@@ -1757,9 +1764,7 @@ module.exports = function(){
                 self.toggleTitleAttribute(false);
 
                 if (scfg.delay && !immediately) {
-                    state.showDelay = window.setTimeout(function(){
-                        self.showAfterDelay(e);
-                    }, scfg.delay);
+                    state.showDelay = async(self.showAfterDelay, self, [e], scfg.delay);
                 }
                 else {
                     self.showAfterDelay(e, immediately);
@@ -1877,9 +1882,7 @@ module.exports = function(){
                 }
 
                 if (cfg.hide.delay && !immediately) {
-                    state.hideDelay = window.setTimeout(function(){
-                        self.hideAfterDelay(e);
-                    }, cfg.hide.delay);
+                    state.hideDelay = async(self.hideAfterDelay, self, [e], cfg.hide.delay);
                 }
                 else {
                     self.hideAfterDelay(e, immediately);
@@ -2426,10 +2429,6 @@ module.exports = function(){
                     return;
                 }
 
-                if (!cfg.position.manual) {
-                    self.reposition(e);
-                }
-
                 // tooltip is following the mouse
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
@@ -2456,6 +2455,14 @@ module.exports = function(){
                     }
                     /*debug-end*/
                     return;
+                }
+
+                if (cfg.hide.remove) {
+                    self.appendElem();
+                }
+
+                if (!cfg.position.manual) {
+                    self.reposition(e);
                 }
 
                 if (overlay) {
@@ -2515,11 +2522,11 @@ module.exports = function(){
                 // if it has to be shown only for a limited amount of time,
                 // we set timeout.
                 if (cfg.hide.timeout) {
-                    state.hideTimeout = window.setTimeout(self.hide, cfg.hide.timeout);
+                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
                 }
 
                 if (cfg.show.focus) {
-                    window.setTimeout(self.setFocus, 20);
+                    async(self.setFocus, self, null, 20);
                 }
 
                 self.trigger('show', api, e);
@@ -2631,15 +2638,21 @@ module.exports = function(){
                         self.destroyElem();
                     }
                     else {
-                        state.destroyDelay = window.setTimeout(self.destroyElem, lt);
+                        state.destroyDelay = async(self.destroyElem, self, null, lt);
                     }
                 }
 
                 if (elem && cfg.hide.destroy) {
-                    window.setTimeout(function(){
+                    raf(function(){
                         data(elem, cfg.instanceName, null);
                         self.destroy();
-                    }, 0);
+                    });
+                }
+
+                if (elem && cfg.hide.remove) {
+                    raf(function(){
+                        self.removeElem();
+                    });
                 }
             },
 
@@ -2714,7 +2727,7 @@ module.exports = function(){
                         backgroundColor: 	cfg.overlay.color
                     });
 
-                    window.document.body.appendChild(overlay);
+                    //window.document.body.appendChild(overlay);
 
                     addListener(overlay, "click", self.onOverlayClick);
 
@@ -2726,11 +2739,15 @@ module.exports = function(){
                     }
                 }
 
-                if (rnd.appendTo) {
+                /*if (rnd.appendTo) {
                     rnd.appendTo.appendChild(elem);
                 }
                 else if (rnd.appendTo !== false) {
                     window.document.body.appendChild(elem);
+                }*/
+
+                if (!cfg.hide.remove) {
+                    self.appendElem();
                 }
 
                 if (rnd.zIndex) {
@@ -3212,6 +3229,36 @@ module.exports = function(){
 
                 if (state.visible) {
                     self.reposition();
+                }
+            },
+
+
+            removeElem: function() {
+                if (overlay) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+
+                if (elem) {
+                    elem.parentNode.removeChild(elem);
+                }
+            },
+
+            appendElem: function() {
+
+                var body    = window.document.body,
+                    rnd	    = cfg.render;
+
+                if (overlay) {
+                    body.appendChild(overlay);
+                }
+
+                if (elem) {
+                    if (rnd.appendTo) {
+                        rnd.appendTo.appendChild(elem);
+                    }
+                    else if (rnd.appendTo !== false) {
+                        body.appendChild(elem);
+                    }
                 }
             },
 

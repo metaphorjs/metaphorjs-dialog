@@ -2,7 +2,10 @@
 "use strict";
 
 
+var MetaphorJs = {
 
+
+};
 
 
 
@@ -1497,7 +1500,7 @@ var strUndef = "undefined";
  * @param {number} timeout
  */
 function async(fn, context, args, timeout) {
-    setTimeout(function(){
+    return setTimeout(function(){
         fn.apply(context, args || []);
     }, timeout || 0);
 };
@@ -5613,6 +5616,12 @@ var Dialog = function(){
             destroy:        false,
 
             /**
+             * Remove element from DOM after hide
+             * @type {bool}
+             */
+            remove:         false,
+
+            /**
              * See show.animate
              * @type {bool|string|array|function}
              */
@@ -6249,7 +6258,7 @@ var Dialog = function(){
                 if (state.visible && state.hideTimeout) {
 
                     window.clearTimeout(state.hideTimeout);
-                    state.hideTimeout = window.setTimeout(self.hide, cfg.hide.timeout);
+                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
 
                     /*debug-start*/
                     if (cfg.debug) {
@@ -6361,9 +6370,7 @@ var Dialog = function(){
                 self.toggleTitleAttribute(false);
 
                 if (scfg.delay && !immediately) {
-                    state.showDelay = window.setTimeout(function(){
-                        self.showAfterDelay(e);
-                    }, scfg.delay);
+                    state.showDelay = async(self.showAfterDelay, self, [e], scfg.delay);
                 }
                 else {
                     self.showAfterDelay(e, immediately);
@@ -6481,9 +6488,7 @@ var Dialog = function(){
                 }
 
                 if (cfg.hide.delay && !immediately) {
-                    state.hideDelay = window.setTimeout(function(){
-                        self.hideAfterDelay(e);
-                    }, cfg.hide.delay);
+                    state.hideDelay = async(self.hideAfterDelay, self, [e], cfg.hide.delay);
                 }
                 else {
                     self.hideAfterDelay(e, immediately);
@@ -7030,10 +7035,6 @@ var Dialog = function(){
                     return;
                 }
 
-                if (!cfg.position.manual) {
-                    self.reposition(e);
-                }
-
                 // tooltip is following the mouse
                 if (state.position == "mouse") {
                     // now we can adjust tooltip's position according
@@ -7060,6 +7061,14 @@ var Dialog = function(){
                     }
                     /*debug-end*/
                     return;
+                }
+
+                if (cfg.hide.remove) {
+                    self.appendElem();
+                }
+
+                if (!cfg.position.manual) {
+                    self.reposition(e);
                 }
 
                 if (overlay) {
@@ -7119,11 +7128,11 @@ var Dialog = function(){
                 // if it has to be shown only for a limited amount of time,
                 // we set timeout.
                 if (cfg.hide.timeout) {
-                    state.hideTimeout = window.setTimeout(self.hide, cfg.hide.timeout);
+                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
                 }
 
                 if (cfg.show.focus) {
-                    window.setTimeout(self.setFocus, 20);
+                    async(self.setFocus, self, null, 20);
                 }
 
                 self.trigger('show', api, e);
@@ -7235,15 +7244,21 @@ var Dialog = function(){
                         self.destroyElem();
                     }
                     else {
-                        state.destroyDelay = window.setTimeout(self.destroyElem, lt);
+                        state.destroyDelay = async(self.destroyElem, self, null, lt);
                     }
                 }
 
                 if (elem && cfg.hide.destroy) {
-                    window.setTimeout(function(){
+                    raf(function(){
                         data(elem, cfg.instanceName, null);
                         self.destroy();
-                    }, 0);
+                    });
+                }
+
+                if (elem && cfg.hide.remove) {
+                    raf(function(){
+                        self.removeElem();
+                    });
                 }
             },
 
@@ -7318,7 +7333,7 @@ var Dialog = function(){
                         backgroundColor: 	cfg.overlay.color
                     });
 
-                    window.document.body.appendChild(overlay);
+                    //window.document.body.appendChild(overlay);
 
                     addListener(overlay, "click", self.onOverlayClick);
 
@@ -7330,11 +7345,15 @@ var Dialog = function(){
                     }
                 }
 
-                if (rnd.appendTo) {
+                /*if (rnd.appendTo) {
                     rnd.appendTo.appendChild(elem);
                 }
                 else if (rnd.appendTo !== false) {
                     window.document.body.appendChild(elem);
+                }*/
+
+                if (!cfg.hide.remove) {
+                    self.appendElem();
                 }
 
                 if (rnd.zIndex) {
@@ -7816,6 +7835,36 @@ var Dialog = function(){
 
                 if (state.visible) {
                     self.reposition();
+                }
+            },
+
+
+            removeElem: function() {
+                if (overlay) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+
+                if (elem) {
+                    elem.parentNode.removeChild(elem);
+                }
+            },
+
+            appendElem: function() {
+
+                var body    = window.document.body,
+                    rnd	    = cfg.render;
+
+                if (overlay) {
+                    body.appendChild(overlay);
+                }
+
+                if (elem) {
+                    if (rnd.appendTo) {
+                        rnd.appendTo.appendChild(elem);
+                    }
+                    else if (rnd.appendTo !== false) {
+                        body.appendChild(elem);
+                    }
                 }
             },
 
