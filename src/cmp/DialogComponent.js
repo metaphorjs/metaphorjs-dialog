@@ -42,6 +42,14 @@ module.exports = defineClass({
         self.dialog.on("destroy", self.onDialogDestroy, self);
     },
 
+    // skips the append part
+    onRenderingFinished: function() {
+        var self = this;
+        self.rendered   = true;
+        self.afterRender();
+        self.trigger('afterrender', self);
+    },
+
     show: function() {
         this.dialog.show();
         this.$super();

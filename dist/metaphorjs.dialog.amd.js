@@ -3767,6 +3767,11 @@ var Dialog = function(){
                 if (!cfg.hide.remove) {
                     self.appendElem();
                 }
+                else {
+                    if (elem.parentNode) {
+                        elem.parentNode.removeChild(elem);
+                    }
+                }
 
                 if (rnd.zIndex) {
                     css(elem, {zIndex: rnd.zIndex});
