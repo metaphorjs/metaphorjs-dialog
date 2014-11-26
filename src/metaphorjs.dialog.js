@@ -3251,19 +3251,15 @@ module.exports = function(){
             appendElem: function() {
 
                 var body    = window.document.body,
-                    rnd	    = cfg.render;
+                    rnd	    = cfg.render,
+                    to      = rnd.appendTo || body;
 
-                if (overlay) {
-                    body.appendChild(overlay);
+                if (overlay && to) {
+                    to.appendChild(overlay);
                 }
 
-                if (elem) {
-                    if (rnd.appendTo) {
-                        rnd.appendTo.appendChild(elem);
-                    }
-                    else if (rnd.appendTo !== false) {
-                        body.appendChild(elem);
-                    }
+                if (elem && to) {
+                    to.appendChild(elem);
                 }
             },
 
