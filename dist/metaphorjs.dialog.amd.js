@@ -4257,11 +4257,11 @@ var Dialog = function(){
 
 
             removeElem: function() {
-                if (overlay) {
+                if (overlay && overlay.parentNode) {
                     overlay.parentNode.removeChild(overlay);
                 }
 
-                if (elem) {
+                if (elem && elem.parentNode) {
                     elem.parentNode.removeChild(elem);
                 }
             },
