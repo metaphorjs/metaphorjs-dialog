@@ -477,7 +477,7 @@ var mousewheelHandler = function(e) {
         lowestDelta = null;
     }
 
-    var toBind = ( 'onwheel' in document || document.documentMode >= 9 ) ?
+    var toBind = ( 'onwheel' in window.document || window.document.documentMode >= 9 ) ?
                  ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
         nullLowestDeltaTimeout, lowestDelta;
 
@@ -2712,29 +2712,12 @@ function parseXML(data, type) {
 
 
 /**
- * <p>A javascript event system implementing two patterns - observable and collector.</p>
+ * @description A javascript event system implementing two patterns - observable and collector.
+ * @description Observable:
+ * @code examples/observable.js
  *
- * <p>Observable:</p>
- * <pre><code class="language-javascript">var o = new Observable;
- * o.on("event", function(x, y, z){ console.log([x, y, z]) });
- * o.trigger("event", 1, 2, 3); // [1, 2, 3]
- * </code></pre>
- *
- * <p>Collector:</p>
- * <pre><code class="language-javascript">var o = new Observable;
- * o.createEvent("collectStuff", "all");
- * o.on("collectStuff", function(){ return 1; });
- * o.on("collectStuff", function(){ return 2; });
- * var results = o.trigger("collectStuff"); // [1, 2]
- * </code></pre>
- *
- * <p>Although all methods are public there is getApi() method that allows you
- * extending your own objects without overriding "destroy" (which you probably have)</p>
- * <pre><code class="language-javascript">var o = new Observable;
- * $.extend(this, o.getApi());
- * this.on("event", function(){ alert("ok") });
- * this.trigger("event");
- * </code></pre>
+ * @description Collector:
+ * @code examples/collector.js
  *
  * @class Observable
  * @version 1.1
@@ -2750,42 +2733,56 @@ var Observable = function() {
 
 extend(Observable.prototype, {
 
+
+
     /**
-    * You don't have to call this function unless you want to pass returnResult param.
-    * This function will be automatically called from {@link on} with <code>returnResult = false</code>,
-    * so if you want to receive handler's return values, create event first, then call on().
+    * You don't have to call this function unless you want to pass params other than event name.
+    * Normally, events are created automatically.
     *
-    * <pre><code class="language-javascript">var observable = new Observable;
-    * observable.createEvent("collectStuff", "all");
-    * observable.on("collectStuff", function(){ return 1; });
-    * observable.on("collectStuff", function(){ return 2; });
-    * var results = observable.trigger("collectStuff"); // [1, 2]
-    * </code></pre>
-    *
-    * @method
+    * @method createEvent
     * @access public
     * @param {string} name {
     *       Event name
     *       @required
     * }
     * @param {bool|string} returnResult {
-    *   false -- do not return results except if handler returned "false". This is how
-    *   normal observables work.<br>
+    *   false -- return first 'false' result and stop calling listeners after that<br>
     *   "all" -- return all results as array<br>
     *   "merge" -- merge all results into one array (each result must be array)<br>
-    *   "first" -- return result of the first handler<br>
-    *   "last" -- return result of the last handler<br>
-    *   @required
+    *   "first" -- return result of the first handler (next listener will not be called)<br>
+    *   "last" -- return result of the last handler (all listeners will be called)<br>
     * }
-    * @param {bool} autoTrigger -- once triggered, all future subscribers will be automatically called
-    * with last trigger params
+    * @param {bool} autoTrigger {
+    *   once triggered, all future subscribers will be automatically called
+    *   with last trigger params
+    *   @code examples/autoTrigger.js
+    * }
+    * @param {function} triggerFilter {
+    *   This function will be called each time event is triggered. Return false to skip listener.
+    *   @code examples/triggerFilter.js
+    *   @param {object} listener This object contains all information about the listener, including
+    *       all data you provided in options while subscribing to the event.
+    *   @param {[]} arguments
+    *   @return {bool}
+    * }
     * @return {ObservableEvent}
     */
-    createEvent: function(name, returnResult, autoTrigger) {
+
+    /**
+     * @method createEvent
+     * @param {string} name
+     * @param {object} options {
+     *  @type {string} returnResult
+     *  @param {bool} autoTrigger
+     *  @param {function} triggerFilter
+     * }
+     * @returns {ObservableEvent}
+     */
+    createEvent: function(name, returnResult, autoTrigger, triggerFilter) {
         name = name.toLowerCase();
         var events  = this.events;
         if (!events[name]) {
-            events[name] = new Event(name, returnResult, autoTrigger);
+            events[name] = new Event(name, returnResult, autoTrigger, triggerFilter);
         }
         return events[name];
     },
@@ -2815,6 +2812,8 @@ extend(Observable.prototype, {
     * }
     * @param {object} context "this" object for the callback function
     * @param {object} options {
+    *       You can pass any key-value pairs in this object. All of them will be passed to triggerFilter (if
+    *       you're using one).
     *       @type {bool} first {
     *           True to prepend to the list of handlers
     *           @default false
@@ -3010,29 +3009,24 @@ extend(Observable.prototype, {
     * @method
     * @md-not-inheritable
     * @access public
-    * @param {string} name Event name
     */
-    destroy: function(name) {
-        var events  = this.events;
+    destroy: function() {
+        var self    = this,
+            events  = self.events;
 
-        if (name) {
-            name = name.toLowerCase();
-            if (events[name]) {
-                events[name].destroy();
-                delete events[name];
-            }
+        for (var i in events) {
+            self.destroyEvent(i);
         }
-        else {
-            for (var i in events) {
-                events[i].destroy();
-            }
 
-            this.events = {};
+        for (i in self) {
+            self[i] = null;
         }
     },
 
     /**
-    * Get object with all functions except "destroy"
+    * Although all methods are public there is getApi() method that allows you
+    * extending your own objects without overriding "destroy" (which you probably have)
+    * @code examples/api.js
     * @method
     * @md-not-inheritable
     * @returns object
@@ -3060,6 +3054,7 @@ extend(Observable.prototype, {
         }
 
         return self.api;
+
     }
 }, true, false);
 
@@ -3070,9 +3065,15 @@ extend(Observable.prototype, {
  * @class ObservableEvent
  * @private
  */
-var Event = function(name, returnResult, autoTrigger) {
+var Event = function(name, returnResult, autoTrigger, triggerFilter) {
 
     var self    = this;
+
+    if (typeof returnResult == "object" && returnResult !== null) {
+        triggerFilter = returnResult.triggerFilter;
+        autoTrigger = returnResult.autoTrigger;
+        returnResult = returnResult.returnResult;
+    }
 
     self.name           = name;
     self.listeners      = [];
@@ -3083,6 +3084,7 @@ var Event = function(name, returnResult, autoTrigger) {
     self.lid            = 0;
     self.returnResult   = returnResult === undf ? null : returnResult; // first|last|all
     self.autoTrigger    = autoTrigger;
+    self.triggerFilter  = triggerFilter;
 };
 
 
@@ -3098,7 +3100,7 @@ extend(Event.prototype, {
     returnResult: null,
     autoTrigger: null,
     lastTrigger: null,
-    autoTriggerId: null,
+    triggerFilter: null,
 
     /**
      * Get event name
@@ -3153,12 +3155,14 @@ extend(Event.prototype, {
             uniContext: uniContext,
             id:         id,
             called:     0, // how many times the function was triggered
-            limit:      options.limit || 0, // how many times the function is allowed to trigger
-            start:      options.start || 1, // from which attempt it is allowed to trigger the function
+            limit:      0, // how many times the function is allowed to trigger
+            start:      1, // from which attempt it is allowed to trigger the function
             count:      0, // how many attempts to trigger the function was made
-            append:     options.append, // append parameters
-            prepend:    options.prepend // prepend parameters
+            append:     null, // append parameters
+            prepend:    null // prepend parameters
         };
+
+        extend(e, options, true, false);
 
         if (first) {
             self.listeners.unshift(e);
@@ -3170,9 +3174,15 @@ extend(Event.prototype, {
         self.map[id] = e;
 
         if (self.autoTrigger && self.lastTrigger && !self.suspended) {
-            self.autoTriggerId = id;
+            var prevFilter = self.triggerFilter;
+            self.triggerFilter = function(l){
+                if (l.id == id) {
+                    return prevFilter ? prevFilter(l) !== false : true;
+                }
+                return false;
+            };
             self.trigger.apply(self, self.lastTrigger);
-            self.autoTriggerId = null;
+            self.triggerFilter = prevFilter;
         }
 
         return id;
@@ -3339,7 +3349,8 @@ extend(Event.prototype, {
         var self            = this,
             listeners       = self.listeners,
             returnResult    = self.returnResult,
-            aid             = self.autoTriggerId;
+            filter          = self.triggerFilter,
+            args;
 
         if (self.suspended) {
             return null;
@@ -3376,7 +3387,9 @@ extend(Event.prototype, {
                 continue;
             }
 
-            if (aid && l.id != aid) {
+            args = self._prepareArgs(l, arguments);
+
+            if (filter && filter(l, args) === false) {
                 continue;
             }
 
@@ -3386,7 +3399,7 @@ extend(Event.prototype, {
                 continue;
             }
 
-            res = l.fn.apply(l.context, self._prepareArgs(l, arguments));
+            res = l.fn.apply(l.context, args);
 
             l.called++;
 

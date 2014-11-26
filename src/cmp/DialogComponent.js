@@ -13,6 +13,8 @@ module.exports = defineClass({
     dialogPreset: null,
     dialogCfg: null,
 
+    hidden: true,
+
     initComponent: function() {
 
         var self    = this;
@@ -39,6 +41,8 @@ module.exports = defineClass({
         self.dialog = new Dialog(self.dialogPreset, self._getDialogCfg());
         self.dialog.on("show", self.onDialogShow, self);
         self.dialog.on("hide", self.onDialogHide, self);
+        self.dialog.on("beforeshow", self.onBeforeDialogShow, self);
+        self.dialog.on("beforehide", self.onBeforeDialogHide, self);
         self.dialog.on("destroy", self.onDialogDestroy, self);
     },
 
@@ -52,20 +56,39 @@ module.exports = defineClass({
 
     show: function() {
         this.dialog.show();
-        this.$super();
     },
 
     hide: function() {
         this.dialog.hide();
-        this.$super();
+    },
+
+    onBeforeDialogShow: function() {
+
+        var self = this;
+        if (!self.rendered) {
+            self.render();
+        }
+
+        self.template.setAnimation(true);
+        self.hidden = false;
     },
 
     onDialogShow: function() {
-        this.show();
+        var self = this;
+        self.onShow();
+        self.trigger("show", self);
+    },
+
+    onBeforeDialogHide: function() {
+
     },
 
     onDialogHide: function() {
-        this.hide();
+        var self = this;
+        self.template.setAnimation(false);
+        self.hidden = true;
+        self.onHide();
+        self.trigger("hide", self);
     },
 
     onDialogDestroy: function() {
