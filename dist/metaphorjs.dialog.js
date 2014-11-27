@@ -7143,7 +7143,9 @@ var Dialog = function(){
                     });
                 }
                 else {
-                    self.showAfterAnimation(e);
+                    raf(function(){
+                        self.showAfterAnimation(e);
+                    });
                 }
             },
 
@@ -7255,7 +7257,9 @@ var Dialog = function(){
                     });
                 }
                 else {
-                    self.hideAfterAnimation(e);
+                    raf(function(){
+                        self.hideAfterAnimation(e);
+                    });
                 }
             },
 
@@ -7890,11 +7894,19 @@ var Dialog = function(){
 
             removeElem: function() {
                 if (overlay && overlay.parentNode) {
-                    overlay.parentNode.removeChild(overlay);
+                    raf(function(){
+                        if (!state.visible) {
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                    });
                 }
 
                 if (elem && elem.parentNode) {
-                    elem.parentNode.removeChild(elem);
+                    raf(function(){
+                        if (!state.visible) {
+                            elem.parentNode.removeChild(elem);
+                        }
+                    });
                 }
             },
 
