@@ -2773,13 +2773,14 @@ extend(Observable.prototype, {
      *  @param {bool} autoTrigger
      *  @param {function} triggerFilter
      * }
+     * @param {object} filterContext
      * @returns {ObservableEvent}
      */
-    createEvent: function(name, returnResult, autoTrigger, triggerFilter) {
+    createEvent: function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
         name = name.toLowerCase();
         var events  = this.events;
         if (!events[name]) {
-            events[name] = new Event(name, returnResult, autoTrigger, triggerFilter);
+            events[name] = new Event(name, returnResult, autoTrigger, triggerFilter, filterContext);
         }
         return events[name];
     },
@@ -3062,15 +3063,9 @@ extend(Observable.prototype, {
  * @class ObservableEvent
  * @private
  */
-var Event = function(name, returnResult, autoTrigger, triggerFilter) {
+var Event = function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
 
     var self    = this;
-
-    if (typeof returnResult == "object" && returnResult !== null) {
-        triggerFilter = returnResult.triggerFilter;
-        autoTrigger = returnResult.autoTrigger;
-        returnResult = returnResult.returnResult;
-    }
 
     self.name           = name;
     self.listeners      = [];
@@ -3079,9 +3074,16 @@ var Event = function(name, returnResult, autoTrigger, triggerFilter) {
     self.uni            = '$$' + name + '_' + self.hash;
     self.suspended      = false;
     self.lid            = 0;
-    self.returnResult   = returnResult === undf ? null : returnResult; // first|last|all
-    self.autoTrigger    = autoTrigger;
-    self.triggerFilter  = triggerFilter;
+
+    if (typeof returnResult == "object" && returnResult !== null) {
+        extend(self, returnResult, true, false);
+    }
+    else {
+        self.returnResult = returnResult === undf ? null : returnResult; // first|last|all
+        self.autoTrigger = autoTrigger;
+        self.triggerFilter = triggerFilter;
+        self.filterContext = filterContext;
+    }
 };
 
 
@@ -3098,6 +3100,7 @@ extend(Event.prototype, {
     autoTrigger: null,
     lastTrigger: null,
     triggerFilter: null,
+    filterContext: null,
 
     /**
      * Get event name
@@ -3112,9 +3115,12 @@ extend(Event.prototype, {
      * @method
      */
     destroy: function() {
-        var self        = this;
-        self.listeners  = null;
-        self.map        = null;
+        var self        = this,
+            k;
+
+        for (k in self) {
+            self[k] = null;
+        }
     },
 
     /**
@@ -3347,6 +3353,7 @@ extend(Event.prototype, {
             listeners       = self.listeners,
             returnResult    = self.returnResult,
             filter          = self.triggerFilter,
+            filterContext   = self.filterContext,
             args;
 
         if (self.suspended) {
@@ -3386,7 +3393,7 @@ extend(Event.prototype, {
 
             args = self._prepareArgs(l, arguments);
 
-            if (filter && filter(l, args) === false) {
+            if (filter && filter.call(filterContext, l, args, self) === false) {
                 continue;
             }
 
@@ -3504,7 +3511,7 @@ var ajax = function(){
 
                 var stamp   = (new Date).getTime();
 
-                return rts.test(url) ?
+                url = rts.test(url) ?
                     // If there is already a '_' parameter, set its value
                        url.replace(rts, "$1_=" + stamp) :
                     // Otherwise add one to the end
@@ -5079,7 +5086,13 @@ var Dialog = function(){
     };
 
 
-
+    var defaultEventProcessor = function(dlg, e, type, returnMode){
+        if (type == "show" || !returnMode) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+    };
 
     /*
      * Shorthands
@@ -5467,7 +5480,6 @@ var Dialog = function(){
         events: {
 
             /**
-             * You can also add "hide".
              * @type {object}
              * @md-stack add
              */
@@ -5478,33 +5490,39 @@ var Dialog = function(){
                  * @type {object}
                  * @md-stack add
                  */
-                click: {
+                "*": {
 
                     /**
-                     * @type {bool}
+                     * @type {function}
+                     * @md-stack remove 2
                      */
-                    preventDefault: 	true,
+                    process: defaultEventProcessor
+                }
+            },
 
-                    /**
-                     * @type {bool}
-                     */
-                    stopPropagation: 	true,
+            /**
+             * @type {object}
+             * @md-stack add
+             */
+            hide: {
 
-                    /**
-                     * @type {bool}
-                     */
-                    returnValue: 		false,
+                /**
+                 * You can also add any event you use to show/hide dialog.
+                 * @type {object}
+                 * @md-stack add
+                 */
+                "*": {
 
                     /**
                      * Must return "returnValue" which will be in its turn
                      * returned from event handler. If you provide this function
                      * preventDefault and stopPropagation options are ignored.
                      * @function
-                     * @param {MetaphorJs.lib.Dialog} dialog
+                     * @param {Dialog} dialog
                      * @param {Event} event
                      * @md-stack remove 3
                      */
-                    process:            null
+                    process: defaultEventProcessor
                 }
             }
         },
@@ -6269,7 +6287,8 @@ var Dialog = function(){
 
                 // if called as an event handler, we do not return api
                 var returnValue	= e && e.stopPropagation ? null : api,
-                    scfg        = cfg.show;
+                    scfg        = cfg.show,
+                    returnMode  = null;
 
                 // if tooltip is disabled, we do not stop propagation and do not return false.s
                 if (!api.isEnabled()) {
@@ -6280,26 +6299,15 @@ var Dialog = function(){
                     }
                     /*debug-end*/
 
-                    return returnValue;
+                    returnMode = "disabled";
+                    //return returnValue;
                 }
 
-                if (e && e.stopPropagation && cfg.events.show && cfg.events.show[e.type]) {
-                    var et = cfg.events.show[e.type];
-
-                    if (et.process) {
-                        returnValue	= et.process(api, e);
-                    }
-                    else {
-                        et.stopPropagation && e.stopPropagation();
-                        et.preventDefault && e.preventDefault();
-                        returnValue = et.returnValue;
-                    }
-                }
 
                 // if tooltip is already shown
                 // and hide timeout was set.
                 // we need to restart timer
-                if (state.visible && state.hideTimeout) {
+                if (!returnMode && state.visible && state.hideTimeout) {
 
                     window.clearTimeout(state.hideTimeout);
                     state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
@@ -6310,12 +6318,13 @@ var Dialog = function(){
                     }
                     /*debug-end*/
 
-                    return returnValue;
+                    returnMode = "hidetimeout";
+                    //return returnValue;
                 }
 
                 // if tooltip was delayed to hide
                 // we cancel it.
-                if (state.hideDelay) {
+                if (!returnMode && state.hideDelay) {
 
                     window.clearTimeout(state.hideDelay);
                     state.hideDelay     = null;
@@ -6327,7 +6336,8 @@ var Dialog = function(){
                     }
                     /*debug-end*/
 
-                    return returnValue;
+                    returnMode = "hidedelay";
+                    //return returnValue;
                 }
 
 
@@ -6336,7 +6346,7 @@ var Dialog = function(){
                 // have some content, or empty content is allowed.
                 // also if beforeShow() returns false, we can't proceed
                 // if tooltip was frozen, we do not show or hide
-                if (state.frozen) {
+                if (!returnMode && state.frozen) {
 
                     /*debug-start*/
                     if (cfg.debug) {
@@ -6344,7 +6354,8 @@ var Dialog = function(){
                     }
                     /*debug-end*/
 
-                    return returnValue;
+                    returnMode = "frozen";
+                    //return returnValue;
                 }
 
                 // cancel delayed destroy
@@ -6361,19 +6372,22 @@ var Dialog = function(){
                     dtChanged = self.changeDynamicTarget(e);
                 }
 
-                if (state.visible) {
+                if (!returnMode && state.visible) {
                     if (!dtChanged) {
                         /*debug-start*/
                         if (cfg.debug) {
                             console.log("show: already shown", elem);
                         }
                         /*debug-end*/
-                        return returnValue;
+
+                        returnMode = "visible";
+                        //return returnValue;
                     }
                     else {
                         if (!cfg.render.fn) {
                             self.reposition(e);
-                            return returnValue;
+                            returnMode = "reposition";
+                            //return returnValue;
                         }
                         else {
                             self.hide(null, true);
@@ -6381,22 +6395,43 @@ var Dialog = function(){
                     }
                 }
 
-                // if tooltip is not rendered yet we render it
-                if (!elem) {
-                    self.render();
-                }
-                else if (dtChanged) {
-                    self.changeDynamicContent();
+                if (!returnMode) {
+                    // if tooltip is not rendered yet we render it
+                    if (!elem) {
+                        self.render();
+                    }
+                    else if (dtChanged) {
+                        self.changeDynamicContent();
+                    }
                 }
 
                 // if beforeShow callback returns false we stop.
-                if (self.trigger('beforeshow', api, e) === false) {
+                if (!returnMode && self.trigger('beforeshow', api, e) === false) {
                     /*debug-start*/
                     if (cfg.debug) {
                         console.log("show: beforeshow return false", api.getTarget());
                     }
                     /*debug-end*/
-                    return returnValue;
+
+                    returnMode = "beforeshow";
+                    //return returnValue;
+                }
+
+                if (e && e.stopPropagation && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
+                    var et = cfg.events.show[e.type] || cfg.events.show["*"];
+
+                    if (et.process) {
+                        returnValue	= et.process(api, e, "show", returnMode);
+                    }
+                    else {
+                        et.stopPropagation && e.stopPropagation();
+                        et.preventDefault && e.preventDefault();
+                        returnValue = et.returnValue;
+                    }
+                }
+
+                if (returnMode) {
+                    return returnMode;
                 }
 
                 // first, we stop all current animations
@@ -6436,20 +6471,9 @@ var Dialog = function(){
                 state.hideTimeout = null;
 
                 // if called as an event handler, we do not return api
-                var returnValue	 = e && e.stopPropagation ? null : api;
+                var returnValue	    = e && e.stopPropagation ? null : api,
+                    returnMode      = null;
 
-                if (e && e.stopPropagation && cfg.events.hide && cfg.events.hide[e.type]) {
-                    var et = cfg.events.hide[e.type];
-
-                    if (et.process) {
-                        returnValue = et.process(api, e);
-                    }
-                    else {
-                        if (et.stopPropagation) e.stopPropagation();
-                        if (et.preventDefault) e.preventDefault();
-                        returnValue = et.returnValue;
-                    }
-                }
 
                 // if the timer was set to hide the tooltip
                 // but then we needed to close tooltip immediately
@@ -6467,12 +6491,13 @@ var Dialog = function(){
                             elem, state.visible, self.isEnabled());
                     }
                     /*debug-end*/
-                    return returnValue;
+                    returnMode = !elem ? "noelem" : (!state.visible ? "hidden" : "disabled");
+                    //return returnValue;
                 }
 
                 // if tooltip is still waiting to be shown after delay timeout,
                 // we cancel this timeout and return.
-                if (state.showDelay) {
+                if (state.showDelay && !returnMode) {
 
                     if (cfg.hide.cancelShowDelay || cancelShowDelay) {
                         window.clearTimeout(state.showDelay);
@@ -6485,7 +6510,8 @@ var Dialog = function(){
                         }
                         /*debug-end*/
 
-                        return returnValue;
+                        returnMode = "cancel";
+                        //return returnValue;
                     }
                     else {
 
@@ -6495,27 +6521,48 @@ var Dialog = function(){
                         }
                         /*debug-end*/
 
-                        return returnValue;
+                        returnMode = "delay";
+                        //return returnValue;
                     }
                 }
 
                 // if tooltip was frozen, we do not show or hide
-                if (state.frozen) {
+                if (state.frozen && !returnMode) {
                     /*debug-start*/
                     if (cfg.debug) {
                         console.log("hide: frozen", self.getTarget());
                     }
                     /*debug-end*/
-                    return returnValue;
+                    returnMode = "frozen";
+                    //return returnValue;
                 }
 
                 // lets see what the callback will tell us
-                if (self.trigger('beforehide', api, e) === false) {
+                if (!returnMode && self.trigger('beforehide', api, e) === false) {
                     /*debug-start*/
                     if (cfg.debug) {
                         console.log("hide: beforehide returned false", self.getTarget());
                     }
                     /*debug-end*/
+                    returnMode = "beforehide";
+                    //return returnValue;
+                }
+
+
+                if (e && e.stopPropagation && cfg.events.hide && (cfg.events.hide[e.type] || cfg.events.hide["*"])) {
+                    var et = cfg.events.hide[e.type] || cfg.events.hide["*"];
+
+                    if (et.process) {
+                        returnValue = et.process(api, e, "hide", returnMode);
+                    }
+                    else {
+                        if (et.stopPropagation) e.stopPropagation();
+                        if (et.preventDefault) e.preventDefault();
+                        returnValue = et.returnValue;
+                    }
+                }
+
+                if (returnMode) {
                     return returnValue;
                 }
 
