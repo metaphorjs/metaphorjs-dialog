@@ -33,6 +33,7 @@ var extend          = require("metaphorjs/src/func/extend.js"),
     getScrollTop    = require("metaphorjs/src/func/dom/getScrollTop.js"),
     getScrollLeft   = require("metaphorjs/src/func/dom/getScrollLeft.js"),
     getOffset       = require("metaphorjs/src/func/dom/getOffset.js"),
+    getPosition     = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth   = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight  = require("metaphorjs/src/func/dom/getOuterHeight.js"),
 
@@ -1137,6 +1138,18 @@ module.exports = function(){
              * @type {number|bool}
              */
             screenY:		false,
+
+            /**
+             * Calculate position relative to this element (defaults to window)
+             * @type {string|Element}
+             */
+            base:           null,
+
+            /**
+             * Monitor window/selector/element scroll.
+             * @type {bool|string|Element}
+             */
+            scroll:         false,
 
             /**
              * Monitor window resize.
@@ -2453,6 +2466,17 @@ module.exports = function(){
                 }
             },
 
+            getScrollEl: function(cfgScroll) {
+                if (cfgScroll === true || cfgScroll === false) {
+                    return window;
+                }
+                else if (typeof cfgScroll == "string") {
+                    return select(cfgScroll).shift();
+                }
+                else {
+                    return cfgScroll;
+                }
+            },
 
 
             showAfterDelay: function(e, immediately) {
@@ -2483,7 +2507,7 @@ module.exports = function(){
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    addListener(window, "scroll", self.onWindowScroll);
+                    addListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
                 }
 
 
@@ -2601,7 +2625,7 @@ module.exports = function(){
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    removeListener(window, "scroll", self.onWindowScroll);
+                    removeListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
                 }
 
                 // if afterdelay callback returns false we stop.
@@ -2917,6 +2941,23 @@ module.exports = function(){
                 }
             },
 
+            getPositionBase: function() {
+                if (state.positionBase) {
+                    return state.positionBase;
+                }
+                var b;
+                if (b = cfg.position.base) {
+                    if (typeof b == "string") {
+                        state.positionBase = select(b).shift();
+                    }
+                    else {
+                        state.positionBase = b;
+                    }
+                    return state.positionBase;
+                }
+                return null;
+            },
+
             getDialogSize: function() {
 
                 var hidden  = cfg.cls.hidden ? hasClass(elem, cfg.cls.hidden) : !isVisible(elem),
@@ -2964,8 +3005,9 @@ module.exports = function(){
                     return null;
                 }
 
-                var size    = self.getDialogSize(),
-                    offset  = getOffset(target),
+                var pBase   = self.getPositionBase(),
+                    size    = self.getDialogSize(),
+                    offset  = pBase ? getPosition(target, pBase) : getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -3127,15 +3169,16 @@ module.exports = function(){
 
             getWindowPosition: function() {
 
-                var size    = self.getDialogSize(),
+                var pBase   = self.getPositionBase() || window,
+                    size    = self.getDialogSize(),
                     pos     = {},
                     type    = cfg.position.type.substr(1),
                     offsetX = cfg.position.offsetX,
                     offsetY = cfg.position.offsetY,
-                    st      = getScrollTop(),
-                    sl      = getScrollLeft(),
-                    ww      = getOuterWidth(window),
-                    wh      = getOuterHeight(window);
+                    st      = getScrollTop(pBase),
+                    sl      = getScrollLeft(pBase),
+                    ww      = getOuterWidth(pBase),
+                    wh      = getOuterHeight(pBase);
 
                 switch (type) {
                     case "c": {
@@ -3190,11 +3233,12 @@ module.exports = function(){
 
             correctScreenPosition: function(pos, offsetX, offsetY) {
 
-                var size    = self.getDialogSize(),
-                    st      = getScrollTop(),
-                    sl      = getScrollLeft(),
-                    ww      = getOuterWidth(window),
-                    wh      = getOuterHeight(window);
+                var pBase   = self.getPositionBase(),
+                    size    = self.getDialogSize(),
+                    st      = getScrollTop(pBase),
+                    sl      = getScrollLeft(pBase),
+                    ww      = getOuterWidth(pBase),
+                    wh      = getOuterHeight(pBase);
 
                 if (offsetY && pos.y + size.height > wh + st - offsetY) {
                     pos.y   = wh + st - offsetY - size.height;

@@ -2,7 +2,10 @@
 "use strict";
 
 
+var MetaphorJs = {
 
+
+};
 
 
 
@@ -2868,6 +2871,12 @@ extend(Observable.prototype, {
     },
 
     /**
+     * @method hasListener
+     * @access public
+     * @return bool
+     */
+
+    /**
     * @method hasListener
     * @access public
     * @param {string} name Event name { @required }
@@ -2883,12 +2892,23 @@ extend(Observable.prototype, {
     * @return bool
     */
     hasListener: function(name, fn, context) {
-        name = name.toLowerCase();
-        var events  = this.events;
-        if (!events[name]) {
+        var events = this.events;
+
+        if (name) {
+            name = name.toLowerCase();
+            if (!events[name]) {
+                return false;
+            }
+            return events[name].hasListener(fn, context);
+        }
+        else {
+            for (name in events) {
+                if (events[name].hasListener()) {
+                    return true;
+                }
+            }
             return false;
         }
-        return events[name].hasListener(fn, context);
     },
 
 
@@ -3418,6 +3438,9 @@ extend(Event.prototype, {
                 ret = ret.concat(res);
             }
             else if (returnResult == "first") {
+                return res;
+            }
+            else if (returnResult == "nonempty" && res) {
                 return res;
             }
             else if (returnResult == "last") {
@@ -4170,7 +4193,9 @@ var ajax = function(){
                 self._xhr.send(opt.data);
             }
             catch (thrownError) {
-                self._deferred.reject(thrownError);
+                if (self._deferred) {
+                    self._deferred.reject(thrownError);
+                }
             }
         },
 
@@ -4481,6 +4506,80 @@ var getStyle = function(node, prop, numeric) {
 
     return numeric ? parseFloat(val) || 0 : val;
 
+};
+
+
+
+
+function getOffsetParent(node) {
+
+    var html = window.document.documentElement,
+        offsetParent = node.offsetParent || html;
+
+    while (offsetParent && (offsetParent != html &&
+                              getStyle(offsetParent, "position") == "static")) {
+        offsetParent = offsetParent.offsetParent;
+    }
+
+    return offsetParent || html;
+
+};
+
+
+
+function getPosition(node, to) {
+
+    var offsetParent, offset,
+        parentOffset = {top: 0, left: 0},
+        html = window.document.documentElement;
+
+    if (node === window || node === html) {
+        return parentOffset;
+    }
+
+    // Fixed elements are offset from window (parentOffset = {top:0, left: 0},
+    // because it is its only offset parent
+    if (getStyle(node, "position" ) == "fixed") {
+        // Assume getBoundingClientRect is there when computed position is fixed
+        offset = node.getBoundingClientRect();
+    }
+    else if (to) {
+        var thisOffset = getOffset(node),
+            toOffset = getOffset(to),
+            position = {
+                left: thisOffset.left - toOffset.left,
+                top: thisOffset.top - toOffset.top
+            };
+
+        if (position.left < 0) {
+            position.left = 0;
+        }
+        if (position.top < 0) {
+            position.top = 0;
+        }
+        return position;
+    }
+    else {
+        // Get *real* offsetParent
+        offsetParent = getOffsetParent(node);
+
+        // Get correct offsets
+        offset = getOffset(node);
+
+        if (offsetParent !== html) {
+            parentOffset = getOffset(offsetParent);
+        }
+
+        // Add offsetParent borders
+        parentOffset.top += getStyle(offsetParent, "borderTopWidth", true);
+        parentOffset.left += getStyle(offsetParent, "borderLeftWidth", true);
+    }
+
+    // Subtract parent offsets and element margins
+    return {
+        top: offset.top - parentOffset.top - getStyle(node, "marginTop", true),
+        left: offset.left - parentOffset.left - getStyle(node, "marginLeft", true)
+    };
 };
 
 
@@ -5794,6 +5893,18 @@ var Dialog = function(){
              * @type {number|bool}
              */
             screenY:		false,
+
+            /**
+             * Calculate position relative to this element (defaults to window)
+             * @type {string|Element}
+             */
+            base:           null,
+
+            /**
+             * Monitor window/selector/element scroll.
+             * @type {bool|string|Element}
+             */
+            scroll:         false,
 
             /**
              * Monitor window resize.
@@ -7110,6 +7221,17 @@ var Dialog = function(){
                 }
             },
 
+            getScrollEl: function(cfgScroll) {
+                if (cfgScroll === true || cfgScroll === false) {
+                    return window;
+                }
+                else if (typeof cfgScroll == "string") {
+                    return select(cfgScroll).shift();
+                }
+                else {
+                    return cfgScroll;
+                }
+            },
 
 
             showAfterDelay: function(e, immediately) {
@@ -7140,7 +7262,7 @@ var Dialog = function(){
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    addListener(window, "scroll", self.onWindowScroll);
+                    addListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
                 }
 
 
@@ -7258,7 +7380,7 @@ var Dialog = function(){
                 }
 
                 if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    removeListener(window, "scroll", self.onWindowScroll);
+                    removeListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
                 }
 
                 // if afterdelay callback returns false we stop.
@@ -7574,6 +7696,23 @@ var Dialog = function(){
                 }
             },
 
+            getPositionBase: function() {
+                if (state.positionBase) {
+                    return state.positionBase;
+                }
+                var b;
+                if (b = cfg.position.base) {
+                    if (typeof b == "string") {
+                        state.positionBase = select(b).shift();
+                    }
+                    else {
+                        state.positionBase = b;
+                    }
+                    return state.positionBase;
+                }
+                return null;
+            },
+
             getDialogSize: function() {
 
                 var hidden  = cfg.cls.hidden ? hasClass(elem, cfg.cls.hidden) : !isVisible(elem),
@@ -7621,8 +7760,9 @@ var Dialog = function(){
                     return null;
                 }
 
-                var size    = self.getDialogSize(),
-                    offset  = getOffset(target),
+                var pBase   = self.getPositionBase(),
+                    size    = self.getDialogSize(),
+                    offset  = pBase ? getPosition(target, pBase) : getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
                     type    = type || cfg.position.type,
@@ -7784,15 +7924,16 @@ var Dialog = function(){
 
             getWindowPosition: function() {
 
-                var size    = self.getDialogSize(),
+                var pBase   = self.getPositionBase() || window,
+                    size    = self.getDialogSize(),
                     pos     = {},
                     type    = cfg.position.type.substr(1),
                     offsetX = cfg.position.offsetX,
                     offsetY = cfg.position.offsetY,
-                    st      = getScrollTop(),
-                    sl      = getScrollLeft(),
-                    ww      = getOuterWidth(window),
-                    wh      = getOuterHeight(window);
+                    st      = getScrollTop(pBase),
+                    sl      = getScrollLeft(pBase),
+                    ww      = getOuterWidth(pBase),
+                    wh      = getOuterHeight(pBase);
 
                 switch (type) {
                     case "c": {
@@ -7847,11 +7988,12 @@ var Dialog = function(){
 
             correctScreenPosition: function(pos, offsetX, offsetY) {
 
-                var size    = self.getDialogSize(),
-                    st      = getScrollTop(),
-                    sl      = getScrollLeft(),
-                    ww      = getOuterWidth(window),
-                    wh      = getOuterHeight(window);
+                var pBase   = self.getPositionBase(),
+                    size    = self.getDialogSize(),
+                    st      = getScrollTop(pBase),
+                    sl      = getScrollLeft(pBase),
+                    ww      = getOuterWidth(pBase),
+                    wh      = getOuterHeight(pBase);
 
                 if (offsetY && pos.y + size.height > wh + st - offsetY) {
                     pos.y   = wh + st - offsetY - size.height;
