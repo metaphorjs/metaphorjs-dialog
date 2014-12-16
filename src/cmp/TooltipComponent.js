@@ -13,4 +13,6 @@ module.exports = DialogComponent.$extend({
         this.$super(cfg);
     }
 
+}, {
+    $resumeRenderer: true
 });

@@ -1728,7 +1728,7 @@ module.exports = function(){
                     dtChanged = self.changeDynamicTarget(e);
                 }
 
-                if (!returnMode && state.visible) {
+                if (state.visible) {
                     if (!dtChanged) {
                         /*debug-start*/
                         if (cfg.debug) {
@@ -1736,7 +1736,7 @@ module.exports = function(){
                         }
                         /*debug-end*/
 
-                        returnMode = "visible";
+                        returnMode = returnMode || "visible";
                         //return returnValue;
                     }
                     else {
@@ -1751,7 +1751,7 @@ module.exports = function(){
                     }
                 }
 
-                if (!returnMode) {
+                if (!returnMode || dtChanged) {
                     // if tooltip is not rendered yet we render it
                     if (!elem) {
                         self.render();

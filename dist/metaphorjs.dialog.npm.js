@@ -777,8 +777,6 @@ function getOffset(node) {
     };
 };
 
-/*!window!*/
-
 var getStyle = function(node, prop, numeric) {
 
     var style, val;
@@ -2823,7 +2821,7 @@ var Dialog = function(){
                     dtChanged = self.changeDynamicTarget(e);
                 }
 
-                if (!returnMode && state.visible) {
+                if (state.visible) {
                     if (!dtChanged) {
                         /*debug-start*/
                         if (cfg.debug) {
@@ -2831,7 +2829,7 @@ var Dialog = function(){
                         }
                         /*debug-end*/
 
-                        returnMode = "visible";
+                        returnMode = returnMode || "visible";
                         //return returnValue;
                     }
                     else {
@@ -2846,7 +2844,7 @@ var Dialog = function(){
                     }
                 }
 
-                if (!returnMode) {
+                if (!returnMode || dtChanged) {
                     // if tooltip is not rendered yet we render it
                     if (!elem) {
                         self.render();
