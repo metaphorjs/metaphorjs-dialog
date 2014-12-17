@@ -2,10 +2,7 @@
 "use strict";
 
 
-var MetaphorJs = {
 
-
-};
 
 
 
@@ -4947,9 +4944,12 @@ var Dialog = function(){
 
             detectPointerPosition: function() {
                 if (cfg.position) {
+                    if (isFunction(cfg.position)) {
+                        return cfg.position.call(cfg.context, dlg, cfg);
+                    }
                     return cfg.position;
                 }
-                var pri = (dlg.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1);
+                var pri = (dlg.getState().positionType || "").replace(/(w|m|c)/, "").substr(0,1);
 
                 if (!pri) {
                     return null;
@@ -4960,6 +4960,9 @@ var Dialog = function(){
 
             detectPointerDirection: function(position) {
                 if (cfg.direction) {
+                    if (isFunction(cfg.direction)) {
+                        return cfg.direction.call(cfg.context, dlg, position, cfg);
+                    }
                     return cfg.direction;
                 }
                 return position;
@@ -6844,6 +6847,9 @@ var Dialog = function(){
 
                 if (state.positionGetType) {
                     api.setPositionType(state.positionGetType.call(defaultScope, self, e));
+                    pnt.remove();
+                    pnt.init();
+                    pnt.render();
                 }
 
                 var pos = self.getPosition(e);
