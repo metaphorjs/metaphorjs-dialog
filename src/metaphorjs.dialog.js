@@ -131,8 +131,6 @@ module.exports = function(){
     }();
 
 
-
-
     /*
      * Pointer
      */
@@ -170,7 +168,7 @@ module.exports = function(){
 
             getDialogPositionOffset: function() {
                 var pp  = (self.detectPointerPosition() || "").substr(0,1),
-                    dp  = (dlg.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1),
+                    dp  = (dlg.getState().positionType || "").replace(/(w|m|c)/, "").substr(0,1),
                     ofs = {x: 0, y: 0};
 
                 if (pp == opposite[dp]) {
@@ -353,6 +351,9 @@ module.exports = function(){
             render: function() {
 
                 if (el) {
+                    if (!el.parentNode) {
+                        dlg.getElem().appendChild(el);
+                    }
                     return;
                 }
 
@@ -1069,6 +1070,8 @@ module.exports = function(){
 
             /**
              * false -- do not apply position<br>
+             * function(api) - must return one of the following:<br>
+             * "auto" - detect position automatically<br>
              *
              * <b>relative to target:</b><br>
              * t | r | b | l -- simple positions aligned by center<br>
@@ -1083,9 +1086,17 @@ module.exports = function(){
              * <b>window positions:</b><br>
              * wc | wt | wr | wb | wl<br>
              * wrt | wrb | wlt | wlb
+             *
+             * Defaults to 't'
              * @type {bool|string}
              */
             type:			't',
+
+            /**
+             * Works when type = 'auto'
+             * @type {string}
+             */
+            preferredType:  't',
 
             /**
              * Add this offset to dialog's x position
@@ -1438,6 +1449,10 @@ module.exports = function(){
                 dynamicTargetEl:    null,
                 images:             0,
                 position:           null,
+                positionBase:       null,
+                positionType:       null,
+                positionFn:         null,
+                positionGetType:    null,
                 destroyDelay:       null
             };
 
@@ -1537,6 +1552,14 @@ module.exports = function(){
             },
 
             /**
+             * Get dialog's pointer object
+             * @returns {Pointer}
+             */
+            getPointer: function() {
+                return pnt;
+            },
+
+            /**
              * @access public
              * @return {boolean}
              */
@@ -1566,6 +1589,17 @@ module.exports = function(){
              */
             isFrozen: function() {
                 return state.frozen;
+            },
+
+            /**
+             * @returns {boolean}
+             */
+            isRendered: function() {
+                return state.rendered;
+            },
+
+            getState: function() {
+                return state;
             },
 
             /**
@@ -1955,23 +1989,31 @@ module.exports = function(){
              */
             setPositionType: function(type) {
 
-                if (type) {
-                    if (isString(type)) {
-                        cfg.position.get     = type;
-                        cfg.position.type   = false;
+                type = type != undf ?
+                        type :
+                        (cfg.position.get || cfg.position.type);
+
+                if (type != undf) {
+                    if (isFunction(type)) {
+                        state.positionFn = type;
+                        state.positionType = null;
+                        //cfg.position.get    = type;
+                        //cfg.position.type   = false;
                     }
                     else {
-                        cfg.position.get    = null;
-                        cfg.position.type   = type;
+                        state.positionFn = null;
+                        state.positionType = type;
+                        //cfg.position.get    = null;
+                        //cfg.position.type   = type;
                     }
                 }
 
-                var pt  = cfg.position.type;
+                var pt  = state.positionType;
 
                 if (pt === false) {
                     state.position  = false;
                 }
-                else if (cfg.position.get && pt != "m") {
+                else if (state.positionFn && pt != "m") {
                     state.position  = "fn";
                 }
                 else {
@@ -2015,25 +2057,20 @@ module.exports = function(){
                     cfgPos  = cfg.position;
 
                 switch (state.position) {
-                    case false: {
+                    case false:
                         return null;
-                    }
-                    case "target": {
+                    case "target":
                         pos = self.getTargetPosition(e);
                         break;
-                    }
-                    case "mouse": {
+                    case "mouse":
                         pos = self.getMousePosition(e);
                         break;
-                    }
-                    case "window": {
+                    case "window":
                         pos = self.getWindowPosition(e);
                         break;
-                    }
-                    case "fn": {
-                        pos = cfgPos.get.call(defaultScope, api, e);
+                    case "fn":
+                        pos = state.positionFn.call(defaultScope, api, e);
                         break;
-                    }
                 }
 
                 if (cfgPos.screenX !== false || cfgPos.screenY !== false) {
@@ -2051,6 +2088,10 @@ module.exports = function(){
             reposition: function(e) {
 
                 e && (e = normalizeEvent(e));
+
+                if (state.positionGetType) {
+                    api.setPositionType(state.positionGetType.call(defaultScope, self, e));
+                }
 
                 var pos = self.getPosition(e);
 
@@ -2271,7 +2312,14 @@ module.exports = function(){
                     cfg.overlay.enabled = true;
                 }
 
-                self.setPositionType();
+                if (isFunction(cfg.position.type)) {
+                    state.positionGetType = cfg.position.type;
+                }
+                else {
+                    self.setPositionType();
+                }
+
+
                 self.setTarget(cfg.target);
 
                 if (cfg.target && cfg.useHref) {
@@ -2525,7 +2573,7 @@ module.exports = function(){
                     self.appendElem();
                 }
 
-                if (!cfg.position.manual) {
+                if (state.positionType !== false) {
                     self.reposition(e);
                 }
 
@@ -3010,7 +3058,7 @@ module.exports = function(){
                     offset  = pBase ? getPosition(target, pBase) : getOffset(target),
                     tsize   = self.getTargetSize(),
                     pos     = {},
-                    type    = type || cfg.position.type,
+                    type    = type || state.positionType,
                     pri     = type.substr(0, 1),
                     sec     = type.substr(1),
                     offsetX = cfg.position.offsetX,
@@ -3094,7 +3142,7 @@ module.exports = function(){
 
                 var size    = self.getDialogSize(),
                     pos     = {},
-                    type    = cfg.position.type.substr(1),
+                    type    = state.positionType.substr(1),
                     offsetX = cfg.position.offsetX,
                     offsetY = cfg.position.offsetY,
                     axis    = cfg.position.axis,
@@ -3102,7 +3150,7 @@ module.exports = function(){
 
                 switch (type) {
                     case "": {
-                        pos     = cfg.position.get.call(defaultScope, api, e);
+                        pos     = state.positionFn.call(defaultScope, api, e);
                         break;
                     }
                     case "t": {
@@ -3172,7 +3220,7 @@ module.exports = function(){
                 var pBase   = self.getPositionBase() || window,
                     size    = self.getDialogSize(),
                     pos     = {},
-                    type    = cfg.position.type.substr(1),
+                    type    = state.positionType.substr(1),
                     offsetX = cfg.position.offsetX,
                     offsetY = cfg.position.offsetY,
                     st      = getScrollTop(pBase),
