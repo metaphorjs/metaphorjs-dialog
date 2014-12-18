@@ -9,17 +9,18 @@
         "standalone": {
             "wrap": true,
             "global": true,
+            "auto": true,
             "target": "dist/metaphorjs.dialog.js",
             "files": [
-                "../metaphorjs/src/MetaphorJs.js",
+                "metaphorjs/src/MetaphorJs.js",
                 [
-                    "src/metaphorjs.dialog.js",
+                    "src/class/Dialog.js",
                     {
                         "as": "Dialog"
                     }
                 ],
                 [
-                    "../metaphorjs/src/func/dom/onReady.js",
+                    "metaphorjs/src/func/dom/onReady.js",
                     {
                         "as": "onReady"
                     }

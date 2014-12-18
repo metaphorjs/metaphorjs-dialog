@@ -35,7 +35,8 @@ if (window.jQuery) {
             if (!t) {
                 options.target          = el;
                 options.instanceName    = dataName;
-                data(el, dataName, new Dialog(preset, options));
+                options.preset          = preset;
+                data(el, dataName, new MetaphorJs.Dialog(options));
             }
             else if (options == "destroy") {
                 t.destroy();

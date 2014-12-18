@@ -2,11 +2,15 @@
 "use strict";
 
 
+var MetaphorJs = {
 
 
+};
 
 
-var slice = Array.prototype.slice;
+function isFunction(value) {
+    return typeof value == 'function';
+};
 
 var toString = Object.prototype.toString;
 
@@ -70,6 +74,458 @@ var varType = function(){
     };
 
 }();
+
+
+
+function isString(value) {
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
+};
+
+
+
+/**
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isArray(value) {
+    return typeof value == "object" && varType(value) === 5;
+};
+
+var strUndef = "undefined";
+
+
+
+function isObject(value) {
+    if (value === null || typeof value != "object") {
+        return false;
+    }
+    var vt = varType(value);
+    return vt > 2 || vt == -1;
+};
+
+
+
+var Cache = function(){
+
+    var globalCache;
+
+    /**
+     * @class Cache
+     * @param {bool} cacheRewritable
+     * @constructor
+     */
+    var Cache = function(cacheRewritable) {
+
+        var storage = {},
+
+            finders = [];
+
+        if (arguments.length == 0) {
+            cacheRewritable = true;
+        }
+
+        return {
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             * @param {bool} prepend
+             */
+            addFinder: function(fn, context, prepend) {
+                finders[prepend? "unshift" : "push"]({fn: fn, context: context});
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @param {*} value
+             * @param {bool} rewritable
+             * @returns {*} value
+             */
+            add: function(name, value, rewritable) {
+
+                if (storage[name] && storage[name].rewritable === false) {
+                    return storage[name];
+                }
+
+                storage[name] = {
+                    rewritable: typeof rewritable != strUndef ? rewritable : cacheRewritable,
+                    value: value
+                };
+
+                return value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            get: function(name) {
+
+                if (!storage[name]) {
+                    if (finders.length) {
+
+                        var i, l, res,
+                            self = this;
+
+                        for (i = 0, l = finders.length; i < l; i++) {
+
+                            res = finders[i].fn.call(finders[i].context, name, self);
+
+                            if (res !== undf) {
+                                return self.add(name, res, true);
+                            }
+                        }
+                    }
+
+                    return undf;
+                }
+
+                return storage[name].value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            remove: function(name) {
+                var rec = storage[name];
+                if (rec && rec.rewritable === true) {
+                    delete storage[name];
+                }
+                return rec ? rec.value : undf;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {boolean}
+             */
+            exists: function(name) {
+                return !!storage[name];
+            },
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             */
+            eachEntry: function(fn, context) {
+                var k;
+                for (k in storage) {
+                    fn.call(context, storage[k].value, k);
+                }
+            },
+
+            /**
+             * @method
+             */
+            destroy: function() {
+
+                var self = this;
+
+                if (self === globalCache) {
+                    globalCache = null;
+                }
+
+                storage = null;
+                cacheRewritable = null;
+
+                self.add = null;
+                self.get = null;
+                self.destroy = null;
+                self.exists = null;
+                self.remove = null;
+            }
+        };
+    };
+
+    /**
+     * @method
+     * @static
+     * @returns {Cache}
+     */
+    Cache.global = function() {
+
+        if (!globalCache) {
+            globalCache = new Cache(true);
+        }
+
+        return globalCache;
+    };
+
+    return Cache;
+
+}();
+
+
+
+
+
+/**
+ * @class Namespace
+ * @code ../examples/main.js
+ */
+var Namespace = function(){
+
+
+    /**
+     * @param {Object} root optional; usually window or global
+     * @param {String} rootName optional. If you want custom object to be root and
+     * this object itself is the first level of namespace
+     * @param {Cache} cache optional
+     * @constructor
+     */
+    var Namespace   = function(root, rootName, cache) {
+
+        cache       = cache || new Cache(false);
+        var self    = this,
+            rootL   = rootName ? rootName.length : null;
+
+        if (!root) {
+            if (typeof global != strUndef) {
+                root    = global;
+            }
+            else {
+                root    = window;
+            }
+        }
+
+        var normalize   = function(ns) {
+            if (ns && rootName && ns.substr(0, rootL) != rootName) {
+                return rootName + "." + ns;
+            }
+            return ns;
+        };
+
+        var parseNs     = function(ns) {
+
+            ns = normalize(ns);
+
+            var tmp     = ns.split("."),
+                i,
+                last    = tmp.pop(),
+                parent  = tmp.join("."),
+                len     = tmp.length,
+                name,
+                current = root;
+
+
+            if (cache[parent]) {
+                return [cache[parent], last, ns];
+            }
+
+            if (len > 0) {
+                for (i = 0; i < len; i++) {
+
+                    name    = tmp[i];
+
+                    if (rootName && i == 0 && name == rootName) {
+                        current = root;
+                        continue;
+                    }
+
+                    if (current[name] === undf) {
+                        current[name]   = {};
+                    }
+
+                    current = current[name];
+                }
+            }
+
+            return [current, last, ns];
+        };
+
+        /**
+         * Get namespace/cache object
+         * @method
+         * @param {string} ns
+         * @param {bool} cacheOnly
+         * @returns {*}
+         */
+        var get       = function(ns, cacheOnly) {
+
+            ns = normalize(ns);
+
+            if (cache.exists(ns)) {
+                return cache.get(ns);
+            }
+
+            if (cacheOnly) {
+                return undf;
+            }
+
+            var tmp     = ns.split("."),
+                i,
+                len     = tmp.length,
+                name,
+                current = root;
+
+            for (i = 0; i < len; i++) {
+
+                name    = tmp[i];
+
+                if (rootName && i == 0 && name == rootName) {
+                    current = root;
+                    continue;
+                }
+
+                if (current[name] === undf) {
+                    return undf;
+                }
+
+                current = current[name];
+            }
+
+            if (current) {
+                cache.add(ns, current);
+            }
+
+            return current;
+        };
+
+        /**
+         * Register item
+         * @method
+         * @param {string} ns
+         * @param {*} value
+         */
+        var register    = function(ns, value) {
+
+            var parse   = parseNs(ns),
+                parent  = parse[0],
+                name    = parse[1];
+
+            if (isObject(parent) && parent[name] === undf) {
+
+                parent[name]        = value;
+                cache.add(parse[2], value);
+            }
+
+            return value;
+        };
+
+        /**
+         * Item exists
+         * @method
+         * @param {string} ns
+         * @returns boolean
+         */
+        var exists      = function(ns) {
+            return get(ns, true) !== undf;
+        };
+
+        /**
+         * Add item only to the cache
+         * @function add
+         * @param {string} ns
+         * @param {*} value
+         */
+        var add = function(ns, value) {
+
+            ns = normalize(ns);
+            cache.add(ns, value);
+            return value;
+        };
+
+        /**
+         * Remove item from cache
+         * @method
+         * @param {string} ns
+         */
+        var remove = function(ns) {
+            ns = normalize(ns);
+            cache.remove(ns);
+        };
+
+        /**
+         * Make alias in the cache
+         * @method
+         * @param {string} from
+         * @param {string} to
+         */
+        var makeAlias = function(from, to) {
+
+            from = normalize(from);
+            to = normalize(to);
+
+            var value = cache.get(from);
+
+            if (value !== undf) {
+                cache.add(to, value);
+            }
+        };
+
+        /**
+         * Destroy namespace and all classes in it
+         * @method
+         */
+        var destroy     = function() {
+
+            var self = this,
+                k;
+
+            if (self === globalNs) {
+                globalNs = null;
+            }
+
+            cache.eachEntry(function(entry){
+                if (entry && entry.$destroy) {
+                    entry.$destroy();
+                }
+            });
+
+            cache.destroy();
+            cache = null;
+
+            for (k in self) {
+                self[k] = null;
+            }
+        };
+
+        self.register   = register;
+        self.exists     = exists;
+        self.get        = get;
+        self.add        = add;
+        self.remove     = remove;
+        self.normalize  = normalize;
+        self.makeAlias  = makeAlias;
+        self.destroy    = destroy;
+    };
+
+    Namespace.prototype.register = null;
+    Namespace.prototype.exists = null;
+    Namespace.prototype.get = null;
+    Namespace.prototype.add = null;
+    Namespace.prototype.remove = null;
+    Namespace.prototype.normalize = null;
+    Namespace.prototype.makeAlias = null;
+    Namespace.prototype.destroy = null;
+
+    var globalNs;
+
+    /**
+     * Get global namespace
+     * @method
+     * @static
+     * @returns {Namespace}
+     */
+    Namespace.global = function() {
+        if (!globalNs) {
+            globalNs = new Namespace;
+        }
+        return globalNs;
+    };
+
+    return Namespace;
+
+}();
+
+
+
+var slice = Array.prototype.slice;
 
 
 
@@ -155,6 +611,723 @@ var extend = function(){
 
     return extend;
 }();
+
+
+function emptyFn(){};
+
+
+
+var instantiate = function(fn, args) {
+
+    var Temp = function(){},
+        inst, ret;
+
+    Temp.prototype  = fn.prototype;
+    inst            = new Temp;
+    ret             = fn.apply(inst, args);
+
+    // If an object has been returned then return it otherwise
+    // return the original instance.
+    // (consistent with behaviour of the new operator)
+    return isObject(ret) || ret === false ? ret : inst;
+
+};
+/**
+ * Function interceptor
+ * @param {function} origFn
+ * @param {function} interceptor
+ * @param {object|null} context
+ * @param {object|null} origContext
+ * @param {string} when
+ * @param {bool} replaceValue
+ * @returns {Function}
+ */
+function intercept(origFn, interceptor, context, origContext, when, replaceValue) {
+
+    when = when || "before";
+
+    return function() {
+
+        var intrRes,
+            origRes;
+
+        if (when == "instead") {
+            return interceptor.apply(context || origContext, arguments);
+        }
+        else if (when == "before") {
+            intrRes = interceptor.apply(context || origContext, arguments);
+            origRes = intrRes !== false ? origFn.apply(origContext || context, arguments) : null;
+        }
+        else {
+            origRes = origFn.apply(origContext || context, arguments);
+            intrRes = interceptor.apply(context || origContext, arguments);
+        }
+
+        return replaceValue ? intrRes : origRes;
+    };
+};
+
+
+
+var Class = function(){
+
+
+    var proto   = "prototype",
+
+        constr  = "$constructor",
+
+        $constr = function $constr() {
+            var self = this;
+            if (self.$super && self.$super !== emptyFn) {
+                self.$super.apply(self, arguments);
+            }
+        },
+
+        wrapPrototypeMethod = function wrapPrototypeMethod(parent, k, fn) {
+
+            var $super = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
+
+            return function() {
+                var ret,
+                    self    = this,
+                    prev    = self.$super;
+
+                self.$super     = $super;
+                ret             = fn.apply(self, arguments);
+                self.$super     = prev;
+
+                return ret;
+            };
+        },
+
+        preparePrototype = function preparePrototype(prototype, cls, parent, onlyWrap) {
+            var k, ck, pk, pp = parent[proto];
+
+            for (k in cls) {
+                if (cls.hasOwnProperty(k)) {
+                    
+                    pk = pp[k];
+                    ck = cls[k];
+
+                    prototype[k] = isFunction(ck) && (!pk || isFunction(pk)) ?
+                                    wrapPrototypeMethod(parent, k, ck) :
+                                    ck;
+                }
+            }
+
+            if (onlyWrap) {
+                return;
+            }
+
+            prototype.$plugins = null;
+
+            if (pp.$beforeInit) {
+                prototype.$beforeInit = pp.$beforeInit.slice();
+                prototype.$afterInit = pp.$afterInit.slice();
+                prototype.$beforeDestroy = pp.$beforeDestroy.slice();
+                prototype.$afterDestroy = pp.$afterDestroy.slice();
+            }
+            else {
+                prototype.$beforeInit = [];
+                prototype.$afterInit = [];
+                prototype.$beforeDestroy = [];
+                prototype.$afterDestroy = [];
+            }
+        },
+        
+        mixinToPrototype = function(prototype, mixin) {
+            
+            var k;
+            for (k in mixin) {
+                if (mixin.hasOwnProperty(k)) {
+                    if (k == "$beforeInit") {
+                        prototype.$beforeInit.push(mixin[k]);
+                    }
+                    else if (k == "$afterInit") {
+                        prototype.$afterInit.push(mixin[k]);
+                    }
+                    else if (k == "$beforeDestroy") {
+                        prototype.$beforeDestroy.push(mixin[k]);
+                    }
+                    else if (k == "$afterDestroy") {
+                        prototype.$afterDestroy.push(mixin[k]);
+                    }
+                    else if (!prototype[k]) {
+                        prototype[k] = mixin[k];
+                    }
+                }
+            }
+        };
+
+
+    var Class = function(ns){
+
+        if (!ns) {
+            ns = new Namespace;
+        }
+
+        var createConstructor = function() {
+
+            return function() {
+
+                var self    = this,
+                    before  = [],
+                    after   = [],
+                    args    = arguments,
+                    newArgs,
+                    i, l,
+                    plugins, plugin,
+                    plCls;
+
+                if (!self) {
+                    throw "Must instantiate via new";
+                }
+
+                self.$plugins = [];
+
+                newArgs = self[constr].apply(self, arguments);
+
+                if (newArgs && isArray(newArgs)) {
+                    args = newArgs;
+                }
+
+                plugins = self.$plugins;
+
+                for (i = -1, l = self.$beforeInit.length; ++i < l;
+                     before.push([self.$beforeInit[i], self])) {}
+
+                for (i = -1, l = self.$afterInit.length; ++i < l;
+                     after.push([self.$afterInit[i], self])) {}
+
+                if (plugins && plugins.length) {
+
+                    for (i = 0, l = plugins.length; i < l; i++) {
+
+                        plugin = plugins[i];
+
+                        if (isString(plugin)) {
+                            plCls = plugin;
+                            plugin = ns.get(plugin, true);
+                            if (!plugin) {
+                                throw plCls + " not found";
+                            }
+                        }
+
+                        plugin = new plugin(self, args);
+
+                        if (plugin.$beforeHostInit) {
+                            before.push([plugin.$beforeHostInit, plugin]);
+                        }
+                        if (plugin.$afterHostInit) {
+                            after.push([plugin.$afterHostInit, plugin]);
+                        }
+
+                        plugins[i] = plugin;
+                    }
+                }
+
+                for (i = -1, l = before.length; ++i < l;
+                     before[i][0].apply(before[i][1], args)){}
+
+                if (self.$init) {
+                    self.$init.apply(self, args);
+                }
+
+                for (i = -1, l = after.length; ++i < l;
+                     after[i][0].apply(after[i][1], args)){}
+
+            };
+        };
+
+
+        /**
+         * @class BaseClass
+         * @description All classes defined with MetaphorJs.Class extend this class.
+         * You can access it via <code>cs.BaseClass</code>. Basically,
+         * <code>cs.define({});</code> is the same as <code>cs.BaseClass.$extend({})</code>.
+         * @constructor
+         */
+        var BaseClass = function() {
+
+        };
+
+        extend(BaseClass.prototype, {
+
+            $class: null,
+            $extends: null,
+            $plugins: null,
+            $mixins: null,
+
+            $destroyed: false,
+
+            $constructor: emptyFn,
+            $init: emptyFn,
+            $beforeInit: [],
+            $afterInit: [],
+            $beforeDestroy: [],
+            $afterDestroy: [],
+
+            /**
+             * Get class name
+             * @method
+             * @returns {string}
+             */
+            $getClass: function() {
+                return this.$class;
+            },
+
+            /**
+             * Get parent class name
+             * @method
+             * @returns {string | null}
+             */
+            $getParentClass: function() {
+                return this.$extends;
+            },
+
+            /**
+             * Intercept method
+             * @method
+             * @param {string} method Intercepted method name
+             * @param {function} fn function to call before or after intercepted method
+             * @param {object} newContext optional interceptor's "this" object
+             * @param {string} when optional, when to call interceptor before | after | instead; default "before"
+             * @param {bool} replaceValue optional, return interceptor's return value or original method's; default false
+             * @returns {function} original method
+             */
+            $intercept: function(method, fn, newContext, when, replaceValue) {
+                var self = this,
+                    orig = self[method];
+                self[method] = intercept(orig, fn, newContext || self, self, when, replaceValue);
+                return orig;
+            },
+
+            /**
+             * Implement new methods or properties on instance
+             * @param {object} methods
+             */
+            $implement: function(methods) {
+                var $self = this.constructor;
+                if ($self && $self.$parent) {
+                    preparePrototype(this, methods, $self.$parent);
+                }
+            },
+
+            /**
+             * Does this instance have a plugin
+             * @param cls
+             * @returns {bool}
+             */
+            $hasPlugin: function(cls) {
+                var pls = this.$plugins,
+                    i, l;
+                if (!cls) {
+                    return pls.length > 0;
+                }
+                for (i = 0, l = pls.length; i < l; i++) {
+                    if (isInstanceOf(pls[i], cls)) {
+                        return true;
+                    }
+                }
+                return false;
+            },
+
+            /**
+             * Destroy instance
+             * @method
+             */
+            $destroy: function() {
+
+                var self    = this,
+                    before  = self.$beforeDestroy,
+                    after   = self.$afterDestroy,
+                    plugins = self.$plugins,
+                    i, l, res;
+
+                if (self.$destroyed) {
+                    return;
+                }
+
+                self.$destroyed = true;
+
+                for (i = -1, l = before.length; ++i < l;
+                     before[i].apply(self, arguments)){}
+
+                for (i = 0, l = plugins.length; i < l; i++) {
+                    if (plugins[i].$beforeHostDestroy) {
+                        plugins[i].$beforeHostDestroy.call(plugins[i], arguments);
+                    }
+                }
+
+                res = self.destroy.apply(self, arguments);
+
+                for (i = -1, l = before.length; ++i < l;
+                     after[i].apply(self, arguments)){}
+
+                for (i = 0, l = plugins.length; i < l; i++) {
+                    plugins[i].$destroy.apply(plugins[i], arguments);
+                }
+
+                if (res !== false) {
+                    for (i in self) {
+                        if (self.hasOwnProperty(i)) {
+                            self[i] = null;
+                        }
+                    }
+                }
+
+                self.$destroyed = true;
+            },
+
+            destroy: function(){}
+        });
+
+        BaseClass.$self = BaseClass;
+
+        /**
+         * Create an instance of current class. Same as cs.factory(name)
+         * @method
+         * @static
+         * @code var myObj = My.Class.$instantiate(arg1, arg2, ...);
+         * @returns {object} class instance
+         */
+        BaseClass.$instantiate = function() {
+
+            var cls = this,
+                args = arguments,
+                cnt = args.length;
+
+            // lets make it ugly, but without creating temprorary classes and leaks.
+            // and fallback to normal instantiation.
+
+            switch (cnt) {
+                case 0:
+                    return new cls;
+                case 1:
+                    return new cls(args[0]);
+                case 2:
+                    return new cls(args[0], args[1]);
+                case 3:
+                    return new cls(args[0], args[1], args[2]);
+                case 4:
+                    return new cls(args[0], args[1], args[2], args[3]);
+                default:
+                    return instantiate(cls, args);
+            }
+        };
+
+        /**
+         * Override class methods (on prototype level, not on instance level)
+         * @method
+         * @static
+         * @param {object} methods
+         */
+        BaseClass.$override = function(methods) {
+            var $self = this.$self,
+                $parent = this.$parent;
+
+            if ($self && $parent) {
+                preparePrototype($self.prototype, methods, $parent);
+            }
+        };
+
+        /**
+         * Create new class based on current one
+         * @param {object} definition
+         * @param {object} statics
+         * @returns {function}
+         */
+        BaseClass.$extend = function(definition, statics) {
+            return define(definition, statics, this);
+        };
+
+        /**
+         * Destroy class
+         * @method
+         */
+        BaseClass.$destroy = function() {
+            var self = this,
+                k;
+
+            for (k in self) {
+                self[k] = null;
+            }
+        };
+
+        /**
+         * @class Class
+         */
+
+        /**
+         * @method Class
+         * @constructor
+         * @param {Namespace} ns optional namespace. See metaphorjs-namespace repository
+         */
+
+        /**
+         * @method
+         * @param {object} definition {
+         *  @type {string} $class optional
+         *  @type {string} $extends optional
+         *  @type {array} $mixins optional
+         *  @type {function} $constructor optional
+         *  @type {function} $init optional
+         *  @type {function} $beforeInit if this is a mixin
+         *  @type {function} $afterInit if this is a mixin
+         *  @type {function} $beforeHostInit if this is a plugin
+         *  @type {function} $afterHostInit if this is a plugin
+         *  @type {function} $beforeDestroy if this is a mixin
+         *  @type {function} $afterDestroy if this is a mixin
+         *  @type {function} $beforeHostDestroy if this is a plugin
+         *  @type {function} destroy your own destroy function
+         * }
+         * @param {object} statics any statis properties or methods
+         * @param {string|function} $extends this is a private parameter; use definition.$extends
+         * @code var cls = cs.define({$class: "Name"});
+         */
+        var define = function(definition, statics, $extends) {
+
+            definition          = definition || {};
+            
+            var name            = definition.$class,
+                parentClass     = $extends || definition.$extends,
+                mixins          = definition.$mixins,
+                pConstructor,
+                i, l, k, noop, prototype, c, mixin;
+
+            if (parentClass) {
+                if (isString(parentClass)) {
+                    pConstructor = ns.get(parentClass);
+                }
+                else {
+                    pConstructor = parentClass;
+                    parentClass = pConstructor.$class || "";
+                }
+            }
+            else {
+                pConstructor = BaseClass;
+                parentClass = "";
+            }
+
+            if (parentClass && !pConstructor) {
+                throw parentClass + " not found";
+            }
+
+            if (name) {
+                name = ns.normalize(name);
+            }
+
+            definition.$class   = name;
+            definition.$extends = parentClass;
+            definition.$mixins  = null;
+
+
+            noop                = function(){};
+            noop[proto]         = pConstructor[proto];
+            prototype           = new noop;
+            noop                = null;
+            definition[constr]  = definition[constr] || $constr;
+
+            preparePrototype(prototype, definition, pConstructor);
+
+            if (mixins) {
+                for (i = 0, l = mixins.length; i < l; i++) {
+                    mixin = mixins[i];
+                    if (isString(mixin)) {
+                        mixin = ns.get("mixin." + mixin, true);
+                    }
+                    mixinToPrototype(prototype, mixin);
+                }
+            }
+
+            c = createConstructor();
+            prototype.constructor = c;
+            c[proto] = prototype;
+
+            for (k in BaseClass) {
+                if (k != proto && BaseClass.hasOwnProperty(k)) {
+                    c[k] = BaseClass[k];
+                }
+            }
+
+            for (k in pConstructor) {
+                if (k != proto && pConstructor.hasOwnProperty(k)) {
+                    c[k] = pConstructor[k];
+                }
+            }
+
+            if (statics) {
+                for (k in statics) {
+                    if (k != proto && statics.hasOwnProperty(k)) {
+                        c[k] = statics[k];
+                    }
+                }
+            }
+
+            c.$parent   = pConstructor;
+            c.$self     = c;
+
+            if (name) {
+                ns.register(name, c);
+            }
+
+            return c;
+        };
+
+
+
+
+        /**
+         * Instantiate class. Pass constructor parameters after "name"
+         * @method
+         * @code cs.factory("My.Class.Name", arg1, arg2, ...);
+         * @param {string} name Full name of the class
+         * @returns {object} class instance
+         */
+        var factory = function(name) {
+
+            var cls     = ns.get(name),
+                args    = slice.call(arguments, 1);
+
+            if (!cls) {
+                throw name + " not found";
+            }
+
+            return cls.$instantiate.apply(cls, args);
+        };
+
+
+
+        /**
+         * Is cmp instance of cls
+         * @method
+         * @code cs.instanceOf(myObj, "My.Class");
+         * @code cs.instanceOf(myObj, My.Class);
+         * @param {object} cmp
+         * @param {string|object} cls
+         * @returns {boolean}
+         */
+        var isInstanceOf = function(cmp, cls) {
+            var _cls    = isString(cls) ? ns.get(cls) : cls;
+            return _cls ? cmp instanceof _cls : false;
+        };
+
+
+
+        /**
+         * Is one class subclass of another class
+         * @method
+         * @code cs.isSubclassOf("My.Subclass", "My.Class");
+         * @code cs.isSubclassOf(myObj, "My.Class");
+         * @code cs.isSubclassOf("My.Subclass", My.Class);
+         * @code cs.isSubclassOf(myObj, My.Class);
+         * @param {string|object} childClass
+         * @param {string|object} parentClass
+         * @return {bool}
+         */
+        var isSubclassOf = function(childClass, parentClass) {
+
+            var p   = childClass,
+                g   = ns.get;
+
+            if (!isString(parentClass)) {
+                parentClass  = parentClass.prototype.$class;
+            }
+            else {
+                parentClass = ns.normalize(parentClass);
+            }
+            if (isString(childClass)) {
+                p   = g(ns.normalize(childClass));
+            }
+
+            while (p && p.prototype) {
+
+                if (p.prototype.$class == parentClass) {
+                    return true;
+                }
+
+                p = p.$parent;
+            }
+
+            return false;
+        };
+
+        var self    = this;
+
+        self.factory = factory;
+        self.isSubclassOf = isSubclassOf;
+        self.isInstanceOf = isInstanceOf;
+        self.define = define;
+
+        self.destroy = function(){
+
+            if (self === globalCs) {
+                globalCs = null;
+            }
+
+            BaseClass.$destroy();
+            BaseClass = null;
+
+            ns.destroy();
+            ns = null;
+
+            Class = null;
+
+        };
+
+        /**
+         * @type {BaseClass} BaseClass reference to the BaseClass class
+         */
+        self.BaseClass = BaseClass;
+
+    };
+
+    Class.prototype = {
+
+        factory: null,
+        isSubclassOf: null,
+        isInstanceOf: null,
+        define: null,
+        destroy: null
+    };
+
+    var globalCs;
+
+    /**
+     * Get default global class manager
+     * @method
+     * @static
+     * @returns {Class}
+     */
+    Class.global = function() {
+        if (!globalCs) {
+            globalCs = new Class(Namespace.global());
+        }
+        return globalCs;
+    };
+
+    return Class;
+
+}();
+
+
+
+
+var ns  = new Namespace(MetaphorJs, "MetaphorJs");
+
+
+
+var cs = new Class(ns);
+
+
+
+
+
+var defineClass = cs.define;
+
+
+
+var factory = cs.factory;
 
 
 var nextUid = function(){
@@ -263,13 +1436,27 @@ function removeClass(el, cls) {
 };
 
 
+function setStyle(el, name, value) {
 
-/**
- * @param {*} value
- * @returns {boolean}
- */
-function isArray(value) {
-    return typeof value == "object" && varType(value) === 5;
+    if (!el) {
+        return;
+    }
+
+    var props,
+        style = el.style,
+        k;
+
+    if (typeof name == "string") {
+        props = {};
+        props[name] = value;
+    }
+    else {
+        props = name;
+    }
+
+    for (k in props) {
+        style[k] = props[k];
+    }
 };
 
 
@@ -1421,10 +2608,6 @@ var getAnimationDuration = function(){
 
 
 
-function isFunction(value) {
-    return typeof value == 'function';
-};
-
 
 
 /**
@@ -1488,8 +2671,6 @@ function isThenable(any) {
     return isFunction((then = any.then)) ?
            then : false;
 };
-
-var strUndef = "undefined";
 /**
  * @param {Function} fn
  * @param {Object} context
@@ -2293,13 +3474,6 @@ var Promise = function(){
 
 
 
-function isString(value) {
-    return typeof value == "string" || value === ""+value;
-    //return typeof value == "string" || varType(value) === 0;
-};
-
-
-
 var raf = function() {
 
     var raf,
@@ -2660,9 +3834,6 @@ var trim = function() {
         return isString(value) ? value.trim() : value;
     };
 }();
-
-
-function emptyFn(){};
 
 
 
@@ -3456,16 +4627,6 @@ extend(Event.prototype, {
 
 
 
-
-
-
-function isObject(value) {
-    if (value === null || typeof value != "object") {
-        return false;
-    }
-    var vt = varType(value);
-    return vt > 2 || vt == -1;
-};
 
 
 
@@ -4793,399 +5954,1286 @@ function undelegate(el, selector, event, fn) {
 
 
 
-
-
 /**
- * @class MetaphorJs.lib.Dialog
- * @extends MetaphorJs.lib.Observable
- * @version 1.0
- * @author johann kuindji
- * @link https://github.com/kuindji/jquery-dialog
- * @link http://kuindji.com/js/dialog/demo/index.html
+ * @mixin ObservableMixin
  */
-var Dialog = function(){
+var ObservableMixin = ns.add("mixin.Observable", {
 
-    
+    /**
+     * @type {Observable}
+     */
+    $$observable: null,
+    $$callbackContext: null,
 
-    var css             = function(el, props) {
-            var style = el.style,
+    $beforeInit: function(cfg) {
+
+        var self = this;
+
+        self.$$observable = new Observable;
+
+        if (cfg && cfg.callback) {
+            var ls = cfg.callback,
+                context = ls.context,
                 i;
-            for (i in props) {
-                style[i] = props[i];
+
+            ls.context = null;
+
+            for (i in ls) {
+                if (ls[i]) {
+                    self.$$observable.on(i, ls[i], context || self);
+                }
+            }
+
+            cfg.callback = null;
+
+            if (context) {
+                self.$$callbackContext = context;
+            }
+        }
+    },
+
+    on: function() {
+        var o = this.$$observable;
+        return o.on.apply(o, arguments);
+    },
+
+    un: function() {
+        var o = this.$$observable;
+        return o.un.apply(o, arguments);
+    },
+
+    once: function() {
+        var o = this.$$observable;
+        return o.once.apply(o, arguments);
+    },
+
+    trigger: function() {
+        var o = this.$$observable;
+        return o.trigger.apply(o, arguments);
+    },
+
+    $beforeDestroy: function() {
+        this.$$observable.trigger("beforedestroy", this);
+    },
+
+    $afterDestroy: function() {
+        var self = this;
+        self.$$observable.trigger("destroy", self);
+        self.$$observable.destroy();
+        self.$$observable = null;
+    }
+});
+
+
+
+defineClass({
+
+    $class: "$dialog.position.Abstract",
+    dialog: null,
+    positionBase: null,
+
+    $init: function(dialog) {
+        var self = this;
+        self.dialog = dialog;
+        extend(self, dialog.getCfg().position, true, false);
+
+        self.onWindowResizeDelegate = bind(self.onWindowResize, self);
+        self.onWindowScrollDelegate = bind(self.onWindowScroll, self);
+
+        dialog.on("correct-position", self.onCorrectPosition, self);
+        dialog.on("show-after-delay", self.onShowAfterDelay, self);
+        dialog.on("hide-after-delay", self.onHideAfterDelay, self);
+
+        if (dialog.isVisible()) {
+            self.onShowAfterDelay();
+        }
+
+    },
+
+
+    getPositionBase: function() {
+
+        var self = this,
+            dlg = self.dialog;
+
+        if (self.positionBase) {
+            return self.positionBase;
+        }
+        var b;
+        if (b = dlg.getCfg().position.base) {
+            if (typeof b == "string") {
+                self.positionBase = select(b).shift();
+            }
+            else {
+                self.positionBase = b;
+            }
+            return self.positionBase;
+        }
+        return null;
+    },
+
+
+
+    onCorrectPosition: function(dlg, pos) {
+
+        /*var pBase   = self.getPositionBase(),
+            size    = self.getDialogSize(),
+            st      = getScrollTop(pBase),
+            sl      = getScrollLeft(pBase),
+            ww      = getOuterWidth(pBase),
+            wh      = getOuterHeight(pBase);
+
+        if (offsetY && pos.y + size.height > wh + st - offsetY) {
+            pos.y   = wh + st - offsetY - size.height;
+        }
+        if (offsetX && pos.x + size.width > ww + sl - offsetX) {
+            pos.x   = ww + sl - offsetX - size.width;
+        }
+        if (offsetY && pos.y < st + offsetY) {
+            pos.y = st + offsetY;
+        }
+        if (offsetX && pos.x < sl + offsetX) {
+            pos.x = sl + offsetX;
+        }
+
+        return pos;*/
+    },
+
+    getCoords: function(e){
+        return {
+            left: 0,
+            top: 0
+        }
+    },
+
+    apply: function(coords) {
+
+        if (!coords) {
+            return;
+        }
+
+        var dlg = this.dialog;
+
+        setStyle(dlg.getElem(), {
+            left: coords.x + "px",
+            top: coords.y + "px"
+        });
+    },
+
+    onWindowResize: function(e) {
+        this.dialog.reposition(normalizeEvent(e));
+    },
+
+    onWindowScroll: function(e) {
+        this.dialog.reposition(normalizeEvent(e));
+    },
+
+    onShowAfterDelay: function() {
+        var self = this;
+
+        if (self.resize || self.screenX || self.screenY) {
+            addListener(window, "resize", self.onWindowResizeDelegate);
+        }
+
+        if (self.scroll || self.screenX || self.screenY) {
+            addListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+        }
+    },
+
+    onHideAfterDelay: function() {
+
+        var self = this;
+
+        if (self.resize || self.screenX || self.screenY) {
+            removeListener(window, "resize", self.onWindowResizeDelegate);
+        }
+
+        if (self.scroll || self.screenX || self.screenY) {
+            removeListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+        }
+    },
+
+    destroy: function() {
+
+        var self = this;
+        self.dialog.un("correct-position", self.onCorrectPosition, self);
+
+        if (self.dialog.isVisible()) {
+            self.onHideAfterDelay();
+        }
+    }
+
+
+
+});
+
+
+
+
+
+
+
+defineClass({
+
+    $class: "$dialog.position.Target",
+    $extends: "$dialog.position.Abstract",
+
+    getCoords: function(e, type) {
+
+        var self    = this,
+            dlg     = self.dialog,
+            cfg     = dlg.getCfg(),
+            target  = dlg.getTarget();
+
+        if (!target) {
+            return null;
+        }
+
+        var pBase   = self.getPositionBase(),
+            size    = dlg.getDialogSize(),
+            offset  = pBase ? getPosition(target, pBase) : getOffset(target),
+            tsize   = dlg.getTargetSize(),
+            pos     = {},
+            type    = type || self.type,
+            pri     = type.substr(0, 1),
+            sec     = type.substr(1),
+            offsetX = cfg.position.offsetX,
+            offsetY = cfg.position.offsetY,
+            pntOfs  = dlg.pointer.getDialogPositionOffset();
+
+
+
+        switch (pri) {
+            case "t": {
+                pos.y   = offset.top - size.height - offsetY;
+                break;
+            }
+            case "r": {
+                pos.x   = offset.left + tsize.width + offsetX;
+                break;
+            }
+            case "b": {
+                pos.y   = offset.top + tsize.height + offsetY;
+                break;
+            }
+            case "l": {
+                pos.x   = offset.left - size.width - offsetX;
+                break;
+            }
+        }
+
+        switch (sec) {
+            case "t": {
+                pos.y   = offset.top + offsetY;
+                break;
+            }
+            case "r": {
+                pos.x   = offset.left + tsize.width - size.width - offsetX;
+                break;
+            }
+            case "b": {
+                pos.y   = offset.top + tsize.height - size.height - offsetY;
+                break;
+            }
+            case "l": {
+                pos.x   = offset.left + offsetX;
+                break;
+            }
+            case "rc": {
+                pos.x   = offset.left + tsize.width + offsetX;
+                break;
+            }
+            case "lc": {
+                pos.x   = offset.left - size.width - offsetX;
+                break;
+            }
+            case "": {
+                switch (pri) {
+                    case "t":
+                    case "b": {
+                        pos.x   = offset.left + (tsize.width / 2) - (size.width / 2);
+                        break;
+                    }
+                    case "r":
+                    case "l": {
+                        pos.y   = offset.top + (tsize.height / 2) - (size.height / 2);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        if (pntOfs) {
+            pos.x += pntOfs.x;
+            pos.y += pntOfs.y;
+        }
+
+        return pos;
+    }
+
+});
+
+
+
+
+
+
+
+
+
+defineClass({
+
+    $class: "$dialog.position.Mouse",
+    $extends: "$dialog.position.Target",
+
+    $init: function(dialog) {
+
+        var self = this;
+
+        self.onMouseMoveDelegate = bind(self.onMouseMove, self);
+        self.$super(dialog);
+    },
+
+    getCoords: function(e) {
+
+        if (!e) {
+            return null;
+        }
+
+        var self    = this,
+            dlg     = self.dialog,
+            cfg     = dlg.getCfg(),
+            size    = dlg.getDialogSize(),
+            pos     = {},
+            type    = self.type.substr(1),
+            offsetX = cfg.position.offsetX,
+            offsetY = cfg.position.offsetY,
+            axis    = cfg.position.axis;/*,
+            pntOfs  = pnt ? pnt.getDialogPositionOffset() : null;*/
+
+        switch (type) {
+            case "": {
+                pos     = self.get.call(dlg.$$callbackContext, dlg, e);
+                break;
+            }
+            case "c": {
+                pos.y   = e.pageY - (size.height / 2);
+                pos.x   = e.pageX - (size.width / 2);
+                break;
+            }
+            case "t": {
+                pos.y   = e.pageY - size.height - offsetY;
+                pos.x   = e.pageX - (size.width / 2);
+                break;
+            }
+            case "r": {
+                pos.y   = e.pageY - (size.height / 2);
+                pos.x   = e.pageX + offsetX;
+                break;
+            }
+            case "b": {
+                pos.y   = e.pageY + offsetY;
+                pos.x   = e.pageX - (size.width / 2);
+                break;
+            }
+            case "l": {
+                pos.y   = e.pageY - (size.height / 2);
+                pos.x   = e.pageX - size.width - offsetX;
+                break;
+            }
+            case "rt": {
+                pos.y   = e.pageY - size.height - offsetY;
+                pos.x   = e.pageX + offsetX;
+                break;
+            }
+            case "rb": {
+                pos.y   = e.pageY + offsetY;
+                pos.x   = e.pageX + offsetX;
+                break;
+            }
+            case "lt": {
+                pos.y   = e.pageY - size.height - offsetY;
+                pos.x   = e.pageX - size.width - offsetX;
+                break;
+            }
+            case "lb": {
+                pos.y   = e.pageY + offsetY;
+                pos.x   = e.pageX - size.width - offsetX;
+                break;
+            }
+        }
+
+        /*if (pntOfs) {
+            pos.x += pntOfs.x;
+            pos.y += pntOfs.y;
+        }*/
+
+        if (axis) {
+            var tp = self.$super(e, type);
+            if (tp) {
+                if (axis == "x") {
+                    pos.y = tp.y;
+                }
+                else {
+                    pos.x = tp.x;
+                }
+            }
+        }
+
+        return pos;
+    },
+
+    onShowAfterDelay: function() {
+        var self = this;
+        self.$super();
+        addListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
+    },
+
+    onHideAfterDelay: function() {
+        var self = this;
+        self.$super();
+        removeListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
+    },
+
+    onMouseMove: function(e) {
+        this.dialog.reposition(normalizeEvent(e));
+    }
+});
+
+
+
+
+
+
+
+defineClass({
+
+    $class: "$dialog.position.Window",
+    $extends: "$dialog.position.Abstract",
+
+
+    getCoords: function(e) {
+        var self    = this,
+            dlg     = self.dialog,
+            pBase   = self.getPositionBase() || window,
+            size    = dlg.getDialogSize(),
+            pos     = {},
+            type    = self.type.substr(1),
+            offsetX = self.offsetX,
+            offsetY = self.offsetY,
+            st      = getScrollTop(pBase),
+            sl      = getScrollLeft(pBase),
+            ww      = getOuterWidth(pBase),
+            wh      = getOuterHeight(pBase);
+
+        switch (type) {
+            case "c": {
+                pos.y   = (wh / 2) - (size.height / 2) + st;
+                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                break;
+            }
+            case "t": {
+                pos.y   = st + offsetY;
+                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                break;
+            }
+            case "r": {
+                pos.y   = (wh / 2) - (size.height / 2) + st;
+                pos.x   = ww - size.width + sl - offsetX;
+                break;
+            }
+            case "b": {
+                pos.y   = wh - size.height + st - offsetY;
+                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                break;
+            }
+            case "l": {
+                pos.y   = (wh / 2) - (size.height / 2) + st;
+                pos.x   = sl + offsetX;
+                break;
+            }
+            case "rt": {
+                pos.y   = st + offsetY;
+                pos.x   = ww - size.width + sl - offsetX;
+                break;
+            }
+            case "rb": {
+                pos.y   = wh - size.height + st - offsetY;
+                pos.x   = ww - size.width + sl - offsetX;
+                break;
+            }
+            case "lt": {
+                pos.y   = st + offsetY;
+                pos.x   = sl + offsetX;
+                break;
+            }
+            case "lb": {
+                pos.y   = wh - size.height + st - offsetY;
+                pos.x   = sl + offsetX;
+                break;
+            }
+        }
+
+        return pos;
+    }
+});
+
+
+
+
+
+
+
+defineClass({
+
+    $class: "$dialog.position.Custom",
+    $extends: "$dialog.position.Abstract",
+
+    getCoords: function(e) {
+
+        var dlg = this.dialog;
+        return this.get.call(dlg.$$callbackContext, dlg, e);
+    }
+});
+
+
+
+
+
+defineClass({
+
+    $class: "$dialog.pointer.Abstract",
+    enabled: null,
+    node: null,
+
+    $init: function(dialog, cfg) {
+
+        var self = this;
+
+        extend(self, cfg, true, false);
+
+        self.origCfg    = cfg;
+        self.dialog     = dialog;
+        self.opposite   = {t: "b", r: "l", b: "t", l: "r"};
+        self.names      = {t: 'top', r: 'right', b: 'bottom', l: 'left'};
+        self.sides      = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']};
+
+        if (self.enabled !== false && cfg.size) {
+            self.enable();
+        }
+        if (!self.size) {
+            self.enabled = false;
+        }
+    },
+
+    enable: function() {
+        var self = this;
+        if (!self.enabled) {
+            self.enabled = true;
+            self.render();
+            if (self.dialog.isVisible()) {
+                self.dialog.reposition();
+            }
+        }
+    },
+
+    disable: function() {
+        var self = this;
+        if (self.enabled) {
+            self.remove();
+            self.enabled = false;
+            if (self.dialog.isVisible()) {
+                self.dialog.reposition();
+            }
+        }
+    },
+
+    getElem: function() {
+        return this.node;
+    },
+
+    getSize: function() {
+        return this.enabled ? this.size : 0;
+    },
+
+    getDialogPositionOffset: function() {
+        var self    = this,
+            pp      = (self.detectPointerPosition() || "").substr(0,1),
+            dp      = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1),
+            ofs     = {x: 0, y: 0};
+
+        if (!self.enabled) {
+            return ofs;
+        }
+
+        if (pp == self.opposite[dp]) {
+            ofs[pp == "t" || pp == "b" ? "y" : "x"] =
+                pp == "b" || pp == "r" ? -self.size : self.size;
+        }
+
+        return ofs;
+    },
+
+    detectPointerPosition: function() {
+
+        var self = this;
+
+        if (self.position) {
+            if (isFunction(self.position)) {
+                return self.position.call(self.dialog.$$callbackContext, self.dialog, self.origCfg);
+            }
+            return self.position;
+        }
+        var pri = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1);
+
+        if (!pri) {
+            return null;
+        }
+
+        return self.opposite[pri];
+    },
+
+    detectPointerDirection: function(position) {
+
+        var self = this;
+
+        if (self.direction) {
+            if (isFunction(self.direction)) {
+                return self.direction.call(self.dialog.$$callbackContext, self.dialog, position, self.origCfg);
+            }
+            return self.direction;
+        }
+        return position;
+    },
+
+    update: function(){
+        var self = this;
+        self.remove();
+        self.render();
+        self.append();
+        if (self.dialog.isVisible()) {
+            self.dialog.reposition();
+        }
+    },
+
+    render: function() {
+
+    },
+
+    destroy: function() {
+        var self = this;
+        self.remove();
+    },
+
+    reposition: function() {
+
+    },
+
+    append: function() {
+
+        var self = this;
+        if (!self.enabled) {
+            return;
+        }
+        if (!self.node) {
+            self.render();
+        }
+        if (!self.node) {
+            return;
+        }
+
+        self.reposition();
+
+        var parent = self.dialog.getElem();
+        if (parent) {
+            parent.appendChild(self.node);
+        }
+    },
+
+    remove: function(){
+
+        var self = this;
+
+        if (self.node) {
+            self.node.parentNode.removeChild(self.node);
+            self.node = null;
+        }
+    }
+});
+
+
+
+
+
+
+(function(){
+
+    var ie6             = null,
+        defaultProps    = {
+            backgroundColor: 'transparent',
+            width: 			'0px',
+            height: 		'0px',
+            position: 		'absolute',
+            fontSize: 	    '0px', // ie6
+            lineHeight:     '0px' // ie6
+        };
+
+
+    defineClass({
+
+        $class: "$dialog.pointer.Html",
+        $extends: "$dialog.pointer.Abstract",
+
+        node: null,
+        sub: null,
+
+        $init: function(dialog, cfg) {
+
+            if (ie6 === null) {
+                ie6 = window.document.all && !window.XMLHttpRequest
+            }
+
+            var self = this;
+
+            self.$super(dialog, cfg);
+            self.width = self.width || self.size * 2;
+
+            if (self.inner) {
+                self.enabled = true;
             }
         },
 
-        opposite    = {t: "b", r: "l", b: "t", l: "r"},
-        names       = {t: 'top', r: 'right', b: 'bottom', l: 'left'},
-        sides       = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']},
 
-        ie6         = null;
 
-    /*
-     * Manager
-     */
-    var manager     = function() {
+        createInner: function() {
+            var self        = this,
+                newcfg 		= extend({}, self.origCfg);
 
-        var all     = {},
-            groups  = {};
+            newcfg.size 	= self.size - (self.border * 2);
+            newcfg.width	= self.width - (self.border * 4);
 
-        return {
+            newcfg.border = null;
+            newcfg.borderColor = null;
+            newcfg.borderCls = null;
+            newcfg.offset = null;
+            newcfg.inner = self.border;
 
-            register: function(dialog) {
+            self.sub = factory("$dialog.pointer.Html", self.dialog, newcfg);
+        },
 
-                var id      = dialog.getInstanceId(),
-                    grps    = dialog.getGroup(),
-                    i, len,
-                    g;
 
-                all[id]     = dialog;
+        getBorders: function(position, direction, color) {
 
-                for (i = 0, len = grps.length; i < len; i++) {
-                    g   = grps[i];
-                    if (!groups[g]) {
-                        groups[g]   = {};
+            var self        = this,
+                borders 	= {},
+                pri 		= position.substr(0,1),
+                dpri        = direction.substr(0,1),
+                dsec        = direction.substr(1),
+                style       = ie6 ? "dotted" : "solid",
+                names       = self.names,
+                sides       = self.sides,
+                opposite    = self.opposite;
+
+            // in ie6 "solid" wouldn't make transparency :(
+
+            // this is always height : border which is opposite to direction
+            borders['border'+ucfirst(names[opposite[pri]])] = self.size + "px solid "+color;
+            // border which is similar to direction is always 0
+            borders['border'+ucfirst(names[pri])] = "0 "+style+" transparent";
+
+            if (!dsec) {
+                // if pointer's direction matches pointer primary position (p: l|lt|lb, d: l)
+                // then we set both side borders to a half of the width;
+                var side = Math.floor(self.width / 2);
+                borders['border' + ucfirst(names[sides[dpri][0]])] = side + "px "+style+" transparent";
+                borders['border' + ucfirst(names[sides[dpri][1]])] = side + "px "+style+" transparent";
+            }
+            else {
+                // if pointer's direction doesn't match with primary position (p: l|lt|lb, d: t|b)
+                // we set the border opposite to direction to the full width;
+                borders['border'+ucfirst(names[dsec])] = "0 solid transparent";
+                borders['border'+ucfirst(names[opposite[dsec]])] = self.width + "px "+style+" transparent";
+            }
+
+            return borders;
+        },
+
+        getOffsets: function(position, direction) {
+
+            var self    = this,
+                offsets = {},
+                names   = self.names,
+                opposite= self.opposite,
+                pri		= position.substr(0,1),
+                auto 	= (pri == 't' || pri == 'b') ? "r" : "b";
+
+            // custom element
+            if (!self.size) {
+                window.document.body.appendChild(self.node);
+                switch (pri) {
+                    case "t":
+                    case "b": {
+                        self.size = getOuterHeight(self.node);
+                        self.width = getOuterWidth(self.node);
+                        break;
                     }
-                    groups[g][id] = true;
-                }
-
-                dialog.on("destroy", this.unregister, this);
-            },
-
-            unregister: function(dialog) {
-
-                var id  = dialog.getInstanceId();
-                delete all[id];
-            },
-
-            hideAll: function(dialog) {
-
-                var id      = dialog.getInstanceId(),
-                    grps    = dialog.getGroup(),
-                    i, len, gid,
-                    ds, did;
-
-                for (i = 0, len = grps.length; i < len; i++) {
-                    gid     = grps[i];
-                    ds      = groups[gid];
-                    for (did in ds) {
-                        if (!all[did]) {
-                            delete ds[did];
-                        }
-                        else if (did != id && !all[did].isHideAllIgnored()) {
-                            all[did].hide(null, true, true);
-                        }
+                    case "l":
+                    case "r": {
+                        self.width = getOuterHeight(self.node);
+                        self.size = getOuterWidth(self.node);
+                        break;
                     }
                 }
             }
-        };
-    }();
 
+            offsets[names[pri]] = self.inner ? 'auto' : -self.size+"px";
+            offsets[names[auto]] = "auto";
 
-    /*
-     * Pointer
-     */
-    var Pointer     = function(dlg, cfg, inner) {
+            if (!self.inner) {
 
-        if (ie6 === null) {
-            ie6 = window.document.all && !window.XMLHttpRequest
-        }
+                var margin;
 
-        var el,
-            self    = this,
-            sub,
-            defaultProps = {
-                backgroundColor: 'transparent',
-                width: 			'0px',
-                height: 		'0px',
-                position: 		'absolute',
-                fontSize: 	    '0px', // ie6
-                lineHeight:     '0px' // ie6
-            },
-            size    = cfg.size,
-            width   = cfg.width || size * 2;
-
-        extend(self, {
-
-            init: function() {
-                if (cfg.border) {
-                    self.createInner();
-                }
-            },
-
-            getEl: function() {
-                return el;
-            },
-
-            getDialogPositionOffset: function() {
-                var pp  = (self.detectPointerPosition() || "").substr(0,1),
-                    dp  = (dlg.getState().positionType || "").replace(/(w|m|c)/, "").substr(0,1),
-                    ofs = {x: 0, y: 0};
-
-                if (pp == opposite[dp]) {
-                    ofs[pp == "t" || pp == "b" ? "y" : "x"] =
-                        pp == "b" || pp == "r" ? -size : size;
-                }
-
-                return ofs;
-            },
-
-            createInner: function() {
-                var newcfg 		= extend({}, cfg);
-                newcfg.size 	= size - (cfg.border*2);
-                newcfg.width	= width - (cfg.border*4);
-
-                newcfg.border = null;
-                newcfg.borderColor = null;
-                newcfg.borderCls = null;
-                newcfg.offset = null;
-
-                sub = new Pointer(dlg, newcfg, cfg.border);
-            },
-
-            detectPointerPosition: function() {
-                if (cfg.position) {
-                    if (isFunction(cfg.position)) {
-                        return cfg.position.call(cfg.context, dlg, cfg);
-                    }
-                    return cfg.position;
-                }
-                var pri = (dlg.getState().positionType || "").replace(/(w|m|c)/, "").substr(0,1);
-
-                if (!pri) {
-                    return null;
-                }
-
-                return opposite[pri];
-            },
-
-            detectPointerDirection: function(position) {
-                if (cfg.direction) {
-                    if (isFunction(cfg.direction)) {
-                        return cfg.direction.call(cfg.context, dlg, position, cfg);
-                    }
-                    return cfg.direction;
-                }
-                return position;
-            },
-
-            getBorders: function(position, direction, color) {
-
-                var borders 	= {},
-                    pri 		= position.substr(0,1),
-                    dpri        = direction.substr(0,1),
-                    dsec        = direction.substr(1),
-                    style       = ie6 ? "dotted" : "solid";
-
-                // in ie6 "solid" wouldn't make transparency :(
-
-                // this is always height : border which is opposite to direction
-                borders['border'+ucfirst(names[opposite[pri]])] = size + "px solid "+color;
-                // border which is similar to direction is always 0
-                borders['border'+ucfirst(names[pri])] = "0 "+style+" transparent";
-
-                if (!dsec) {
-                    // if pointer's direction matches pointer primary position (p: l|lt|lb, d: l)
-                    // then we set both side borders to a half of the width;
-                    var side = Math.floor(width/2);
-                    borders['border' + ucfirst(names[sides[dpri][0]])] = side + "px "+style+" transparent";
-                    borders['border' + ucfirst(names[sides[dpri][1]])] = side + "px "+style+" transparent";
-                }
-                else {
-                    // if pointer's direction doesn't match with primary position (p: l|lt|lb, d: t|b)
-                    // we set the border opposite to direction to the full width;
-                    borders['border'+ucfirst(names[dsec])] = "0 solid transparent";
-                    borders['border'+ucfirst(names[opposite[dsec]])] = width + "px "+style+" transparent";
-                }
-
-                return borders;
-            },
-
-            getOffsets: function(position, direction) {
-
-                var offsets = {},
-                    pri		= position.substr(0,1),
-                    auto 	= (pri == 't' || pri == 'b') ? "r" : "b";
-
-                // custom element
-                if (!size) {
-                    window.document.body.appendChild(el);
-                    switch (pri) {
-                        case "t":
-                        case "b": {
-                            size = getOuterHeight(el);
-                            width = getOuterWidth(el);
-                            break;
-                        }
-                        case "l":
-                        case "r": {
-                            width = getOuterHeight(el);
-                            size = getOuterWidth(el);
-                            break;
-                        }
-                    }
-                }
-
-                offsets[names[pri]] = inner ? 'auto' : -size+"px";
-                offsets[names[auto]] = "auto";
-
-                if (!inner) {
-
-                    var margin;
-
-                    switch (position) {
-                        case 't': case 'r': case 'b': case 'l': {
-                            if (direction != position) {
-                                if (direction == 'l' || direction == 't') {
-                                    margin = cfg.offset;
-                                }
-                                else {
-                                    margin = -width + cfg.offset;
-                                }
-                            }
-                            else {
-                                margin = -width/2 + cfg.offset;
-                            }
-                            break;
-                        }
-                        case 'bl': case 'tl': case 'lt': case 'rt': {
-                            margin = cfg.offset;
-                            break;
-                        }
-                        default: {
-                            margin = -width - cfg.offset;
-                            break;
-                        }
-                    }
-
-                    offsets['margin' + ucfirst(names[opposite[auto]])] = margin + "px";
-
-                    var positionOffset;
-
-                    switch (position) {
-                        case 't': case 'r': case 'b': case 'l': {
-                            positionOffset = '50%';
-                            break;
-                        }
-                        case 'tr': case 'rb': case 'br': case 'lb': {
-                            positionOffset = '100%';
-                            break;
-                        }
-                        default: {
-                            positionOffset = 0;
-                            break;
-                        }
-                    }
-
-                    offsets[names[opposite[auto]]]  = positionOffset;
-                }
-                else {
-
-                    var innerOffset,
-                        dpri    = direction.substr(0, 1),
-                        dsec    = direction.substr(1);
-
-                    if (dsec) {
-                        if (dsec == 'l' || dsec == 't') {
-                            innerOffset = inner + 'px';
+                switch (position) {
+                    case 't': case 'r': case 'b': case 'l': {
+                    if (direction != position) {
+                        if (direction == 'l' || direction == 't') {
+                            margin = self.offset;
                         }
                         else {
-                            innerOffset = -width - inner + 'px';
+                            margin = -self.width + self.offset;
                         }
                     }
                     else {
-                        innerOffset = Math.floor(-width / 2) + 'px';
+                        margin = -self.width/2 + self.offset;
                     }
-
-                    offsets[names[opposite[auto]]]  = innerOffset;
-                    offsets[names[opposite[dpri]]] = -(size + (inner * 2)) + 'px';
+                    break;
+                }
+                    case 'bl': case 'tl': case 'lt': case 'rt': {
+                    margin = self.offset;
+                    break;
+                }
+                    default: {
+                        margin = -self.width - self.offset;
+                        break;
+                    }
                 }
 
+                offsets['margin' + ucfirst(names[opposite[auto]])] = margin + "px";
 
-                return offsets;
-            },
+                var positionOffset;
 
-            render: function() {
-
-                if (el) {
-                    if (!el.parentNode) {
-                        dlg.getElem().appendChild(el);
+                switch (position) {
+                    case 't': case 'r': case 'b': case 'l': {
+                    positionOffset = '50%';
+                    break;
+                }
+                    case 'tr': case 'rb': case 'br': case 'lb': {
+                    positionOffset = '100%';
+                    break;
+                }
+                    default: {
+                        positionOffset = 0;
+                        break;
                     }
-                    return;
                 }
 
-                var position    = self.detectPointerPosition();
-                if (!position) {
-                    return;
-                }
+                offsets[names[opposite[auto]]]  = positionOffset;
+            }
+            else {
 
-                if (!cfg.el) {
+                var innerOffset,
+                    dpri    = direction.substr(0, 1),
+                    dsec    = direction.substr(1);
 
-                    var direction   = self.detectPointerDirection(position);
-
-                    el          = window.document.createElement('div');
-                    var cmt     = window.document.createComment(" ");
-
-                    el.appendChild(cmt);
-
-                    css(el, defaultProps);
-                    css(el, self.getBorders(position, direction, cfg.borderColor || cfg.color));
-                    css(el, self.getOffsets(position, direction));
-
-                    addClass(el, cfg.borderCls || cfg.cls);
-
-                    if (sub) {
-                        sub.render();
-                        el.appendChild(sub.getEl());
+                if (dsec) {
+                    if (dsec == 'l' || dsec == 't') {
+                        innerOffset = self.inner + 'px';
                     }
-                    if (!inner) {
-                        dlg.getElem().appendChild(el);
+                    else {
+                        innerOffset = -self.width - self.inner + 'px';
                     }
                 }
                 else {
-                    if (isString(cfg.el)) {
-                        var tmp = window.document.createElement("div");
-                        tmp.innerHTML = cfg.el;
-                        el = tmp.firstChild;
-                    }
-                    else {
-                        el  = cfg.el;
-                    }
-
-                    css(el, {position: "absolute"});
-                    css(el, self.getOffsets(position));
-                    addClass(el, cfg.cls);
-
-                    dlg.getElem().appendChild(el);
+                    innerOffset = Math.floor(-self.width / 2) + 'px';
                 }
-            },
 
-            destroy: function() {
-
-                self.remove();
-                self    = null;
-                sub     = null;
-                dlg     = null;
-                cfg     = null;
-                inner   = null;
-            },
-
-            remove: function() {
-                if (sub) {
-                    sub.remove();
-                }
-                if (el) {
-                    el.parentNode.removeChild(el);
-                    el = null;
-                }
+                offsets[names[opposite[auto]]]  = innerOffset;
+                offsets[names[opposite[dpri]]] = -(self.size + (self.inner * 2)) + 'px';
             }
 
-        }, true, false);
 
-        self.init();
+            return offsets;
+        },
 
-        return self;
-    };
+        render: function() {
 
+            var self = this;
+
+            if (!self.enabled) {
+                return;
+            }
+
+            if (self.node) {
+                return;
+            }
+
+            var position    = self.detectPointerPosition();
+            if (!position) {
+                return;
+            }
+
+            if (self.border && !self.sub) {
+                self.createInner();
+            }
+
+            self.node   = window.document.createElement('div');
+            var cmt     = window.document.createComment(" ");
+
+            self.node.appendChild(cmt);
+
+            setStyle(self.node, defaultProps);
+            addClass(self.node, self.borderCls || self.cls);
+
+            if (self.sub) {
+                self.sub.render();
+                self.node.appendChild(self.sub.getElem());
+            }
+        },
+
+        reposition: function() {
+
+            var self        = this,
+                position    = self.detectPointerPosition(),
+                direction   = self.detectPointerDirection(position);
+
+            if (!self.node) {
+                return;
+            }
+
+            setStyle(self.node, self.getBorders(position, direction, self.borderColor || self.color));
+            setStyle(self.node, self.getOffsets(position, direction));
+
+            if (self.sub) {
+                self.sub.reposition();
+            }
+        },
+
+        update: function() {
+            var self = this;
+            if (self.sub) {
+                self.sub.$destroy();
+                self.sub = null;
+            }
+            self.remove();
+            self.node = null;
+            self.render();
+            self.append();
+
+            if (self.dialog.isVisible()) {
+                self.dialog.reposition();
+            }
+        },
+
+        destroy: function() {
+
+            var self = this;
+
+            if (self.sub) {
+                self.sub.$destroy();
+                self.sub = null;
+            }
+
+            self.$super();
+        },
+
+        remove: function() {
+
+            var self = this;
+
+            if (self.sub) {
+                self.sub.remove();
+            }
+
+            self.$super();
+        }
+    });
+}());
+
+
+
+
+
+
+
+defineClass({
+
+    $class:         "$dialog.Overlay",
+    dialog:         null,
+    enabled:		false,
+    color:			'#000',
+    opacity:		.5,
+    cls:			null,
+    animateShow:	false,
+    animateHide:	false,
+
+    $init: function(dialog){
+
+        var self = this;
+
+        self.dialog = dialog;
+        self.onClickDelegate = bind(self.onClick, self);
+        extend(self, dialog.getCfg().overlay, true, false);
+
+        if (self.enabled) {
+            self.enabled = false;
+            self.enable();
+        }
+    },
+
+    enable: function() {
+        var self = this;
+        if (!self.enabled) {
+            self.enabled = true;
+        }
+    },
+
+    disable: function() {
+        var self = this;
+        if (self.enabled) {
+            self.remove();
+            self.enabled = false;
+        }
+    },
+
+    show: function(e) {
+        var self = this;
+
+        if (!self.enabled) {
+            return;
+        }
+
+        if (self.animateShow) {
+            self.animate("show", e);
+        }
+        else {
+            self.node.style.display = "block";
+        }
+    },
+
+    hide: function(e) {
+        var self = this;
+        if (self.node) {
+            if (self.animateHide) {
+                self.animate("hide", e);
+            }
+            else {
+                self.node.style.display = "none";
+            }
+        }
+    },
+
+    render: function() {
+
+        var self = this;
+
+        if (!self.enabled) {
+            return;
+        }
+
+        var node = window.document.createElement("div"),
+            cfg = self.dialog.getCfg();
+
+        setStyle(node, {
+            display:            "none",
+            position: 			"fixed",
+            left:				0,
+            top:				0,
+            right:              0,
+            bottom:             0,
+            opacity:			self.opacity,
+            backgroundColor: 	self.color
+        });
+
+        addListener(node, "click", self.onClickDelegate);
+
+        if (cfg.render.zIndex) {
+            setStyle(node, "zIndex", cfg.render.zIndex);
+        }
+        if (self.cls) {
+            addClass(node, self.cls);
+        }
+
+        self.node = node;
+    },
+
+    remove: function() {
+        var self = this,
+            dialog = self.dialog,
+            node = self.node;
+
+        if (node) {
+            raf(function () {
+                if (!dialog.isVisible()) {
+                    node.parentNode.removeChild(node);
+                }
+            });
+        }
+    },
+
+    append: function() {
+        var self = this,
+            cfg = self.dialog.getCfg(),
+            to = cfg.render.appendTo || window.document.body;
+
+        if (!self.enabled) {
+            return;
+        }
+
+        if (!self.node) {
+            self.render();
+        }
+
+        to.appendChild(self.node);
+    },
+
+    animate: function(type, e) {
+        var self = this,
+            node = self.node,
+            a;
+
+        a = type == "show" ? self.animateShow : self.animateHide;
+
+        if (isFunction(a)) {
+            a   = a(self, e);
+        }
+
+        if (isBool(a)) {
+            a = type;
+        }
+        else if (isString(a)) {
+            a = [a];
+        }
+
+        return animate(node, a, function(){
+            if (type == "show") {
+
+                var p = new Promise;
+
+                raf(function(){
+                    node.style.display = "";
+                    p.resolve();
+                });
+
+                return p;
+            }
+        }, false);
+    },
+
+    onClick: function(e) {
+        if (this.modal) {
+            e = normalizeEvent(e);
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        return null;
+    },
+
+    destroy: function() {
+
+        var self = this;
+        self.remove();
+
+    }
+});
+
+
+
+defineClass({
+    $class: "$dialog.Manager",
+    all: null,
+    groups: null,
+
+    $init: function() {
+        this.all = {};
+        this.groups = {};
+    },
+
+    register: function(dialog) {
+
+        var id      = dialog.getInstanceId(),
+            grps    = dialog.getGroup(),
+            self    = this,
+            all     = self.all,
+            groups  = self.groups,
+            i, len,
+            g;
+
+        all[id]     = dialog;
+
+        for (i = 0, len = grps.length; i < len; i++) {
+            g   = grps[i];
+            if (!groups[g]) {
+                groups[g]   = {};
+            }
+            groups[g][id] = true;
+        }
+
+        dialog.on("destroy", this.unregister, this);
+    },
+
+    unregister: function(dialog) {
+
+        var id  = dialog.getInstanceId();
+        delete this.all[id];
+    },
+
+    hideAll: function(dialog) {
+
+        var id      = dialog.getInstanceId(),
+            grps    = dialog.getGroup(),
+            self    = this,
+            all     = self.all,
+            groups  = self.groups,
+            i, len, gid,
+            ds, did;
+
+        for (i = 0, len = grps.length; i < len; i++) {
+            gid     = grps[i];
+            ds      = groups[gid];
+            for (did in ds) {
+                if (!all[did]) {
+                    delete ds[did];
+                }
+                else if (did != id && !all[did].isHideAllIgnored()) {
+                    all[did].hide(null, true, true);
+                }
+            }
+        }
+    }
+
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var Dialog = (function(){
+
+    var manager = factory("$dialog.Manager");
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
         if (type == "show" || !returnMode) {
@@ -5198,92 +7246,90 @@ var Dialog = function(){
     /*
      * Shorthands
      */
+
+    var fixShorthand = function(options, level1, level2, type) {
+        var value   = options[level1],
+            yes     = false;
+
+        if (value === undf) {
+            return;
+        }
+
+        switch (type) {
+            case "string": {
+                yes     = isString(value);
+                break;
+            }
+            case "function": {
+                yes     = isFunction(value);
+                break;
+            }
+            case "number": {
+                yes     = isNumber(value) || value == parseInt(value);
+                break;
+            }
+            case "dom": {
+                yes     = value && (value.tagName || value.nodeName) ? true : false;
+                break;
+            }
+            case "jquery": {
+                yes     = value && value.jquery ? true : false;
+                if (yes) {
+                    value = value.get(0);
+                }
+                break;
+            }
+            case "boolean": {
+                if (value === true || value === false) {
+                    yes = true;
+                }
+                break;
+            }
+            default: {
+                if (type === true && value === true) {
+                    yes = true;
+                }
+                if (type === false && value === false) {
+                    yes = true;
+                }
+            }
+        }
+        if (yes) {
+            options[level1] = {};
+            options[level1][level2] = value;
+        }
+    };
+
     var fixShorthands   = function(options) {
 
         if (!options) {
             return {};
         }
 
-        var fix = function(level1, level2, type) {
-            var value   = options[level1],
-                yes     = false;
-
-            if (value === undf) {
-                return;
-            }
-
-            switch (type) {
-                case "string": {
-                    yes     = isString(value);
-                    break;
-                }
-                case "function": {
-                    yes     = isFunction(value);
-                    break;
-                }
-                case "number": {
-                    yes     = isNumber(value) || value == parseInt(value);
-                    break;
-                }
-                case "dom": {
-                    yes     = value && (value.tagName || value.nodeName) ? true : false;
-                    break;
-                }
-                case "jquery": {
-                    yes     = value && value.jquery ? true : false;
-                    if (yes) {
-                        value = value.get(0);
-                    }
-                    break;
-                }
-                case "boolean": {
-                    if (value === true || value === false) {
-                        yes = true;
-                    }
-                    break;
-                }
-                default: {
-                    if (type === true && value === true) {
-                        yes = true;
-                    }
-                    if (type === false && value === false) {
-                        yes = true;
-                    }
-                }
-            }
-            if (yes) {
-                options[level1] = {};
-                options[level1][level2] = value;
-            }
-        };
-
-        fix("content", "value", "string");
-        fix("content", "value", "boolean");
-        fix("content", "fn", "function");
-        fix("ajax", "url", "string");
-        fix("cls", "dialog", "string");
-        fix("render", "tpl", "string");
-        fix("render", "fn", "function");
-        fix("render", "el", "dom");
-        fix("render", "el", "jquery");
-        fix("show", "events", false);
-        fix("show", "events", "string");
-        fix("hide", "events", false);
-        fix("hide", "events", "string");
-        fix("toggle", "events", false);
-        fix("toggle", "events", "string");
-        fix("position", "type", "string");
-        fix("position", "type", false);
-        fix("position", "get", "function");
-        fix("overlay", "enabled", "boolean");
-        fix("pointer", "position", "string");
-        fix("pointer", "size", "number");
+        fixShorthand(options, "content", "value", "string");
+        fixShorthand(options, "content", "value", "boolean");
+        fixShorthand(options, "content", "fn", "function");
+        fixShorthand(options, "ajax", "url", "string");
+        fixShorthand(options, "cls", "dialog", "string");
+        fixShorthand(options, "render", "tpl", "string");
+        fixShorthand(options, "render", "fn", "function");
+        fixShorthand(options, "render", "el", "dom");
+        fixShorthand(options, "render", "el", "jquery");
+        fixShorthand(options, "show", "events", false);
+        fixShorthand(options, "show", "events", "string");
+        fixShorthand(options, "hide", "events", false);
+        fixShorthand(options, "hide", "events", "string");
+        fixShorthand(options, "toggle", "events", false);
+        fixShorthand(options, "toggle", "events", "string");
+        fixShorthand(options, "position", "type", "string");
+        fixShorthand(options, "position", "type", false);
+        fixShorthand(options, "position", "get", "function");
+        fixShorthand(options, "overlay", "enabled", "boolean");
+        fixShorthand(options, "pointer", "position", "string");
+        fixShorthand(options, "pointer", "size", "number");
 
         return options;
     };
-
-
-
 
 
     /**
@@ -5291,7 +7337,7 @@ var Dialog = function(){
      * @md-tmp defaults
      * @md-stack add
      */
-    var defaults    = /*options-start*/{
+    var defaults    = {
 
         /**
          * Target element(s) which trigger dialog's show and hide.<br>
@@ -5304,14 +7350,6 @@ var Dialog = function(){
          * @type {string|Element}
          */
         target:         null,
-
-        /*debug-start*/
-        /**
-         * Log all critical exits; stripped out in minified version
-         * @type {bool}
-         */
-        debug:          false,
-        /*debug-end*/
 
         /**
          * One or more group names.
@@ -6051,15 +8089,9 @@ var Dialog = function(){
             /**
              * Same animation rules as in show.animate.
              * @type {bool}
-             */
-            animateHide:	false,
-
-            /**
-             * Prevent document scrolling
-             * @type {bool}
              * @md-stack remove
              */
-            preventScroll:  false
+            animateHide:	false
         },
 
         /**
@@ -6153,2078 +8185,1623 @@ var Dialog = function(){
             button:             null
         }
 
-    }/*options-end*/;
+    };
 
 
 
-    /*
-     * Dialog
-     */
 
-    /**
-     * @constructor
-     * @name MetaphorJs.lib.Dialog
-     * @param {string} preset
-     * @param {object} options {
-     *  @md-use defaults
-     * }
-     */
-    var dialog  = function(preset, options) {
+    var Dialog = defineClass({
 
-        if (preset && !isString(preset)) {
-            options         = preset;
-            preset          = null;
-        }
+        $class:             "Dialog",
+        $mixins:            [ObservableMixin],
 
-        options             = options || {};
+        id:                 null,
+        node:               null,
+        overlay:            null,
+        pointer:            null,
+        cfg:                null,
+        position:           null,
 
-        var self            = this,
-            api             = {},
-            id              = nextUid(),
-            events          = new Observable,
-            cfg             = extend({}, defaults,
-                                fixShorthands(dialog.defaults),
-                                fixShorthands(dialog[preset]),
-                                fixShorthands(options),
-                                true, true),
-            defaultScope    = cfg.callback.scope || api,
-            elem,
-            pnt,
-            overlay,
-            state           = {
-                bindSelfOnRender:   false,
-                target:             null,
-                visible:            false,
-                enabled:            true,
-                frozen:             false,
-                rendered:           false,
-                hideTimeout:        null,
-                hideDelay:          null,
-                showDelay:          null,
-                dynamicTarget:      false,
-                dynamicTargetEl:    null,
-                images:             0,
-                position:           null,
-                positionBase:       null,
-                positionType:       null,
-                positionFn:         null,
-                positionGetType:    null,
-                destroyDelay:       null
-            };
+        target:             null,
+        dynamicTarget:      false,
+        dynamicTargetEl:    null,
 
-        options = null;
+        visible:            false,
+        enabled:            true,
+        frozen:             false,
+        rendered:           false,
 
-        extend(api, events.getApi(), /*api-start*/{
+        bindSelfOnRender:   false,
 
-            /**
-             * @access public
-             * @return {Element}
-             */
-            getElem: function() {
-                return elem;
-            },
+        hideTimeout:        null,
+        hideDelay:          null,
+        showDelay:          null,
+        destroyDelay:       null,
 
-            getInstanceId: function() {
-                return id;
-            },
+        images:             0,
 
-            /**
-             * Get copy of dialog's config.
-             * @access public
-             * @return {object}
-             */
-            getCfg: function() {
-                return extend({}, cfg);
-            },
+        /*position:           null,
+        positionBase:       null,
+        positionType:       null,
+        positionFn:         null,*/
+        positionGetType:    null,
+        positionClass:      null,
+        positionAttempt:    0,
 
-            /**
-             * Get groups.
-             * @access public
-             * @return {[]}
-             */
-            getGroup: function() {
-                if (!cfg.group) {
-                    return [""];
+        $init: function(cfg) {
+
+            cfg = cfg || {};
+            var preset  = cfg.preset,
+                self    = this;
+
+            cfg.preset  = null;
+            cfg         = extend({}, defaults,
+                                fixShorthands(Dialog.defaults),
+                                fixShorthands(Dialog[preset]),
+                                fixShorthands(cfg),
+                                    true, true);
+
+            self.cfg    = cfg;
+            self.id     = nextUid();
+
+            self.onPreventScrollDelegate = bind(self.onPreventScroll, self);
+            self.onButtonClickDelegate = bind(self.onButtonClick, self);
+            self.onButtonKeyupDelegate = bind(self.onButtonKeyup, self);
+            self.showDelegate = bind(self.show, self);
+            self.hideDelegate = bind(self.hide, self);
+            self.toggleDelegate = bind(self.toggle, self);
+            self.onImageLoadDelegate = bind(self.onImageLoad, self);
+
+            manager.register(self);
+
+            if (cfg.modal) {
+                cfg.overlay.enabled = true;
+            }
+            self.overlay    = factory("$dialog.Overlay", self);
+
+            var pointerCls = ucfirst(cfg.pointer.$class || "Html");
+            self.pointer    = factory("$dialog.pointer." + pointerCls, self, cfg.pointer);
+
+            if (isFunction(cfg.position.type)) {
+                self.positionGetType = cfg.position.type;
+            }
+
+            self.setTarget(cfg.target);
+
+            if (cfg.target && cfg.useHref) {
+                var href = getAttr(self.getTarget(), "href");
+                if (href.substr(0, 1) == "#") {
+                    cfg.render.el = href;
                 }
                 else {
-                    return isString(cfg.group) ?
-                        [cfg.group] : cfg.group;
-                }
-            },
-
-            /**
-             * Set new dialog's target.
-             * @access public
-             * @param newTarget Element {
-             *     @required
-             * }
-             */
-            setTarget: function(newTarget) {
-
-                if (!newTarget) {
-                    return api;
-                }
-
-                var change  = false,
-                    prev    = state.target;
-
-                if (state.target) {
-                    self.setHandlers('unbind', '_target');
-                    change = true;
-                }
-                else if (state.dynamicTarget) {
-                    change = true;
-                }
-
-                var isStr = isString(newTarget);
-
-                if (isStr && newTarget.substr(0,1) != "#") {
-                    state.dynamicTarget = true;
-                    state.target        = null;
-                }
-                else {
-                    if (isStr) {
-                        newTarget       = select(newTarget).shift();
-                    }
-                    state.dynamicTarget = false;
-                    state.target        = newTarget;
-                }
-
-                if (change) {
-                    self.setHandlers('bind', '_target');
-                    self.trigger("targetchange", api, newTarget, prev);
-                }
-
-                return api;
-            },
-
-            /**
-             * Get dialog's target.
-             * @access public
-             * @return {Element}
-             */
-            getTarget: function() {
-                return state.dynamicTarget ? state.dynamicTargetEl : state.target;
-            },
-
-            /**
-             * Get dialog's pointer object
-             * @returns {Pointer}
-             */
-            getPointer: function() {
-                return pnt;
-            },
-
-            /**
-             * @access public
-             * @return {boolean}
-             */
-            isEnabled: function() {
-                return state.enabled;
-            },
-
-            /**
-             * @access public
-             * @return {boolean}
-             */
-            isVisible: function() {
-                return state.visible;
-            },
-
-            /**
-             * @access public
-             * @returns {boolean}
-             */
-            isHideAllIgnored: function() {
-                return cfg.show.ignoreHideAll;
-            },
-
-            /**
-             * @access public
-             * @return {boolean}
-             */
-            isFrozen: function() {
-                return state.frozen;
-            },
-
-            /**
-             * @returns {boolean}
-             */
-            isRendered: function() {
-                return state.rendered;
-            },
-
-            getState: function() {
-                return state;
-            },
-
-            /**
-             * Enable dialog
-             * @access public
-             * @method
-             */
-            enable: function() {
-                state.enabled = true;
-                return api;
-            },
-
-            /**
-             * Disable dialog
-             * @access public
-             * @method
-             */
-            disable: function() {
-                self.hide();
-                state.enabled = false;
-                return api;
-            },
-
-            /**
-             * The difference between freeze and disable is that
-             * disable always hides dialog and freeze makes current
-             * state permanent (if it was shown, it will stay shown
-             * until unfreeze() is called).
-             * @access public
-             * @method
-             */
-            freeze: function() {
-                state.frozen   = true;
-                return api;
-            },
-
-            /**
-             * Unfreeze dialog
-             * @access public
-             * @method
-             */
-            unfreeze: function() {
-                state.frozen   = false;
-                return api;
-            },
-
-            /**
-             * Show/hide
-             * @access public
-             * @param {Event} e Optional
-             * @param {bool} immediately Optional
-             */
-            toggle: function(e, immediately) {
-
-                // if switching between dynamic targets
-                // we need not to hide tooltip
-                if (e && e.stopPropagation && state.dynamicTarget) {
-
-                    if (state.visible && self.isDynamicTargetChanged(e)) {
-                        return self.show(e);
-                    }
-                }
-
-                return self[state.visible ? 'hide' : 'show'](e, immediately);
-            },
-
-
-            /**
-             * Show dialog
-             * @access public
-             * @param {Event} e Optional. True to skip delay.
-             * @param {bool} immediately Optional
-             */
-            show: function(e, immediately) {
-
-                // if called as an event handler, we do not return api
-                var returnValue	= e && e.stopPropagation ? null : api,
-                    scfg        = cfg.show,
-                    returnMode  = null;
-
-                // if tooltip is disabled, we do not stop propagation and do not return false.s
-                if (!api.isEnabled()) {
-
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("show: not enabled", api.getTarget());
-                    }
-                    /*debug-end*/
-
-                    returnMode = "disabled";
-                    //return returnValue;
-                }
-
-
-                // if tooltip is already shown
-                // and hide timeout was set.
-                // we need to restart timer
-                if (!returnMode && state.visible && state.hideTimeout) {
-
-                    window.clearTimeout(state.hideTimeout);
-                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
-
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("show: hide timeout was set", api.getTarget());
-                    }
-                    /*debug-end*/
-
-                    returnMode = "hidetimeout";
-                    //return returnValue;
-                }
-
-                // if tooltip was delayed to hide
-                // we cancel it.
-                if (!returnMode && state.hideDelay) {
-
-                    window.clearTimeout(state.hideDelay);
-                    state.hideDelay     = null;
-                    state.visible       = true;
-
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("show: hide delay was set; already shown", api.getTarget());
-                    }
-                    /*debug-end*/
-
-                    returnMode = "hidedelay";
-                    //return returnValue;
-                }
-
-
-                // various checks: tooltip should be enabled,
-                // should not be already shown, it should
-                // have some content, or empty content is allowed.
-                // also if beforeShow() returns false, we can't proceed
-                // if tooltip was frozen, we do not show or hide
-                if (!returnMode && state.frozen) {
-
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("show: frozen", api.getTarget());
-                    }
-                    /*debug-end*/
-
-                    returnMode = "frozen";
-                    //return returnValue;
-                }
-
-                // cancel delayed destroy
-                // so that we don't have to re-render dialog
-                if (state.destroyDelay) {
-                    window.clearTimeout(state.destroyDelay);
-                    state.destroyDelay = null;
-                }
-
-                var dtChanged   = false;
-
-                // if we have a dynamicTarget
-                if (e && e.stopPropagation && state.dynamicTarget) {
-                    dtChanged = self.changeDynamicTarget(e);
-                }
-
-                if (state.visible) {
-                    if (!dtChanged) {
-                        /*debug-start*/
-                        if (cfg.debug) {
-                            console.log("show: already shown", elem);
-                        }
-                        /*debug-end*/
-
-                        returnMode = returnMode || "visible";
-                        //return returnValue;
-                    }
-                    else {
-                        if (!cfg.render.fn) {
-                            self.reposition(e);
-                            returnMode = "reposition";
-                            //return returnValue;
-                        }
-                        else {
-                            self.hide(null, true);
-                        }
-                    }
-                }
-
-                if (!returnMode || dtChanged) {
-                    // if tooltip is not rendered yet we render it
-                    if (!elem) {
-                        self.render();
-                    }
-                    else if (dtChanged) {
-                        self.changeDynamicContent();
-                    }
-                }
-
-                // if beforeShow callback returns false we stop.
-                if (!returnMode && self.trigger('beforeshow', api, e) === false) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("show: beforeshow return false", api.getTarget());
-                    }
-                    /*debug-end*/
-
-                    returnMode = "beforeshow";
-                    //return returnValue;
-                }
-
-                if (e && e.stopPropagation && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
-                    var et = cfg.events.show[e.type] || cfg.events.show["*"];
-
-                    if (et.process) {
-                        returnValue	= et.process(api, e, "show", returnMode);
-                    }
-                    else {
-                        et.stopPropagation && e.stopPropagation();
-                        et.preventDefault && e.preventDefault();
-                        returnValue = et.returnValue;
-                    }
-                }
-
-                if (returnMode) {
-                    return returnMode;
-                }
-
-                // first, we stop all current animations
-                stopAnimation(elem);
-
-                // as of this moment we mark dialog as visible so that hide() were able
-                // to work. also, all next steps should check for this state
-                // in case if tooltip case hidden back during the process
-                state.visible = true;
-
-                if (scfg.single) {
-                    manager.hideAll(self);
-                }
-
-                self.toggleTitleAttribute(false);
-
-                if (scfg.delay && !immediately) {
-                    state.showDelay = async(self.showAfterDelay, self, [e], scfg.delay);
-                }
-                else {
-                    self.showAfterDelay(e, immediately);
-                }
-
-                return returnValue;
-            },
-
-            /**
-             * Hide dialog
-             * @access public
-             * @param {Event} e Optional.
-             * @param {bool} immediately Optional. True to skip delay.
-             * @param {bool} cancelShowDelay Optional. If showing already started but was delayed -
-             * cancel that delay.
-             */
-            hide: function(e, immediately, cancelShowDelay) {
-
-                state.hideTimeout = null;
-
-                // if called as an event handler, we do not return api
-                var returnValue	    = e && e.stopPropagation ? null : api,
-                    returnMode      = null;
-
-
-                // if the timer was set to hide the tooltip
-                // but then we needed to close tooltip immediately
-                if (!state.visible && state.hideDelay && immediately) {
-                    window.clearTimeout(state.hideDelay);
-                    state.hideDelay     = null;
-                    state.visible       = true;
-                }
-
-                // various checks
-                if (!elem || !state.visible || !self.isEnabled()) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hide: elem/visible/enabled: ",
-                            elem, state.visible, self.isEnabled());
-                    }
-                    /*debug-end*/
-                    returnMode = !elem ? "noelem" : (!state.visible ? "hidden" : "disabled");
-                    //return returnValue;
-                }
-
-                // if tooltip is still waiting to be shown after delay timeout,
-                // we cancel this timeout and return.
-                if (state.showDelay && !returnMode) {
-
-                    if (cfg.hide.cancelShowDelay || cancelShowDelay) {
-                        window.clearTimeout(state.showDelay);
-                        state.showDelay     = null;
-                        state.visible       = false;
-
-                        /*debug-start*/
-                        if (cfg.debug) {
-                            console.log("hide: cancelShowDelay: ", self.getTarget());
-                        }
-                        /*debug-end*/
-
-                        returnMode = "cancel";
-                        //return returnValue;
-                    }
-                    else {
-
-                        /*debug-start*/
-                        if (cfg.debug) {
-                            console.log("hide: show delay was set", self.getTarget());
-                        }
-                        /*debug-end*/
-
-                        returnMode = "delay";
-                        //return returnValue;
-                    }
-                }
-
-                // if tooltip was frozen, we do not show or hide
-                if (state.frozen && !returnMode) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hide: frozen", self.getTarget());
-                    }
-                    /*debug-end*/
-                    returnMode = "frozen";
-                    //return returnValue;
-                }
-
-                // lets see what the callback will tell us
-                if (!returnMode && self.trigger('beforehide', api, e) === false) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hide: beforehide returned false", self.getTarget());
-                    }
-                    /*debug-end*/
-                    returnMode = "beforehide";
-                    //return returnValue;
-                }
-
-
-                if (e && e.stopPropagation && cfg.events.hide && (cfg.events.hide[e.type] || cfg.events.hide["*"])) {
-                    var et = cfg.events.hide[e.type] || cfg.events.hide["*"];
-
-                    if (et.process) {
-                        returnValue = et.process(api, e, "hide", returnMode);
-                    }
-                    else {
-                        if (et.stopPropagation) e.stopPropagation();
-                        if (et.preventDefault) e.preventDefault();
-                        returnValue = et.returnValue;
-                    }
-                }
-
-                if (returnMode) {
-                    return returnValue;
-                }
-
-                // now we can stop all current animations
-                stopAnimation(elem);
-
-                // and change the state
-                state.visible = false;
-
-                self.toggleTitleAttribute(true);
-
-                if (state.dynamicTarget) {
-                    self.resetDynamicTarget();
-                }
-
-                if (cfg.hide.delay && !immediately) {
-                    state.hideDelay = async(self.hideAfterDelay, self, [e], cfg.hide.delay);
-                }
-                else {
-                    self.hideAfterDelay(e, immediately);
-                }
-
-                return returnValue;
-            },
-
-
-
-            /**
-             * Set new position. See position.type
-             * @access public
-             * @param {string} type {
-             *    @required
-             * }
-             */
-            setPositionType: function(type) {
-
-                type = type != undf ?
-                        type :
-                        (cfg.position.get || cfg.position.type);
-
-                if (type != undf) {
-                    if (isFunction(type)) {
-                        state.positionFn = type;
-                        state.positionType = null;
-                        //cfg.position.get    = type;
-                        //cfg.position.type   = false;
-                    }
-                    else {
-                        state.positionFn = null;
-                        state.positionType = type;
-                        //cfg.position.get    = null;
-                        //cfg.position.type   = type;
-                    }
-                }
-
-                var pt  = state.positionType;
-
-                if (pt === false) {
-                    state.position  = false;
-                }
-                else if (state.positionFn && pt != "m") {
-                    state.position  = "fn";
-                }
-                else {
-                    pt  = pt.substr(0, 1);
-                    if (pt == "w") {
-                        state.position  = "window";
-                    }
-                    else if (pt == "m") {
-                        state.position  = "mouse";
-                    }
-                    else {
-                        state.position  = "target";
-                    }
-                }
-
-                if (pnt) {
-                    pnt.remove();
-
-                    if (elem) {
-                        pnt.render();
-                    }
-                }
-            },
-
-            /**
-             * Get dialog's position.
-             * @access public
-             * @param {Event} e Optional.
-             * @return {object} {
-             *         @type {number} x
-             *         @type {number} y
-             * }
-             */
-            getPosition: function(e) {
-
-                if (!elem) {
-                    return null;
-                }
-
-                var pos,
-                    cfgPos  = cfg.position;
-
-                switch (state.position) {
-                    case false:
-                        return null;
-                    case "target":
-                        pos = self.getTargetPosition(e);
-                        break;
-                    case "mouse":
-                        pos = self.getMousePosition(e);
-                        break;
-                    case "window":
-                        pos = self.getWindowPosition(e);
-                        break;
-                    case "fn":
-                        pos = state.positionFn.call(defaultScope, api, e);
-                        break;
-                }
-
-                if (cfgPos.screenX !== false || cfgPos.screenY !== false) {
-                    pos     = self.correctScreenPosition(pos, cfgPos.screenX, cfgPos.screenY);
-                }
-
-                return pos;
-            },
-
-            /**
-             * Usually called internally from show().
-             * @access public
-             * @param {Event} e Optional.
-             */
-            reposition: function(e) {
-
-                e && (e = normalizeEvent(e));
-
-                if (state.positionGetType) {
-                    api.setPositionType(state.positionGetType.call(defaultScope, self, e));
-                    pnt.remove();
-                    pnt.init();
-                    pnt.render();
-                }
-
-                var pos = self.getPosition(e);
-
-                if (pos) {
-
-                    if (pos.x != undf) {
-                        css(elem, {left: pos.x+"px"});
-                    }
-                    if (pos.y != undf) {
-                        css(elem, {top: pos.y+"px"});
-                    }
-                    if (pos.x == undf && pos.y == undf) {
-                        css(elem, pos);
-                    }
-                }
-            },
-
-            /**
-             * @access public
-             * @return {Element}
-             */
-            getContentElem: function() {
-                if (!elem) {
-                    return null;
-                }
-
-                if (cfg.selector.content) {
-                    var el = select(cfg.selector.content, elem).shift();
-                    return el || elem;
-                }
-                else {
-                    return elem;
-                }
-            },
-
-            /**
-             * Set new content.
-             * @access public
-             * @param {string|object} content {
-             *      See "selector" option
-             *      @required
-             * }
-             * @param {string} mode "", "attribute", "ajax" -- optional (used internally). See
-             * content.prepare option.
-             */
-            setContent: function(content, mode) {
-
-                mode = mode || '';
-
-                if (!elem) {
-                    cfg.content.value = content;
-                    return api;
-                }
-
-                if (cfg.content.prepare) {
-                    content = cfg.content.prepare(api, mode, content);
-                }
-
-                var contentElem = api.getContentElem(),
-                    fixPointer  = state.rendered && !cfg.selector.content && pnt,
-                    pntEl       = fixPointer && pnt.getEl();
-
-                if (fixPointer && pntEl) {
-                    try {
-                        elem.removeChild(pntEl);
-                    }
-                    catch (thrownError) {}
-                }
-
-                if (!isString(content)) {
-                    for (var i in content) {
-                        var sel     = cfg.selector[i];
-                        if (sel) {
-                            var cel = select(sel, contentElem).shift();
-                            if (cel) {
-                                cel.innerHTML = content[i];
-                            }
-                        }
-                    }
-                }
-                else {
-                    contentElem.innerHTML = content;
-                }
-
-                // if there a pointer, and this is not initial content set,
-                // and there is no selector for content
-                // we must restore pointer after dialog's inner html
-                // has been replaced with new content
-                if (fixPointer && pntEl) {
-                    try {
-                        elem.appendChild(pntEl);
-                    }
-                    catch (thrownError){}
-                }
-
-                var imgs = select("img", contentElem),
-                    l;
-
-                state.images = imgs.length;
-
-                for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoad)){}
-
-                self.trigger('contentchange', api, content, mode);
-                self.onContentChange();
-
-                return api;
-            },
-
-            /**
-             * Force dialog to re-read content from attributes.
-             * @access public
-             * @method
-             */
-            readContent: function() {
-
-                var el 			= 	api.getTarget(),
-                    content;
-
-                if (el) {
-                    if (cfg.content.attr) {
-                        content = getAttr(el, cfg.content.attr);
-                    }
-                    else {
-                        content = getAttr(el, 'tooltip') ||
-                                  getAttr(el, 'title') ||
-                                  getAttr(el, 'alt');
-                    }
-                }
-
-                if (content) {
-                    self.setContent(content, 'attribute');
-                }
-                return api;
-            },
-
-            /**
-             * Load content via ajax.
-             * @access public
-             * @param {object} options Merged with cfg.ajax
-             */
-            loadContent: function(options) {
-
-                addClass(elem, cfg.cls.loading);
-                var opt = extend({}, cfg.ajax, options, true, true);
-                self.trigger('beforeajax', api, opt);
-                return ajax(opt).done(self.onAjaxLoad);
-            },
-
-
-            /**
-             * Destroy dialog.
-             * @access public
-             * @method
-             */
-            destroy: function() {
-
-                self.trigger("destroy", api);
-
-                removeListener(window, "resize", self.onWindowResize);
-                removeListener(window, "scroll", self.onWindowScroll);
-
-                self.destroyElem();
-
-                if (pnt) {
-                    pnt.destroy();
-                    pnt = null;
-                }
-
-                self.setHandlers("unbind");
-                events.destroy();
-                events  = null;
-                self    = null;
-                api     = null;
-                state   = null;
-                overlay = null;
-            },
-
-            /**
-             * Set focus based on focus setting.
-             * @access public
-             * @method
-             */
-            setFocus: function() {
-
-                var af      = cfg.show.focus,
-                    i,
-                    input;
-
-                if (af === true) {
-                    input   = select("input", elem).concat(select("textarea", elem));
-                    if (input.length > 0) {
-                        input[0].focus();
-                    }
-                    else if (cfg.buttons) {
-                        for (i in cfg.buttons) {
-                            var btn = select(cfg.buttons[i], elem).shift();
-                            btn && btn.focus();
-                            break;
-                        }
-                    }
-                }
-                else {
-                    var el = select(af, elem).shift();
-                    el && el.focus();
+                    cfg.ajax.url = href;
                 }
             }
 
-        }/*api-end*/, true, false);
+            if (!cfg.render.lazy) {
+                self.render();
+            }
+
+            self.$$observable.createEvent("reposition", false);
+            self.$$observable.createEvent("correct-reposition", false);
+
+            self.trigger("init", self);
+            self.setHandlers("bind");
+        },
 
 
-        extend(self, api, {
+        /* **** General api **** */
 
-            init: function() {
 
-                manager.register(self);
+        /**
+         * @returns {Element}
+         */
+        getElem: function() {
+            return this.node;
+        },
 
-                if (cfg.modal) {
-                    cfg.overlay.enabled = true;
+        /**
+         * @returns {string}
+         */
+        getInstanceId: function() {
+            return this.id;
+        },
+
+        /**
+         * Get dialog's config.
+         * @access public
+         * @return {object}
+         */
+        getCfg: function() {
+            return this.cfg;
+        },
+
+        /**
+         * Get dialog's pointer object
+         * @returns {$dialog.pointer.Abstract}
+         */
+        getPointer: function() {
+            return this.pointer;
+        },
+
+        /**
+         * @access public
+         * @return {boolean}
+         */
+        isEnabled: function() {
+            return this.enabled;
+        },
+
+        /**
+         * @access public
+         * @return {boolean}
+         */
+        isVisible: function() {
+            return this.visible;
+        },
+
+        /**
+         * @access public
+         * @returns {boolean}
+         */
+        isHideAllIgnored: function() {
+            return this.cfg.show.ignoreHideAll;
+        },
+
+        /**
+         * @access public
+         * @return {boolean}
+         */
+        isFrozen: function() {
+            return this.frozen;
+        },
+
+        /**
+         * @returns {boolean}
+         */
+        isRendered: function() {
+            return this.rendered;
+        },
+
+        /**
+         * Enable dialog
+         * @access public
+         * @method
+         */
+        enable: function() {
+            this.enabled = true;
+        },
+
+        /**
+         * Disable dialog
+         * @access public
+         * @method
+         */
+        disable: function() {
+            this.hide();
+            this.enabled = false;
+        },
+
+        /**
+         * The difference between freeze and disable is that
+         * disable always hides dialog and freeze makes current
+         * state permanent (if it was shown, it will stay shown
+         * until unfreeze() is called).
+         * @access public
+         * @method
+         */
+        freeze: function() {
+            this.frozen   = true;
+        },
+
+        /**
+         * Unfreeze dialog
+         * @access public
+         * @method
+         */
+        unfreeze: function() {
+            this.frozen   = false;
+        },
+
+        /**
+         * Get groups.
+         * @access public
+         * @return {[]}
+         */
+        getGroup: function() {
+            var cfg = this.cfg;
+            if (!cfg.group) {
+                return [""];
+            }
+            else {
+                return isString(cfg.group) ?
+                       [cfg.group] : cfg.group;
+            }
+        },
+
+        /**
+         * Show/hide
+         * @access public
+         * @param {Event} e Optional
+         * @param {bool} immediately Optional
+         */
+        toggle: function(e, immediately) {
+
+            var self = this;
+
+            // if switching between dynamic targets
+            // we need not to hide tooltip
+            if (e && e.stopPropagation && self.dynamicTarget) {
+
+                if (self.visible && self.isDynamicTargetChanged(e)) {
+                    return self.show(e);
+                }
+            }
+
+            return self[self.visible ? 'hide' : 'show'](e, immediately);
+        },
+
+
+        /* **** Events **** */
+
+
+        setHandlers: function(mode, only) {
+
+            var self    = this,
+                cfg     = self.cfg,
+                fns     = ["show", "hide", "toggle"],
+                lfn     = mode == "bind" ? addListener : removeListener,
+                dfn     = mode == "bind" ? delegate : undelegate,
+                fn,
+                fnCfg,
+                selector,
+                e, i, len,
+                evs, el,
+                j, jl;
+
+            while (fn = fns.shift()) {
+
+                fnCfg   = cfg[fn].events;
+
+                if (fnCfg === false) {
+                    continue;
                 }
 
-                if (isFunction(cfg.position.type)) {
-                    state.positionGetType = cfg.position.type;
-                }
-                else {
-                    self.setPositionType();
-                }
-
-
-                self.setTarget(cfg.target);
-
-                if (cfg.target && cfg.useHref) {
-                    var href = getAttr(self.getTarget(), "href");
-                    if (href.substr(0, 1) == "#") {
-                        cfg.render.el = href;
+                if (isString(fnCfg) || isArray(fnCfg)) {
+                    if (self.dynamicTarget) {
+                        var tmp     = {};
+                        tmp[fnCfg]  = cfg.target;
+                        fnCfg       = {
+                            "_html": tmp
+                        }
                     }
                     else {
-                        cfg.ajax.url = href;
+                        fnCfg   = {"_target": fnCfg};
                     }
                 }
 
-                if (cfg.pointer.size || cfg.pointer.el) {
-                    pnt = new Pointer(self, cfg.pointer);
-                }
+                for (selector in fnCfg) {
 
-                if (!cfg.render.lazy) {
-                    self.render();
-                }
-
-                self.setHandlers("bind");
-            },
-
-            setHandlers: function(mode, only) {
-
-                var fns     = ["show", "hide", "toggle"],
-                    lfn     = mode == "bind" ? addListener : removeListener,
-                    dfn     = mode == "bind" ? delegate : undelegate,
-                    fn,
-                    fnCfg,
-                    selector,
-                    e, i, len,
-                    evs, el,
-                    j, jl;
-
-                while (fn = fns.shift()) {
-
-                    fnCfg   = cfg[fn].events;
-
-                    if (fnCfg === false) {
-                        continue;
-                    }
-
-                    if (isString(fnCfg) || isArray(fnCfg)) {
-                        if (state.dynamicTarget) {
-                            var tmp     = {};
-                            tmp[fnCfg]  = cfg.target;
-                            fnCfg       = {
-                                "_html": tmp
-                            }
-                        }
-                        else {
-                            fnCfg   = {"_target": fnCfg};
-                        }
-                    }
-
-                    for (selector in fnCfg) {
-
-                        if (only) {
-                            if (only == '_self') {
-                                if (selector != '_self' && selector != "_overlay" && selector.substr(0,1) != '>') {
-                                    continue;
-                                }
-                            }
-                            else if (selector != only) {
+                    if (only) {
+                        if (only == '_self') {
+                            if (selector != '_self' && selector != "_overlay" && selector.substr(0,1) != '>') {
                                 continue;
                             }
                         }
-
-                        if ((selector == '_self' || selector == '_overlay' || selector.substr(0,1) == '>')
-                            && !elem) {
-
-                            state.bindSelfOnRender = true;
+                        else if (selector != only) {
                             continue;
                         }
-
-                        evs         = fnCfg[selector];
-
-                        if (!evs) {
-                            continue;
-                        }
-
-                        switch (selector) {
-                            case "_target":
-                                el  = [self.getTarget()];
-                                break;
-
-                            case "_self":
-                                el  = [elem];
-                                break;
-
-                            case "_window":
-                                el  = [window];
-                                break;
-
-                            case "_document":
-                                el  = [window.document];
-                                break;
-
-                            case "_html":
-                                el  = [window.document.documentElement];
-                                break;
-
-                            case "_overlay":
-                                el  = [overlay];
-                                break;
-
-                            default:
-                                el  = selector.substr(0,1) == '>' ?
-                                        select(selector.substr(1), elem) :
-                                        select(selector);
-
-                        }
-
-                        if (!el || !el.length) {
-                            continue;
-                        }
-
-                        if (isString(evs)) {
-                            evs     = [evs];
-                        }
-
-                        if (isArray(evs)) {
-                            for (i = 0, len = evs.length; i < len; i++) {
-                                for (j = -1, jl = el.length; ++j < jl; lfn(el[j], evs[i], api[fn])){}
-                            }
-                        }
-                        else {
-                            for (e in evs) {
-                                for (j = -1, jl = el.length; ++j < jl; dfn(el[j], evs[e], e, api[fn])){}
-                                //dfn(el, evs[e], e, api[fn]);
-                                //$(el)[dfn](evs[e], e, api[fn]);
-                            }
-                        }
-                    }
-                }
-            },
-
-            resetDynamicTarget: function() {
-                var curr = state.dynamicTargetEl;
-                if (curr) {
-                    self.setHandlers("unbind", "_target");
-                    self.trigger("targetchange", api, null, curr);
-                }
-            },
-
-            isDynamicTargetChanged: function(e) {
-
-                var dt	    = cfg.target,
-                    t	    = e.target,
-                    curr    = state.dynamicTargetEl;
-
-                while (t && !is(t, dt)) {
-                    t   = t.parentNode;
-                }
-
-                if (!t) {
-                    return false;
-                }
-
-                return !curr || curr !== t;
-            },
-
-            changeDynamicTarget: function(e) {
-
-                var dt	    = cfg.target,
-                    t	    = e.target,
-                    curr    = state.dynamicTargetEl;
-
-                while (t && !is(t, dt)) {
-                    t   = t.parentNode;
-                }
-
-                if (!t) {
-                    return false;
-                }
-
-                if (!curr || curr !== t) {
-
-                    if (curr) {
-                        self.setHandlers("unbind", "_target");
                     }
 
-                    state.dynamicTargetEl = t;
+                    if ((selector == '_self' || selector == '_overlay' || selector.substr(0,1) == '>')
+                        && !self.node) {
 
-                    self.setHandlers("bind", "_target");
-                    self.trigger("targetchange", api, t, curr);
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            },
-
-            getScrollEl: function(cfgScroll) {
-                if (cfgScroll === true || cfgScroll === false) {
-                    return window;
-                }
-                else if (typeof cfgScroll == "string") {
-                    return select(cfgScroll).shift();
-                }
-                else {
-                    return cfgScroll;
-                }
-            },
-
-
-            showAfterDelay: function(e, immediately) {
-
-                state.showDelay = null;
-
-                // if tooltip was already hidden, we can't proceed
-                if (!state.visible) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("showAfterDelay: already hidden", self.getTarget());
+                        self.bindSelfOnRender = true;
+                        continue;
                     }
-                    /*debug-end*/
-                    return;
-                }
 
-                // tooltip is following the mouse
-                if (state.position == "mouse") {
-                    // now we can adjust tooltip's position according
-                    // to mouse's position and set mousemove event listener
-                    addListener(window.document.documentElement, "mousemove", self.onMouseMove);
-                }
+                    evs         = fnCfg[selector];
 
-                var cfgPos = cfg.position;
-
-                if (cfgPos.resize || cfgPos.screenX || cfgPos.screenY) {
-                    addListener(window, "resize", self.onWindowResize);
-                }
-
-                if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    addListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
-                }
-
-
-                if (!immediately && self.trigger('afterdelay', api, e) === false) {
-                    state.visible	= false;
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("showAfterDelay: afterdelay returned false", api.getTarget());
+                    if (!evs) {
+                        continue;
                     }
-                    /*debug-end*/
-                    return;
-                }
 
-                if (cfg.hide.remove) {
-                    self.appendElem();
-                }
+                    switch (selector) {
+                        case "_target":
+                            el  = [self.getTarget()];
+                            break;
 
-                if (state.positionType !== false) {
-                    self.reposition(e);
-                }
+                        case "_self":
+                            el  = [self.node];
+                            break;
 
-                if (overlay) {
-                    if (cfg.overlay.animateShow) {
-                        self.animate("show", null, true);
+                        case "_window":
+                            el  = [window];
+                            break;
+
+                        case "_document":
+                            el  = [window.document];
+                            break;
+
+                        case "_html":
+                            el  = [window.document.documentElement];
+                            break;
+
+                        case "_overlay":
+                            el  = [self.overlay.getElem()];
+                            break;
+
+                        default:
+                            el  = selector.substr(0,1) == '>' ?
+                                  select(selector.substr(1), self.node) :
+                                  select(selector);
+
+                    }
+
+                    if (!el || !el.length) {
+                        continue;
+                    }
+
+                    if (isString(evs)) {
+                        evs     = [evs];
+                    }
+
+                    if (isArray(evs)) {
+                        for (i = 0, len = evs.length; i < len; i++) {
+                            for (j = -1, jl = el.length; ++j < jl; lfn(el[j], evs[i], self[fn+"Delegate"])){}
+                        }
                     }
                     else {
-                        overlay.style.display = "";
-                    }
-                }
-
-                if (cfg.show.preventScroll) {
-                    var ps = cfg.show.preventScroll,
-                        i, l;
-                    if (ps === true) {
-                        ps = "body";
-                    }
-                    ps = select(ps);
-                    for (i = -1, l = ps.length; ++i < l;
-                         addListener(ps[i], "mousewheel", self.onPreventScroll) &&
-                         addListener(ps[i], "touchmove", self.onPreventScroll)
-                        ){}
-                }
-
-                if (cfg.show.animate && !immediately) {
-                    self.animate("show").done(function() {
-                        self.showAfterAnimation(e);
-                    });
-                }
-                else {
-                    raf(function(){
-                        self.showAfterAnimation(e);
-                    });
-                }
-            },
-
-            showAfterAnimation: function(e) {
-
-                // if tooltip was already hidden, we can't proceed
-                if (!state.visible) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("showAfterAnimation: already hidden", self.getTarget());
-                    }
-                    /*debug-end*/
-                    return;
-                }
-
-                // now we can finally show the dialog (if it wasn't shown already
-                // during the animation
-                removeClass(elem, cfg.cls.hidden);
-                addClass(elem, cfg.cls.visible);
-
-                if (!cfg.render.keepVisible) {
-                    elem.style.display = cfg.show.display || "block";
-                }
-
-
-                // if it has to be shown only for a limited amount of time,
-                // we set timeout.
-                if (cfg.hide.timeout) {
-                    state.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
-                }
-
-                if (cfg.show.focus) {
-                    async(self.setFocus, self, null, 20);
-                }
-
-                self.trigger('show', api, e);
-            },
-
-
-
-            hideAfterDelay: function(e, immediately) {
-
-                state.hideDelay = null;
-
-                if (state.visible) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hideAfterDelay: already shown again", self.getTarget());
-                    }
-                    /*debug-end*/
-                    return;
-                }
-
-                // if this tooltip is following the mouse, we reset event listeners
-                if (state.position == "mouse") {
-                    removeListener(window.document.documentElement, "mousemove", self.onMouseMove);
-                }
-
-                var cfgPos = cfg.position;
-
-                if (cfgPos.resize || cfgPos.screenX || cfgPos.screenY) {
-                    removeListener(window, "resize", self.onWindowResize);
-                }
-
-                if (cfgPos.scroll || cfgPos.screenX || cfgPos.screenY) {
-                    removeListener(self.getScrollEl(cfgPos.scroll), "scroll", self.onWindowScroll);
-                }
-
-                // if afterdelay callback returns false we stop.
-                if (!immediately && self.trigger('afterhidedelay', api, e) === false) {
-
-                    state.visible	= cfg.cls.hidden ? !hasClass(elem, cfg.cls.hidden) : isVisible(elem);
-
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hideAfterDelay: afterhdelay returned false", self.getTarget());
-                    }
-                    /*debug-end*/
-                    return;
-                }
-
-                if (cfg.show.preventScroll) {
-                    var ps = cfg.show.preventScroll,
-                        i, l;
-                    if (ps === true) {
-                        ps = "body";
-                    }
-                    ps = select(ps);
-                    for (i = -1, l = ps.length; ++i < l;
-                         removeListener(ps[i], "mousewheel", self.onPreventScroll) &&
-                         removeListener(ps[i], "touchmove", self.onPreventScroll)
-                        ){}
-                }
-
-                if (overlay) {
-                    if (cfg.overlay.animateShow) {
-                        self.animate("hide", null, true).done(function(){
-                            overlay.style.display = "none";
-                        });
-                    }
-                    else {
-                        overlay.style.display = "none";
-                    }
-                }
-
-                if (cfg.hide.animate && !immediately) {
-                    self.animate("hide").done(function() {
-                        self.hideAfterAnimation(e);
-                    });
-                }
-                else {
-                    raf(function(){
-                        self.hideAfterAnimation(e);
-                    });
-                }
-            },
-
-            hideAfterAnimation: function(e) {
-
-                // we need to check if the tooltip was returned to visible state
-                // while hiding animation
-                if (state.visible) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("hideAfterAnimation: already shown again", self.getTarget());
-                    }
-                    /*debug-end*/
-                    return;
-                }
-
-                removeClass(elem, cfg.cls.visible);
-                addClass(elem, cfg.cls.hidden);
-
-                if (!cfg.render.keepVisible) {
-                    elem.style.display = "none";
-                }
-
-                self.trigger('hide', api, e);
-
-                var lt = cfg.render.lifetime;
-
-                if (lt !== null) {
-                    if (lt === 0) {
-                        self.destroyElem();
-                    }
-                    else {
-                        state.destroyDelay = async(self.destroyElem, self, null, lt);
-                    }
-                }
-
-                if (elem && cfg.hide.destroy) {
-                    raf(function(){
-                        data(elem, cfg.instanceName, null);
-                        self.destroy();
-                    });
-                }
-
-                if (elem && cfg.hide.remove) {
-                    raf(function(){
-                        self.removeElem();
-                    });
-                }
-            },
-
-
-            render: function() {
-
-                // if already rendered, we return
-                if (elem) {
-                    /*debug-start*/
-                    if (cfg.debug) {
-                        console.log("element already rendered", elem);
-                    }
-                    /*debug-end*/
-                    return;
-                }
-
-                var rnd	    = cfg.render,
-                    cls     = cfg.cls;
-
-                // custom rendering function
-                if (rnd.fn) {
-                    var res = rnd.fn.call(defaultScope, api);
-                    rnd[isString(res) ? 'tpl' : 'el'] = res;
-                }
-
-                if (rnd.el) {
-                    if (isString(rnd.el)) {
-                        elem = select(rnd.el).shift();
-                        rnd.keepInDOM = true;
-                    }
-                    else {
-                        elem = rnd.el;
-                    }
-                }
-                else {
-                    var tmp = window.document.createElement("div");
-                    tmp.innerHTML = rnd.tpl;
-                    elem = tmp.firstChild;
-                }
-
-                if (!elem) {
-                    elem = window.document.createElement("div");
-                }
-
-                if (rnd.id) {
-                    setAttr(elem, 'id', rnd.id);
-                }
-
-                if (!cfg.render.keepVisible) {
-                    elem.style.display = "none";
-                }
-
-                addClass(elem, cls.dialog);
-                addClass(elem, cls.hidden);
-
-                if (rnd.style) {
-                    css(elem, rnd.style);
-                }
-
-
-                if (cfg.overlay.enabled) {
-
-                    overlay     = window.document.createElement("div");
-                    css(overlay, {
-                        display:            "none",
-                        position: 			"fixed",
-                        left:				0,
-                        top:				0,
-                        right:              0,
-                        bottom:             0,
-                        opacity:			cfg.overlay.opacity,
-                        backgroundColor: 	cfg.overlay.color
-                    });
-
-                    //window.document.body.appendChild(overlay);
-
-                    addListener(overlay, "click", self.onOverlayClick);
-
-                    if (rnd.zIndex) {
-                        css(overlay, {zIndex: rnd.zIndex});
-                    }
-                    if (cfg.overlay.cls) {
-                        addClass(overlay, cfg.overlay.cls);
-                    }
-                }
-
-                /*if (rnd.appendTo) {
-                    rnd.appendTo.appendChild(elem);
-                }
-                else if (rnd.appendTo !== false) {
-                    window.document.body.appendChild(elem);
-                }*/
-
-                if (!cfg.hide.remove) {
-                    self.appendElem();
-                }
-                else {
-                    if (elem.parentNode) {
-                        elem.parentNode.removeChild(elem);
-                    }
-                }
-
-                if (rnd.zIndex) {
-                    css(elem, {zIndex: rnd.zIndex});
-                }
-
-                var cnt = cfg.content;
-
-                if (cnt.value !== false) {
-                    if (cnt.value) {
-                        self.setContent(cnt.value);
-                    }
-                    else {
-                        if (cnt.fn) {
-                            self.setContent(cnt.fn.call(defaultScope, api));
-                        }
-                        else {
-                            self[cfg.ajax.url ? 'loadContent' : 'readContent']();
+                        for (e in evs) {
+                            for (j = -1, jl = el.length; ++j < jl; dfn(el[j], evs[e], e, self[fn+"Delegate"])){}
                         }
                     }
                 }
+            }
+        },
 
-                if (pnt) {
-                    pnt.render();
-                }
 
-                if (cfg.buttons) {
-                    var btnId, btn;
-                    for (btnId in cfg.buttons) {
-                        btn = select(cfg.buttons[btnId], elem).shift();
-                        if (btn) {
-                            data(btn, "metaphorjsTooltip-button-id", btnId);
-                            addListener(btn, "click", self.onButtonClick);
-                            addListener(btn, "keyup", self.onButtonKeyup);
-                        }
-                    }
-                }
 
-                if (state.bindSelfOnRender) {
-                    self.setHandlers('bind', '_self');
-                    state.bindSelfOnRender = false;
-                }
 
-                state.rendered = true;
+        onPreventScroll: function(e) {
+            normalizeEvent(e).preventDefault();
+        },
 
-                self.trigger('render', api);
-            },
+        onButtonClick: function(e) {
 
+            var target  = normalizeEvent(e).target,
+                btnId   = data(target, "metaphorjsTooltip-button-id");
 
+            if (btnId) {
+                this.trigger("button", this, btnId, e);
+            }
+        },
 
-            animate: function(section, e, isOverlay) {
-
-                var a,
-                    skipDisplay;
-
-                if (isOverlay) {
-                    a   = section == "show" ? cfg.overlay.animateShow : cfg.overlay.animateHide;
-                }
-                else {
-                    a 	= cfg[section].animate;
-                }
-
-                if (isFunction(a)) {
-                    a   = a(self, e);
-                }
-
-                skipDisplay = a.skipDisplayChange || false;
-
-                if (isBool(a)) {
-                    a = section;
-                }
-                else if (isString(a)) {
-                    a = [a];
-                }
-
-                return animate(elem, a, function(){
-                    if (section == "show" && !skipDisplay) {
-
-                        var p = new Promise;
-
-                        raf(function(){
-                            if (isOverlay) {
-                                overlay.style.display = "";
-                            }
-                            else {
-                                elem.style.display = cfg.show.display || "block";
-                            }
-                            p.resolve();
-                        });
-
-                        return p;
-                    }
-                }, false);
-            },
-
-            toggleTitleAttribute: function(state) {
-
-                var trg = api.getTarget(),
-                    title;
-
-                if (trg) {
-                    if (state === false) {
-                        data(trg, "tmp-title", getAttr(trg, "title"));
-                        removeAttr(trg, 'title');
-                    }
-                    else if (title = data(trg, "tmp-title")) {
-                        setAttr(trg, "title", title);
-                    }
-                }
-            },
-
-            changeDynamicContent: function() {
-                if (cfg.content.fn) {
-                    self.setContent(cfg.content.fn.call(defaultScope, api));
-                }
-                else if (cfg.content.attr) {
-                    self.readContent();
-                }
-            },
-
-            getPositionBase: function() {
-                if (state.positionBase) {
-                    return state.positionBase;
-                }
-                var b;
-                if (b = cfg.position.base) {
-                    if (typeof b == "string") {
-                        state.positionBase = select(b).shift();
-                    }
-                    else {
-                        state.positionBase = b;
-                    }
-                    return state.positionBase;
-                }
-                return null;
-            },
-
-            getDialogSize: function() {
-
-                var hidden  = cfg.cls.hidden ? hasClass(elem, cfg.cls.hidden) : !isVisible(elem),
-                    size,
-                    left    = elem.style.left;
-
-                if (hidden) {
-                    css(elem, {left: "-1000px"});
-                    elem.style.display = cfg.show.display;
-                }
-
-                size    = {
-                    width:      getOuterWidth(elem),
-                    height:     getOuterHeight(elem)
-                };
-
-                if (hidden) {
-                    css(elem, {left: left});
-                    elem.style.display = "none";
-                }
-
-                return size;
-            },
-
-            getTargetSize: function() {
-
-                var target  = self.getTarget();
-
-                if (!target) {
-                    return null;
-                }
-
-                return {
-                    width:      getOuterWidth(target),
-                    height:     getOuterHeight(target)
-                };
-            },
-
-
-            getTargetPosition: function(e, type) {
-
-                var target  = self.getTarget();
-
-                if (!target) {
-                    return null;
-                }
-
-                var pBase   = self.getPositionBase(),
-                    size    = self.getDialogSize(),
-                    offset  = pBase ? getPosition(target, pBase) : getOffset(target),
-                    tsize   = self.getTargetSize(),
-                    pos     = {},
-                    type    = type || state.positionType,
-                    pri     = type.substr(0, 1),
-                    sec     = type.substr(1),
-                    offsetX = cfg.position.offsetX,
-                    offsetY = cfg.position.offsetY,
-                    pntOfs  = pnt ? pnt.getDialogPositionOffset() : null;
-
-                switch (pri) {
-                    case "t": {
-                        pos.y   = offset.top - size.height - offsetY;
-                        break;
-                    }
-                    case "r": {
-                        pos.x   = offset.left + tsize.width + offsetX;
-                        break;
-                    }
-                    case "b": {
-                        pos.y   = offset.top + tsize.height + offsetY;
-                        break;
-                    }
-                    case "l": {
-                        pos.x   = offset.left - size.width - offsetX;
-                        break;
-                    }
-                }
-
-                switch (sec) {
-                    case "t": {
-                        pos.y   = offset.top + offsetY;
-                        break;
-                    }
-                    case "r": {
-                        pos.x   = offset.left + tsize.width - size.width - offsetX;
-                        break;
-                    }
-                    case "b": {
-                        pos.y   = offset.top + tsize.height - size.height - offsetY;
-                        break;
-                    }
-                    case "l": {
-                        pos.x   = offset.left + offsetX;
-                        break;
-                    }
-                    case "rc": {
-                        pos.x   = offset.left + tsize.width + offsetX;
-                        break;
-                    }
-                    case "lc": {
-                        pos.x   = offset.left - size.width - offsetX;
-                        break;
-                    }
-                    case "": {
-                        switch (pri) {
-                            case "t":
-                            case "b": {
-                                pos.x   = offset.left + (tsize.width / 2) - (size.width / 2);
-                                break;
-                            }
-                            case "r":
-                            case "l": {
-                                pos.y   = offset.top + (tsize.height / 2) - (size.height / 2);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
-
-                if (pntOfs) {
-                    pos.x += pntOfs.x;
-                    pos.y += pntOfs.y;
-                }
-
-                return pos;
-            },
-
-            getMousePosition: function(e) {
-
-                if (!e) {
-                    return null;
-                }
-
-                var size    = self.getDialogSize(),
-                    pos     = {},
-                    type    = state.positionType.substr(1),
-                    offsetX = cfg.position.offsetX,
-                    offsetY = cfg.position.offsetY,
-                    axis    = cfg.position.axis,
-                    pntOfs  = pnt ? pnt.getDialogPositionOffset() : null;
-
-                switch (type) {
-                    case "": {
-                        pos     = state.positionFn.call(defaultScope, api, e);
-                        break;
-                    }
-                    case "t": {
-                        pos.y   = e.pageY - size.height - offsetY;
-                        pos.x   = e.pageX - (size.width / 2);
-                        break;
-                    }
-                    case "r": {
-                        pos.y   = e.pageY - (size.height / 2);
-                        pos.x   = e.pageX + offsetX;
-                        break;
-                    }
-                    case "b": {
-                        pos.y   = e.pageY + offsetY;
-                        pos.x   = e.pageX - (size.width / 2);
-                        break;
-                    }
-                    case "l": {
-                        pos.y   = e.pageY - (size.height / 2);
-                        pos.x   = e.pageX - size.width - offsetX;
-                        break;
-                    }
-                    case "rt": {
-                        pos.y   = e.pageY - size.height - offsetY;
-                        pos.x   = e.pageX + offsetX;
-                        break;
-                    }
-                    case "rb": {
-                        pos.y   = e.pageY + offsetY;
-                        pos.x   = e.pageX + offsetX;
-                        break;
-                    }
-                    case "lt": {
-                        pos.y   = e.pageY - size.height - offsetY;
-                        pos.x   = e.pageX - size.width - offsetX;
-                        break;
-                    }
-                    case "lb": {
-                        pos.y   = e.pageY + offsetY;
-                        pos.x   = e.pageX - size.width - offsetX;
-                        break;
-                    }
-                }
-
-                if (pntOfs) {
-                    pos.x += pntOfs.x;
-                    pos.y += pntOfs.y;
-                }
-
-                if (axis) {
-                    var tp = self.getTargetPosition(e, type);
-                    if (tp) {
-                        if (axis == "x") {
-                            pos.y = tp.y;
-                        }
-                        else {
-                            pos.x = tp.x;
-                        }
-                    }
-                }
-
-                return pos;
-            },
-
-            getWindowPosition: function() {
-
-                var pBase   = self.getPositionBase() || window,
-                    size    = self.getDialogSize(),
-                    pos     = {},
-                    type    = state.positionType.substr(1),
-                    offsetX = cfg.position.offsetX,
-                    offsetY = cfg.position.offsetY,
-                    st      = getScrollTop(pBase),
-                    sl      = getScrollLeft(pBase),
-                    ww      = getOuterWidth(pBase),
-                    wh      = getOuterHeight(pBase);
-
-                switch (type) {
-                    case "c": {
-                        pos.y   = (wh / 2) - (size.height / 2) + st;
-                        pos.x   = (ww / 2) - (size.width / 2) + sl;
-                        break;
-                    }
-                    case "t": {
-                        pos.y   = st + offsetY;
-                        pos.x   = (ww / 2) - (size.width / 2) + sl;
-                        break;
-                    }
-                    case "r": {
-                        pos.y   = (wh / 2) - (size.height / 2) + st;
-                        pos.x   = ww - size.width + sl - offsetX;
-                        break;
-                    }
-                    case "b": {
-                        pos.y   = wh - size.height + st - offsetY;
-                        pos.x   = (ww / 2) - (size.width / 2) + sl;
-                        break;
-                    }
-                    case "l": {
-                        pos.y   = (wh / 2) - (size.height / 2) + st;
-                        pos.x   = sl + offsetX;
-                        break;
-                    }
-                    case "rt": {
-                        pos.y   = st + offsetY;
-                        pos.x   = ww - size.width + sl - offsetX;
-                        break;
-                    }
-                    case "rb": {
-                        pos.y   = wh - size.height + st - offsetY;
-                        pos.x   = ww - size.width + sl - offsetX;
-                        break;
-                    }
-                    case "lt": {
-                        pos.y   = st + offsetY;
-                        pos.x   = sl + offsetX;
-                        break;
-                    }
-                    case "lb": {
-                        pos.y   = wh - size.height + st - offsetY;
-                        pos.x   = sl + offsetX;
-                        break;
-                    }
-                }
-
-                return pos;
-            },
-
-            correctScreenPosition: function(pos, offsetX, offsetY) {
-
-                var pBase   = self.getPositionBase(),
-                    size    = self.getDialogSize(),
-                    st      = getScrollTop(pBase),
-                    sl      = getScrollLeft(pBase),
-                    ww      = getOuterWidth(pBase),
-                    wh      = getOuterHeight(pBase);
-
-                if (offsetY && pos.y + size.height > wh + st - offsetY) {
-                    pos.y   = wh + st - offsetY - size.height;
-                }
-                if (offsetX && pos.x + size.width > ww + sl - offsetX) {
-                    pos.x   = ww + sl - offsetX - size.width;
-                }
-                if (offsetY && pos.y < st + offsetY) {
-                    pos.y = st + offsetY;
-                }
-                if (offsetX && pos.x < sl + offsetX) {
-                    pos.x = sl + offsetX;
-                }
-
-                return pos;
-            },
-
-
-            onMouseMove: function(e) {
-                self.reposition(normalizeEvent(e));
-            },
-
-            onWindowResize: function(e) {
-                self.reposition(normalizeEvent(e));
-            },
-
-            onWindowScroll: function(e) {
-                self.reposition(normalizeEvent(e));
-            },
-
-            onPreventScroll: function(e) {
-                normalizeEvent(e).preventDefault();
-                //e.stopPropagation();
-                //return false;
-            },
-
-            onOverlayClick: function(e) {
-                if (cfg.modal) {
-                    e = normalizeEvent(e);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return false;
-                }
-                return null;
-            },
-
-            onButtonClick: function(e) {
-
-                var target  = normalizeEvent(e).target,
+        onButtonKeyup: function(e) {
+            if (e.keyCode == 13 || e.keyCode == 32) {
+                var target  = e.target,
                     btnId   = data(target, "metaphorjsTooltip-button-id");
 
                 if (btnId) {
-                    self.trigger("button", api, btnId, e);
+                    this.trigger("button", this, btnId, normalizeEvent(e));
                 }
-            },
-
-            onButtonKeyup: function(e) {
-                if (e.keyCode == 13 || e.keyCode == 32) {
-                    var target  = e.target,
-                        btnId   = data(target, "metaphorjsTooltip-button-id");
-
-                    if (btnId) {
-                        self.trigger("button", api, btnId, normalizeEvent(e));
-                    }
-                }
-            },
+            }
+        },
 
 
+        /* **** Show **** */
 
-            onAjaxLoad: function(data) {
-                removeClass(elem, cfg.cls.loading);
-                self.setContent(data, 'ajax');
-            },
+        /**
+         * Show dialog
+         * @access public
+         * @param {Event} e Optional. True to skip delay.
+         * @param {bool} immediately Optional
+         */
+        show: function(e, immediately) {
 
-            onImageLoad: function() {
-                state.images--;
-                self.onContentChange();
-            },
+            // if called as an event handler, we do not return api
+            var self        = this,
+                cfg         = self.cfg,
+                returnValue	= null,
+                scfg        = cfg.show,
+                returnMode  = null;
 
-            onContentChange: function() {
-
-                if (state.visible) {
-                    self.reposition();
-                }
-            },
-
-
-            removeElem: function() {
-                if (overlay && overlay.parentNode) {
-                    raf(function(){
-                        if (!state.visible) {
-                            overlay.parentNode.removeChild(overlay);
-                        }
-                    });
-                }
-
-                if (elem && elem.parentNode) {
-                    raf(function(){
-                        if (!state.visible) {
-                            elem.parentNode.removeChild(elem);
-                        }
-                    });
-                }
-            },
-
-            appendElem: function() {
-
-                var body    = window.document.body,
-                    rnd	    = cfg.render,
-                    to      = rnd.appendTo || body;
-
-                if (overlay && to) {
-                    to.appendChild(overlay);
-                }
-
-                if (elem && to) {
-                    to.appendChild(elem);
-                }
-            },
-
-            destroyElem: function() {
-
-                self.setHandlers("unbind", "_self");
-                state.bindSelfOnRender = true;
-
-                if (pnt) {
-                    pnt.remove();
-                }
-
-                if (overlay) {
-                    overlay.parentNode.removeChild(overlay);
-                    overlay = null;
-                }
-
-                if (elem) {
-                    if (!cfg.render.keepInDOM) {
-                        elem.parentNode.removeChild(elem);
-                    }
-                    elem = null;
-                }
-
-                self.trigger("lifetime", api);
+            // if tooltip is disabled, we do not stop propagation and do not return false.s
+            if (!self.isEnabled()) {
+                returnMode = "disabled";
             }
 
 
-        }, true, false);
+            // if tooltip is already shown
+            // and hide timeout was set.
+            // we need to restart timer
+            if (!returnMode && self.visible && self.hideTimeout) {
 
-        delete cfg.callback.scope;
+                window.clearTimeout(self.hideTimeout);
+                self.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
 
-        for (var c in cfg.callback) {
-            api.on(c, cfg.callback[c], defaultScope);
-        }
+                returnMode = "hidetimeout";
+            }
 
-        self.init();
+            // if tooltip was delayed to hide
+            // we cancel it.
+            if (!returnMode && self.hideDelay) {
 
-        return api;
-    };
+                window.clearTimeout(self.hideDelay);
+                self.hideDelay     = null;
+                self.visible       = true;
 
-    /**
-     * @md-end-class
-     */
+                returnMode = "hidedelay";
+            }
 
 
-    extend(dialog, {
+            // various checks: tooltip should be enabled,
+            // should not be already shown, it should
+            // have some content, or empty content is allowed.
+            // also if beforeShow() returns false, we can't proceed
+            // if tooltip was frozen, we do not show or hide
+            if (!returnMode && self.frozen) {
+                returnMode = "frozen";
+            }
+
+            // cancel delayed destroy
+            // so that we don't have to re-render dialog
+            if (self.destroyDelay) {
+                window.clearTimeout(self.destroyDelay);
+                self.destroyDelay = null;
+            }
+
+            var dtChanged   = false;
+
+            // if we have a dynamicTarget
+            if (e && e.stopPropagation && self.dynamicTarget) {
+                dtChanged = self.changeDynamicTarget(e);
+            }
+
+            if (self.visible) {
+                if (!dtChanged) {
+                    returnMode = returnMode || "visible";
+                }
+                else {
+                    self.reposition(e);
+                    returnMode = "reposition";
+                    /*if (!cfg.render.fn) {
+                        self.reposition(e);
+                        returnMode = "reposition";
+                    }
+                    else {
+                        self.hide(null, true);
+                    }*/
+                }
+            }
+
+            if (!returnMode || dtChanged) {
+                // if tooltip is not rendered yet we render it
+                if (!self.node) {
+                    self.render();
+                }
+                else if (dtChanged) {
+                    self.changeDynamicContent();
+                }
+            }
+
+            // if beforeShow callback returns false we stop.
+            if (!returnMode && self.trigger('before-show', self, e) === false) {
+                returnMode = "beforeshow";
+            }
+
+            if (e && e.stopPropagation && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
+                var et = cfg.events.show[e.type] || cfg.events.show["*"];
+
+                if (et.process) {
+                    returnValue	= et.process(self, e, "show", returnMode);
+                }
+                else {
+                    et.stopPropagation && e.stopPropagation();
+                    et.preventDefault && e.preventDefault();
+                    returnValue = et.returnValue;
+                }
+            }
+
+            if (returnMode) {
+                return returnMode;
+            }
+
+            // first, we stop all current animations
+            stopAnimation(self.node);
+
+            // as of this moment we mark dialog as visible so that hide() were able
+            // to work. also, all next steps should check for this state
+            // in case if tooltip case hidden back during the process
+            self.visible = true;
+
+            if (scfg.single) {
+                manager.hideAll(self);
+            }
+
+            self.toggleTitleAttribute(false);
+
+            if (scfg.delay && !immediately) {
+                self.showDelay = async(self.showAfterDelay, self, [e], scfg.delay);
+            }
+            else {
+                self.showAfterDelay(e, immediately);
+            }
+
+            return returnValue;
+        },
+
+
+        showAfterDelay: function(e, immediately) {
+
+            var self = this,
+                cfg = self.cfg;
+
+            self.showDelay = null;
+
+            // if tooltip was already hidden, we can't proceed
+            if (!self.visible) {
+                return;
+            }
+
+            self.trigger('show-after-delay', self, e);
+
+            if (cfg.hide.remove) {
+                self.appendElem();
+            }
+
+            self.reposition(e);
+
+
+
+            if (cfg.show.preventScroll) {
+                var ps = cfg.show.preventScroll,
+                    i, l;
+                if (ps === true) {
+                    ps = "body";
+                }
+                ps = select(ps);
+                for (i = -1, l = ps.length; ++i < l;
+                     addListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
+                     addListener(ps[i], "touchmove", self.onPreventScrollDelegate)
+                ){}
+            }
+
+            self.overlay.show();
+
+            if (cfg.show.animate && !immediately) {
+                self.animate("show").done(function() {
+                    self.showAfterAnimation(e);
+                });
+            }
+            else {
+                raf(function(){
+                    self.showAfterAnimation(e);
+                });
+            }
+        },
+
+        showAfterAnimation: function(e) {
+
+            var self = this,
+                cfg = self.cfg,
+                node = self.node;
+
+            // if tooltip was already hidden, we can't proceed
+            if (!self.visible) {
+                return;
+            }
+
+            // now we can finally show the dialog (if it wasn't shown already
+            // during the animation
+            removeClass(node, cfg.cls.hidden);
+            addClass(node, cfg.cls.visible);
+
+            if (!cfg.render.keepVisible) {
+                node.style.display = cfg.show.display || "block";
+            }
+
+
+            // if it has to be shown only for a limited amount of time,
+            // we set timeout.
+            if (cfg.hide.timeout) {
+                self.hideTimeout = async(self.hide, self, null, cfg.hide.timeout);
+            }
+
+            if (cfg.show.focus) {
+                async(self.setFocus, self, null, 20);
+            }
+
+            self.trigger('show', self, e);
+        },
+
+
+
+
+
+        /* **** Hide **** */
+
 
         /**
-         * Use this object to set default options for
-         * all dialogs.
-         * You can create any number of presets -- objects with options -- and pass its name to the constructor.
-         * @type {object}
-         * @name MetaphorJs.lib.Dialog.defaults
+         * Hide dialog
+         * @access public
+         * @param {Event} e Optional.
+         * @param {bool} immediately Optional. True to skip delay.
+         * @param {bool} cancelShowDelay Optional. If showing already started but was delayed -
+         * cancel that delay.
          */
-        defaults:   {}
+        hide: function(e, immediately, cancelShowDelay) {
+
+            var self            = this,
+                returnValue	    = null,
+                returnMode      = null,
+                cfg             = self.cfg;
+
+            self.hideTimeout    = null;
+
+            // if the timer was set to hide the tooltip
+            // but then we needed to close tooltip immediately
+            if (!self.visible && self.hideDelay && immediately) {
+                window.clearTimeout(self.hideDelay);
+                self.hideDelay     = null;
+                self.visible       = true;
+            }
+
+            // various checks
+            if (!self.node || !self.visible || !self.isEnabled()) {
+                returnMode = !self.node ? "noelem" : (!self.visible ? "hidden" : "disabled");
+            }
+
+            // if tooltip is still waiting to be shown after delay timeout,
+            // we cancel this timeout and return.
+            if (self.showDelay && !returnMode) {
+
+                if (cfg.hide.cancelShowDelay || cancelShowDelay) {
+                    window.clearTimeout(self.showDelay);
+                    self.showDelay     = null;
+                    self.visible       = false;
+
+                    returnMode = "cancel";
+                }
+                else {
+                    returnMode = "delay";
+                }
+            }
+
+            // if tooltip was frozen, we do not show or hide
+            if (self.frozen && !returnMode) {
+                returnMode = "frozen";
+            }
+
+            // lets see what the callback will tell us
+            if (!returnMode && self.trigger('before-hide', self, e) === false) {
+                returnMode = "beforehide";
+            }
+
+
+            if (e && e.stopPropagation && cfg.events.hide && (cfg.events.hide[e.type] || cfg.events.hide["*"])) {
+                var et = cfg.events.hide[e.type] || cfg.events.hide["*"];
+
+                if (et.process) {
+                    returnValue = et.process(self, e, "hide", returnMode);
+                }
+                else {
+                    if (et.stopPropagation) e.stopPropagation();
+                    if (et.preventDefault) e.preventDefault();
+                    returnValue = et.returnValue;
+                }
+            }
+
+            if (returnMode) {
+                return returnValue;
+            }
+
+            // now we can stop all current animations
+            stopAnimation(self.node);
+
+            // and change the state
+            self.visible = false;
+
+            self.toggleTitleAttribute(true);
+
+            if (self.dynamicTarget) {
+                self.resetDynamicTarget();
+            }
+
+            if (cfg.hide.delay && !immediately) {
+                self.hideDelay = async(self.hideAfterDelay, self, [e], cfg.hide.delay);
+            }
+            else {
+                self.hideAfterDelay(e, immediately);
+            }
+
+            return returnValue;
+        },
+
+
+        hideAfterDelay: function(e, immediately) {
+
+            var self = this,
+                cfg = self.cfg;
+
+            self.hideDelay = null;
+
+            if (self.visible) {
+                return;
+            }
+
+            self.trigger('hide-after-delay', self, e);
+
+
+            if (cfg.show.preventScroll) {
+                var ps = cfg.show.preventScroll,
+                    i, l;
+                if (ps === true) {
+                    ps = "body";
+                }
+                ps = select(ps);
+                for (i = -1, l = ps.length; ++i < l;
+                     removeListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
+                     removeListener(ps[i], "touchmove", self.onPreventScrollDelegate)
+                ){}
+            }
+
+            self.overlay.hide();
+
+            if (cfg.hide.animate && !immediately) {
+                self.animate("hide").done(function() {
+                    self.hideAfterAnimation(e);
+                });
+            }
+            else {
+                raf(function(){
+                    self.hideAfterAnimation(e);
+                });
+            }
+        },
+
+        hideAfterAnimation: function(e) {
+
+            var self = this,
+                cfg = self.cfg,
+                node = self.node;
+
+            // we need to check if the tooltip was returned to visible state
+            // while hiding animation
+            if (self.visible) {
+                return;
+            }
+
+            removeClass(node, cfg.cls.visible);
+            addClass(node, cfg.cls.hidden);
+
+            if (!cfg.render.keepVisible) {
+                node.style.display = "none";
+            }
+
+            self.trigger('hide', self, e);
+
+            var lt = cfg.render.lifetime;
+
+            if (lt !== null) {
+                if (lt === 0) {
+                    self.destroyElem();
+                }
+                else {
+                    self.destroyDelay = async(self.destroyElem, self, null, lt);
+                }
+            }
+
+            if (node && cfg.hide.destroy) {
+                raf(function(){
+                    data(node, cfg.instanceName, null);
+                    self.destroy();
+                });
+            }
+
+            if (node && cfg.hide.remove) {
+                raf(function(){
+                    self.removeElem();
+                });
+            }
+        },
+
+
+
+        /* **** Render **** */
+
+
+
+
+        render: function() {
+
+            var self = this,
+                cfg = self.cfg,
+                elem;
+
+            // if already rendered, we return
+            if (self.node) {
+                return;
+            }
+
+            var rnd	    = cfg.render,
+                cls     = cfg.cls;
+
+            // custom rendering function
+            if (rnd.fn) {
+                var res = rnd.fn.call(self.$$callbackContext, self);
+                rnd[isString(res) ? 'tpl' : 'el'] = res;
+            }
+
+            if (rnd.el) {
+                if (isString(rnd.el)) {
+                    elem = select(rnd.el).shift();
+                    rnd.keepInDOM = true;
+                }
+                else {
+                    elem = rnd.el;
+                }
+            }
+            else {
+                var tmp = window.document.createElement("div");
+                tmp.innerHTML = rnd.tpl;
+                elem = tmp.firstChild;
+            }
+
+            if (!elem) {
+                elem = window.document.createElement("div");
+            }
+
+            self.node = elem;
+
+            if (rnd.id) {
+                setAttr(elem, 'id', rnd.id);
+            }
+
+            if (!cfg.render.keepVisible) {
+                elem.style.display = "none";
+            }
+
+            addClass(elem, cls.dialog);
+            addClass(elem, cls.hidden);
+
+            if (rnd.style) {
+                setStyle(elem, rnd.style);
+            }
+
+
+            self.overlay.render();
+
+
+            if (!cfg.hide.remove) {
+                self.appendElem();
+            }
+            else {
+                if (elem.parentNode) {
+                    elem.parentNode.removeChild(elem);
+                }
+            }
+
+            if (rnd.zIndex) {
+                setStyle(elem, {zIndex: rnd.zIndex});
+            }
+
+            var cnt = cfg.content;
+
+            if (cnt.value !== false) {
+                if (cnt.value) {
+                    self.setContent(cnt.value);
+                }
+                else {
+                    if (cnt.fn) {
+                        self.setContent(cnt.fn.call(self.$$callbackContext, self));
+                    }
+                    else {
+                        self[cfg.ajax.url ? 'loadContent' : 'readContent']();
+                    }
+                }
+            }
+
+            self.pointer.render();
+            self.pointer.append();
+
+            if (cfg.buttons) {
+                var btnId, btn;
+                for (btnId in cfg.buttons) {
+                    btn = select(cfg.buttons[btnId], elem).shift();
+                    if (btn) {
+                        data(btn, "metaphorjsTooltip-button-id", btnId);
+                        addListener(btn, "click", self.onButtonClickDelegate);
+                        addListener(btn, "keyup", self.onButtonKeyupDelegate);
+                    }
+                }
+            }
+
+            if (self.bindSelfOnRender) {
+                self.setHandlers('bind', '_self');
+                self.bindSelfOnRender = false;
+            }
+
+            self.rendered = true;
+
+
+            self.trigger('render', self);
+        },
+
+
+
+
+
+
+
+
+        /* **** Position **** */
+
+        setPositionType: function(type) {
+            var self    = this,
+                cls     = self.getPositionClass(type);
+
+            self.cfg.position.type = type;
+
+            if (self.positionClass != cls || !self.position) {
+                if (self.position) {
+                    self.position.$destroy();
+                }
+                self.position = factory(self.getPositionClass(type), self);
+            }
+            else {
+                self.position.type = type;
+            }
+
+            self.reposition();
+        },
+
+        getPosition: function(e) {
+
+            var self = this,
+                cfgPos = self.cfg.position;
+
+            if (!self.position) {
+
+                if (!self.positionGetType && cfgPos.type != "custom") {
+                    if (isFunction(cfgPos.get) && cfgPos.type != "m") {
+                        cfgPos.type = "custom";
+                    }
+                }
+
+                var type    = self.positionGetType ?
+                                self.positionGetType.call(self.$$callbackContext, self, e) :
+                                cfgPos.type,
+                    cls     = self.getPositionClass(type);
+
+
+                cfgPos.type     = type;
+
+                if (cls === false) {
+                    return;
+                }
+
+                if (self.positionClass != cls) {
+                    self.position   = factory(self.getPositionClass(type), self);
+                }
+                else {
+                    self.position.type = type;
+                }
+            }
+
+            return self.position;
+        },
+
+        getPositionClass: function(type) {
+
+            if (!type) {
+                return false;
+            }
+
+            if (isFunction(type) || type == "custom") {
+                return "$dialog.position.Custom";
+            }
+
+            var fc = type.substr(0, 1);
+
+            if (!fc) {
+                return false;
+            }
+            else if (fc == "w") {
+                return "$dialog.position.Window";
+            }
+            else if (fc == "m") {
+                return "$dialog.position.Mouse";
+            }
+            else {
+                return "$dialog.position.Target";
+            }
+        },
+
+
+        /**
+         * Usually called internally from show().
+         * @access public
+         * @param {Event} e Optional.
+         */
+        reposition: function(e) {
+
+            e && (e = normalizeEvent(e));
+
+            var self = this,
+                cfgPos = self.cfg.position;
+
+            if (self.trigger("reposition", self) === false) {
+                return;
+            }
+
+            var pos = self.getPosition(e);
+
+            if (!pos) {
+                return;
+            }
+
+            var coords = pos.getCoords(e);
+
+            if (cfgPos.screenX || cfgPos.screenY) {
+                if (self.trigger("correct-position", self, coords) === false) {
+                    self.positionAttempt++;
+
+                    if (self.positionAttempt < 5) {
+                        self.reposition(e);
+                    }
+                }
+            }
+
+            pos.apply(coords);
+
+            self.positionAttempt = 0;
+
+            if (pos) {
+                setStyle(self.node, pos);
+            }
+        },
+
+
+
+        /* **** Target **** */
+
+        /**
+         * Get dialog's target.
+         * @access public
+         * @return {Element}
+         */
+        getTarget: function() {
+            return this.dynamicTarget ? this.dynamicTargetEl : this.target;
+        },
+
+
+        /**
+         * Set new dialog's target.
+         * @access public
+         * @param newTarget Element {
+             *     @required
+         * }
+         */
+        setTarget: function(newTarget) {
+
+            if (!newTarget) {
+                return;
+            }
+
+            var self    = this,
+                change  = false,
+                prev    = self.target;
+
+            if (self.target) {
+                self.setHandlers('unbind', '_target');
+                change = true;
+            }
+            else if (self.dynamicTarget) {
+                change = true;
+            }
+
+            var isStr = isString(newTarget);
+
+            if (isStr && newTarget.substr(0,1) != "#") {
+                self.dynamicTarget = true;
+                self.target        = null;
+            }
+            else {
+                if (isStr) {
+                    newTarget       = select(newTarget).shift();
+                }
+                self.dynamicTarget = false;
+                self.target        = newTarget;
+            }
+
+            if (change) {
+                self.setHandlers('bind', '_target');
+                self.trigger("targetchange", self, newTarget, prev);
+            }
+        },
+
+
+        resetDynamicTarget: function() {
+            var self = this,
+                curr = self.dynamicTargetEl;
+            if (curr) {
+                self.setHandlers("unbind", "_target");
+                self.trigger("targetchange", self, null, curr);
+            }
+        },
+
+        isDynamicTargetChanged: function(e) {
+
+            var self    = this,
+                cfg     = self.cfg,
+                dt	    = cfg.target,
+                t	    = e.target,
+                curr    = self.dynamicTargetEl;
+
+            while (t && !is(t, dt)) {
+                t   = t.parentNode;
+            }
+
+            if (!t) {
+                return false;
+            }
+
+            return !curr || curr !== t;
+        },
+
+        changeDynamicTarget: function(e) {
+
+            var self    = this,
+                cfg     = self.cfg,
+                dt	    = cfg.target,
+                t	    = e.target,
+                curr    = self.dynamicTargetEl;
+
+            while (t && !is(t, dt)) {
+                t   = t.parentNode;
+            }
+
+            if (!t) {
+                return false;
+            }
+
+            if (!curr || curr !== t) {
+
+                if (curr) {
+                    self.setHandlers("unbind", "_target");
+                }
+
+                self.dynamicTargetEl = t;
+
+                self.setHandlers("bind", "_target");
+                self.trigger("targetchange", self, t, curr);
+                return true;
+            }
+            else {
+                return false;
+            }
+        },
+
+
+
+
+
+
+
+
+
+        /* **** Content **** */
+
+        /**
+         * @access public
+         * @return {Element}
+         */
+        getContentElem: function() {
+            var self = this,
+                node = self.node;
+
+            if (!node) {
+                return null;
+            }
+
+            if (self.cfg.selector.content) {
+                var el = select(self.cfg.selector.content, node).shift();
+                return el || node;
+            }
+            else {
+                return node;
+            }
+        },
+
+
+        /**
+         * Set new content.
+         * @access public
+         * @param {string|object} content {
+             *      See "selector" option
+             *      @required
+         * }
+         * @param {string} mode "", "attribute", "ajax" -- optional (used internally). See
+         * content.prepare option.
+         */
+        setContent: function(content, mode) {
+
+            mode = mode || '';
+
+            var self    = this,
+                node    = self.node,
+                cfg     = self.cfg,
+                pnt     = self.pointer;
+
+            if (!node) {
+                cfg.content.value = content;
+                return self;
+            }
+
+            if (cfg.content.prepare) {
+                content = cfg.content.prepare.call(self.$$callbackContext, self, mode, content);
+            }
+
+            var contentElem = self.getContentElem(),
+                fixPointer  = self.rendered && !cfg.selector.content && pnt,
+                pntEl       = fixPointer && pnt.getElem();
+
+            if (fixPointer && pntEl) {
+                try {
+                    node.removeChild(pntEl);
+                }
+                catch (thrownError) {}
+            }
+
+            if (!isString(content)) {
+                for (var i in content) {
+                    var sel     = cfg.selector[i];
+                    if (sel) {
+                        var cel = select(sel, contentElem).shift();
+                        if (cel) {
+                            cel.innerHTML = content[i];
+                        }
+                    }
+                }
+            }
+            else {
+                contentElem.innerHTML = content;
+            }
+
+            // if there a pointer, and this is not initial content set,
+            // and there is no selector for content
+            // we must restore pointer after dialog's inner html
+            // has been replaced with new content
+            if (fixPointer && pntEl) {
+                try {
+                    node.appendChild(pntEl);
+                }
+                catch (thrownError){}
+            }
+
+            var imgs = select("img", contentElem),
+                l;
+
+            self.images = imgs.length;
+
+            for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoadDelegate)){}
+
+            self.trigger('contentchange', self, content, mode);
+            self.onContentChange();
+        },
+
+        /**
+         * Force dialog to re-read content from attributes.
+         * @access public
+         * @method
+         */
+        readContent: function() {
+
+            var self        = this,
+                cfg         = self.cfg,
+                el 			= self.getTarget(),
+                content;
+
+            if (el) {
+                if (cfg.content.attr) {
+                    content = getAttr(el, cfg.content.attr);
+                }
+                else {
+                    content = getAttr(el, 'tooltip') ||
+                              getAttr(el, 'title') ||
+                              getAttr(el, 'alt');
+                }
+            }
+
+            if (content) {
+                self.setContent(content, 'attribute');
+            }
+        },
+
+        /**
+         * Load content via ajax.
+         * @access public
+         * @param {object} options Merged with cfg.ajax
+         */
+        loadContent: function(options) {
+
+            var self = this,
+                cfg = self.cfg;
+
+            addClass(self.node, cfg.cls.loading);
+            var opt = extend({}, cfg.ajax, options, true, true);
+            self.trigger('beforeajax', self, opt);
+            return ajax(opt).done(self.onAjaxLoad, self);
+        },
+
+        onAjaxLoad: function(data) {
+            var self = this;
+            removeClass(self.node, self.cfg.cls.loading);
+            self.setContent(data, 'ajax');
+        },
+
+        onImageLoad: function() {
+            this.images--;
+            this.onContentChange();
+        },
+
+        onContentChange: function() {
+            if (this.visible) {
+                this.reposition();
+            }
+        },
+
+        changeDynamicContent: function() {
+            var self = this,
+                cfg = self.cfg;
+            if (cfg.content.fn) {
+                self.setContent(cfg.content.fn.call(self.$$callbackContext, self));
+            }
+            else if (cfg.content.attr) {
+                self.readContent();
+            }
+        },
+
+        toggleTitleAttribute: function(state) {
+
+            var self = this,
+                trg = self.getTarget(),
+                title;
+
+            if (trg) {
+                if (state === false) {
+                    data(trg, "tmp-title", getAttr(trg, "title"));
+                    removeAttr(trg, 'title');
+                }
+                else if (title = data(trg, "tmp-title")) {
+                    setAttr(trg, "title", title);
+                }
+            }
+        },
+
+        /* **** Dimension **** */
+
+
+        getDialogSize: function() {
+
+            var self    = this,
+                cfg     = self.cfg,
+                node    = self.node,
+                hidden  = cfg.cls.hidden ? hasClass(node, cfg.cls.hidden) : !isVisible(node),
+                size,
+                left    = node.style.left;
+
+            if (hidden) {
+                setStyle(node, {left: "-1000px"});
+                node.style.display = cfg.show.display;
+            }
+
+            size    = {
+                width:      getOuterWidth(node),
+                height:     getOuterHeight(node)
+            };
+
+            if (hidden) {
+                setStyle(node, {left: left});
+                node.style.display = "none";
+            }
+
+            return size;
+        },
+
+        getTargetSize: function() {
+
+            var self    = this,
+                target  = self.getTarget();
+
+            if (!target) {
+                return null;
+            }
+
+            return {
+                width:      getOuterWidth(target),
+                height:     getOuterHeight(target)
+            };
+        },
+
+
+        /* **** Misc **** */
+
+
+        /**
+         * Set focus based on focus setting.
+         * @access public
+         * @method
+         */
+        setFocus: function() {
+
+            var self    = this,
+                cfg     = self.cfg,
+                af      = cfg.show.focus,
+                node    = self.node,
+                i,
+                input;
+
+            if (af === true) {
+                input   = select("input", node).concat(select("textarea", node));
+                if (input.length > 0) {
+                    input[0].focus();
+                }
+                else if (cfg.buttons) {
+                    for (i in cfg.buttons) {
+                        var btn = select(cfg.buttons[i], node).shift();
+                        btn && btn.focus();
+                        break;
+                    }
+                }
+            }
+            else {
+                var el = select(af, node).shift();
+                el && el.focus();
+            }
+        },
+
+        getScrollEl: function(cfgScroll) {
+            if (cfgScroll === true || cfgScroll === false) {
+                return window;
+            }
+            else if (typeof cfgScroll == "string") {
+                return select(cfgScroll).shift();
+            }
+            else {
+                return cfgScroll;
+            }
+        },
+
+
+        animate: function(section, e) {
+
+            var self = this,
+                cfg = self.cfg,
+                node = self.node,
+                a,
+                skipDisplay;
+
+            a 	= cfg[section].animate;
+
+            if (isFunction(a)) {
+                a   = a(self, e);
+            }
+
+            skipDisplay = a.skipDisplayChange || false;
+
+            if (isBool(a)) {
+                a = section;
+            }
+            else if (isString(a)) {
+                a = [a];
+            }
+
+            return animate(node, a, function(){
+                if (section == "show" && !skipDisplay) {
+
+                    var p = new Promise;
+
+                    raf(function(){
+                        node.style.display = cfg.show.display || "block";
+                        p.resolve();
+                    });
+
+                    return p;
+                }
+            }, false);
+        },
+
+        removeElem: function() {
+
+            var self = this,
+                node = self.node;
+
+            self.overlay.remove();
+
+            if (node && node.parentNode) {
+                raf(function(){
+                    if (!self.visible) {
+                        node.parentNode.removeChild(node);
+                    }
+                });
+            }
+        },
+
+        appendElem: function() {
+
+
+
+            var self    = this,
+                cfg     = self.cfg,
+                body    = window.document.body,
+                rnd	    = cfg.render,
+                to      = rnd.appendTo || body;
+
+            self.overlay.append();
+
+            if (self.node) {
+                to.appendChild(self.node);
+            }
+        },
+
+
+        /* **** Destroy **** */
+
+        destroyElem: function() {
+
+            var self = this,
+                node = self.node;
+
+            self.setHandlers("unbind", "_self");
+            self.bindSelfOnRender = true;
+
+            self.pointer.remove();
+            self.overlay.remove();
+
+            if (node) {
+                if (!self.cfg.render.keepInDOM) {
+                    node.parentNode.removeChild(node);
+                }
+                self.node = null;
+            }
+
+            self.trigger("lifetime", self);
+        },
+
+        /**
+         * Destroy dialog.
+         * @access public
+         * @method
+         */
+        destroy: function() {
+
+            var self = this;
+
+            self.trigger("destroy", self);
+
+            removeListener(window, "resize", self.onWindowResizeDelegate);
+            removeListener(window, "scroll", self.onWindowScrollDelegate);
+
+            self.destroyElem();
+
+            self.overlay.$destroy();
+            self.pointer.$destroy();
+            self.position.$destroy();
+
+            self.setHandlers("unbind");
+        }
+
+    }, {
+        defaults: null
     });
 
-    return dialog;
 
-}();
 
+    return Dialog;
+
+}());
 
 
 
@@ -8318,7 +9895,8 @@ if (window.jQuery) {
             if (!t) {
                 options.target          = el;
                 options.instanceName    = dataName;
-                data(el, dataName, new Dialog(preset, options));
+                options.preset          = preset;
+                data(el, dataName, new MetaphorJs.Dialog(options));
             }
             else if (options == "destroy") {
                 t.destroy();

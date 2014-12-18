@@ -1,5 +1,5 @@
 
-var Dialog = require("../metaphorjs.dialog.js"),
+var Dialog = require("../class/Dialog.js"),
     extend  = require("metaphorjs/src/func/extend.js"),
     Component = require("metaphorjs/src/class/Component.js");
 
