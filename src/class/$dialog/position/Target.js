@@ -10,7 +10,7 @@ defineClass({
     $class: "$dialog.position.Target",
     $extends: "$dialog.position.Abstract",
 
-    getCoords: function(e, type) {
+    getCoords: function(e, type, absolute) {
 
         var self    = this,
             dlg     = self.dialog,
@@ -23,7 +23,7 @@ defineClass({
 
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
-            offset  = pBase ? getPosition(target, pBase) : getOffset(target),
+            offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
             tsize   = dlg.getTargetSize(),
             pos     = {},
             type    = type || self.type,
@@ -31,7 +31,7 @@ defineClass({
             sec     = type.substr(1),
             offsetX = cfg.position.offsetX,
             offsetY = cfg.position.offsetY,
-            pntOfs  = dlg.pointer.getDialogPositionOffset();
+            pntOfs  = dlg.pointer.getDialogPositionOffset(type);
 
 
 
@@ -102,6 +102,18 @@ defineClass({
         }
 
         return pos;
+    },
+
+    getPrimaryPosition: function() {
+        return this.type.substr(0, 1);
+    },
+
+    getSecondaryPosition: function() {
+        return this.type.substr(1);
+    },
+
+    getAllPositions: function() {
+        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb", "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
     }
 
 });

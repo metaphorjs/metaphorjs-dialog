@@ -5544,105 +5544,6 @@ function ucfirst(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
 
-
-
-var getScrollTopOrLeft = function(vertical) {
-
-    var defaultST,
-        wProp = vertical ? "pageYOffset" : "pageXOffset",
-        sProp = vertical ? "scrollTop" : "scrollLeft",
-        doc = window.document,
-        body = doc.body,
-        html = doc.documentElement;
-
-    if(window[wProp] !== undf) {
-        //most browsers except IE before #9
-        defaultST = function(){
-            return window[wProp];
-        };
-    }
-    else{
-        if (html.clientHeight) {
-            defaultST = function() {
-                return html[sProp];
-            };
-        }
-        else {
-            defaultST = function() {
-                return body[sProp];
-            };
-        }
-    }
-
-    return function(node) {
-        if (!node || node === window) {
-            return defaultST();
-        }
-        else if (node && node.nodeType == 1 &&
-            node !== body && node !== html) {
-            return node[sProp];
-        }
-        else {
-            return defaultST();
-        }
-    }
-
-};
-
-
-
-var getScrollTop = getScrollTopOrLeft(true);
-
-
-
-var getScrollLeft = getScrollTopOrLeft(false);
-
-var isAttached = function(){
-    var isAttached = function isAttached(node) {
-
-        if (node === window) {
-            return true;
-        }
-        if (node.nodeType == 3) {
-            if (node.parentElement) {
-                return isAttached(node.parentElement);
-            }
-            else {
-                return true;
-            }
-        }
-
-        var html = window.document.documentElement;
-
-        return node === html ? true : html.contains(node);
-    };
-    return isAttached;
-}();
-
-
-
-function getOffset(node) {
-
-    var box = {top: 0, left: 0},
-        html = window.document.documentElement;
-
-    // Make sure it's not a disconnected DOM node
-    if (!isAttached(node) || node === window) {
-        return box;
-    }
-
-    // Support: BlackBerry 5, iOS 3 (original iPhone)
-    // If we don't have gBCR, just use 0,0 rather than error
-    if (node.getBoundingClientRect ) {
-        box = node.getBoundingClientRect();
-    }
-
-    return {
-        top: box.top + getScrollTop() - html.clientTop,
-        left: box.left + getScrollLeft() - html.clientLeft
-    };
-};
-
 var getStyle = function(node, prop, numeric) {
 
     var style, val;
@@ -5662,80 +5563,6 @@ var getStyle = function(node, prop, numeric) {
 
     return numeric ? parseFloat(val) || 0 : val;
 
-};
-
-
-
-
-function getOffsetParent(node) {
-
-    var html = window.document.documentElement,
-        offsetParent = node.offsetParent || html;
-
-    while (offsetParent && (offsetParent != html &&
-                              getStyle(offsetParent, "position") == "static")) {
-        offsetParent = offsetParent.offsetParent;
-    }
-
-    return offsetParent || html;
-
-};
-
-
-
-function getPosition(node, to) {
-
-    var offsetParent, offset,
-        parentOffset = {top: 0, left: 0},
-        html = window.document.documentElement;
-
-    if (node === window || node === html) {
-        return parentOffset;
-    }
-
-    // Fixed elements are offset from window (parentOffset = {top:0, left: 0},
-    // because it is its only offset parent
-    if (getStyle(node, "position" ) == "fixed") {
-        // Assume getBoundingClientRect is there when computed position is fixed
-        offset = node.getBoundingClientRect();
-    }
-    else if (to) {
-        var thisOffset = getOffset(node),
-            toOffset = getOffset(to),
-            position = {
-                left: thisOffset.left - toOffset.left,
-                top: thisOffset.top - toOffset.top
-            };
-
-        if (position.left < 0) {
-            position.left = 0;
-        }
-        if (position.top < 0) {
-            position.top = 0;
-        }
-        return position;
-    }
-    else {
-        // Get *real* offsetParent
-        offsetParent = getOffsetParent(node);
-
-        // Get correct offsets
-        offset = getOffset(node);
-
-        if (offsetParent !== html) {
-            parentOffset = getOffset(offsetParent);
-        }
-
-        // Add offsetParent borders
-        parentOffset.top += getStyle(offsetParent, "borderTopWidth", true);
-        parentOffset.left += getStyle(offsetParent, "borderLeftWidth", true);
-    }
-
-    // Subtract parent offsets and element margins
-    return {
-        top: offset.top - parentOffset.top - getStyle(node, "marginTop", true),
-        left: offset.left - parentOffset.left - getStyle(node, "marginLeft", true)
-    };
 };
 
 
@@ -6026,11 +5853,65 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
 
 
+var getScrollTopOrLeft = function(vertical) {
+
+    var defaultST,
+        wProp = vertical ? "pageYOffset" : "pageXOffset",
+        sProp = vertical ? "scrollTop" : "scrollLeft",
+        doc = window.document,
+        body = doc.body,
+        html = doc.documentElement;
+
+    if(window[wProp] !== undf) {
+        //most browsers except IE before #9
+        defaultST = function(){
+            return window[wProp];
+        };
+    }
+    else{
+        if (html.clientHeight) {
+            defaultST = function() {
+                return html[sProp];
+            };
+        }
+        else {
+            defaultST = function() {
+                return body[sProp];
+            };
+        }
+    }
+
+    return function(node) {
+        if (!node || node === window) {
+            return defaultST();
+        }
+        else if (node && node.nodeType == 1 &&
+            node !== body && node !== html) {
+            return node[sProp];
+        }
+        else {
+            return defaultST();
+        }
+    }
+
+};
+
+
+
+var getScrollTop = getScrollTopOrLeft(true);
+
+
+
+var getScrollLeft = getScrollTopOrLeft(false);
+
+
+
 defineClass({
 
     $class: "$dialog.position.Abstract",
     dialog: null,
     positionBase: null,
+    correct: "boundary",
 
     $init: function(dialog) {
         var self = this;
@@ -6040,7 +5921,22 @@ defineClass({
         self.onWindowResizeDelegate = bind(self.onWindowResize, self);
         self.onWindowScrollDelegate = bind(self.onWindowScroll, self);
 
-        dialog.on("correct-position", self.onCorrectPosition, self);
+        var pt = self.preferredType || self.type;
+        if (typeof pt == "string") {
+            var pts = self.getAllPositions(),
+                inx;
+            if ((inx = pts.indexOf(pt)) != -1) {
+                pts.splice(inx, 1);
+                pts.unshift(pt);
+            }
+            self.preferredType = pts;
+        }
+        else if (!pt) {
+            self.preferredType = self.getAllPositions();
+        }
+
+        dialog.on("before-reposition", self.onBeforeReposition, self);
+        dialog.on("reposition", self.onReposition, self);
         dialog.on("show-after-delay", self.onShowAfterDelay, self);
         dialog.on("hide-after-delay", self.onHideAfterDelay, self);
 
@@ -6072,16 +5968,124 @@ defineClass({
         return null;
     },
 
+    getBoundary: function() {
+
+        var self    = this,
+            base    = self.getPositionBase(),
+            sx      = self.screenX || 0,
+            sy      = self.screenY || 0;
+
+        if (base) {
+            var ofs = getOffset(base);
+            return {
+                x: ofs.left + sx,
+                y: ofs.top + sy,
+                x1: ofs.left + getOuterWidth(base) - sx,
+                y1: ofs.top + getOuterHeight(base) - sy
+            };
+        }
+        else {
+            return {
+                x: sx,
+                y: sy,
+                x1: getWidth(window) - sx,
+                y1: getHeight(window) - sy
+            };
+        }
+    },
+
+    onBeforeReposition: function(dlg, e) {
+        var self = this;
+
+        if (self.screenX !== false || self.screenY !== false) {
+            self.correctType(e);
+        }
+    },
+
+    getPrimaryPosition: function() {
+        return false;
+    },
+    getSecondaryPosition: function() {
+        return false;
+    },
+
+    getAllPositions: function() {
+        return [];
+    },
+
+    correctType: function(e) {
+
+        var self        = this,
+            pri         = self.getPrimaryPosition(),
+            strategy    = self.correct;
+
+        if (!pri || !strategy) {
+            return;
+        }
+
+        var dlg         = self.dialog,
+            boundary    = self.getBoundary(),
+            size        = dlg.getDialogSize(),
+            i, l;
+
+        if (self.preferredType[0] != self.type &&
+            self.checkIfFits(e, self.preferredType[0], boundary, size)) {
+            self.changeType(self.preferredType[0]);
+            return;
+        }
+
+        for (i = 0, l = self.preferredType.length; i < l; i++) {
+            if (self.checkIfFits(e, self.preferredType[i], boundary, size)) {
+                self.changeType(self.preferredType[i]);
+                break;
+            }
+        }
+    },
+
+    checkIfFits: function(e, position, boundary, size) {
+
+        var self    = this,
+            coords  = self.getCoords(e, position, true);
+
+        return !(coords.x < boundary.x ||
+                    coords.y < boundary.y ||
+                    coords.x + size.width > boundary.x1 ||
+                    coords.y + size.height > boundary.y1);
+    },
+
+    changeType: function(type) {
+        var self = this,
+            dlg = self.dialog,
+            pointer = dlg.getPointer();
+
+        self.type = type;
+        pointer.setType(null, null);
+    },
+
+    onReposition: function(dlg, e) {
+
+        var self    = this,
+            coords  = self.getCoords(e);
+
+        if (self.screenX !== false || self.screenY !== false) {
+            self.correctPosition(coords, e);
+        }
+
+        self.apply(coords);
+    },
 
 
-    onCorrectPosition: function(dlg, pos) {
+    correctPosition: function(pos, e) {
 
-        /*var pBase   = self.getPositionBase(),
-            size    = self.getDialogSize(),
+        /*var self    = this,
+            pBase   = self.getPositionBase() || window,
+            size    = dlg.getDialogSize(),
             st      = getScrollTop(pBase),
             sl      = getScrollLeft(pBase),
             ww      = getOuterWidth(pBase),
-            wh      = getOuterHeight(pBase);
+            wh      = getOuterHeight(pBase),
+            offsetY = self.screenY,
+            offsetX = self.screenX;
 
         if (offsetY && pos.y + size.height > wh + st - offsetY) {
             pos.y   = wh + st - offsetY - size.height;
@@ -6094,9 +6098,7 @@ defineClass({
         }
         if (offsetX && pos.x < sl + offsetX) {
             pos.x = sl + offsetX;
-        }
-
-        return pos;*/
+        }*/
     },
 
     getCoords: function(e){
@@ -6112,9 +6114,7 @@ defineClass({
             return;
         }
 
-        var dlg = this.dialog;
-
-        setStyle(dlg.getElem(), {
+        setStyle(this.dialog.getElem(), {
             left: coords.x + "px",
             top: coords.y + "px"
         });
@@ -6155,8 +6155,13 @@ defineClass({
 
     destroy: function() {
 
-        var self = this;
-        self.dialog.un("correct-position", self.onCorrectPosition, self);
+        var self = this,
+            dlg = self.dialog;
+
+        dlg.un("before-reposition", self.onBeforeReposition, self);
+        dlg.un("reposition", self.onReposition, self);
+        dlg.un("show-after-delay", self.onShowAfterDelay, self);
+        dlg.un("hide-after-delay", self.onHideAfterDelay, self);
 
         if (self.dialog.isVisible()) {
             self.onHideAfterDelay();
@@ -6172,13 +6177,133 @@ defineClass({
 
 
 
+function getOffsetParent(node) {
+
+    var html = window.document.documentElement,
+        offsetParent = node.offsetParent || html;
+
+    while (offsetParent && (offsetParent != html &&
+                              getStyle(offsetParent, "position") == "static")) {
+        offsetParent = offsetParent.offsetParent;
+    }
+
+    return offsetParent || html;
+
+};
+
+var isAttached = function(){
+    var isAttached = function isAttached(node) {
+
+        if (node === window) {
+            return true;
+        }
+        if (node.nodeType == 3) {
+            if (node.parentElement) {
+                return isAttached(node.parentElement);
+            }
+            else {
+                return true;
+            }
+        }
+
+        var html = window.document.documentElement;
+
+        return node === html ? true : html.contains(node);
+    };
+    return isAttached;
+}();
+
+
+
+function getOffset(node) {
+
+    var box = {top: 0, left: 0},
+        html = window.document.documentElement;
+
+    // Make sure it's not a disconnected DOM node
+    if (!isAttached(node) || node === window) {
+        return box;
+    }
+
+    // Support: BlackBerry 5, iOS 3 (original iPhone)
+    // If we don't have gBCR, just use 0,0 rather than error
+    if (node.getBoundingClientRect ) {
+        box = node.getBoundingClientRect();
+    }
+
+    return {
+        top: box.top + getScrollTop() - html.clientTop,
+        left: box.left + getScrollLeft() - html.clientLeft
+    };
+};
+
+
+
+function getPosition(node, to) {
+
+    var offsetParent, offset,
+        parentOffset = {top: 0, left: 0},
+        html = window.document.documentElement;
+
+    if (node === window || node === html) {
+        return parentOffset;
+    }
+
+    // Fixed elements are offset from window (parentOffset = {top:0, left: 0},
+    // because it is its only offset parent
+    if (getStyle(node, "position" ) == "fixed") {
+        // Assume getBoundingClientRect is there when computed position is fixed
+        offset = node.getBoundingClientRect();
+    }
+    else if (to) {
+        var thisOffset = getOffset(node),
+            toOffset = getOffset(to),
+            position = {
+                left: thisOffset.left - toOffset.left,
+                top: thisOffset.top - toOffset.top
+            };
+
+        if (position.left < 0) {
+            position.left = 0;
+        }
+        if (position.top < 0) {
+            position.top = 0;
+        }
+        return position;
+    }
+    else {
+        // Get *real* offsetParent
+        offsetParent = getOffsetParent(node);
+
+        // Get correct offsets
+        offset = getOffset(node);
+
+        if (offsetParent !== html) {
+            parentOffset = getOffset(offsetParent);
+        }
+
+        // Add offsetParent borders
+        parentOffset.top += getStyle(offsetParent, "borderTopWidth", true);
+        parentOffset.left += getStyle(offsetParent, "borderLeftWidth", true);
+    }
+
+    // Subtract parent offsets and element margins
+    return {
+        top: offset.top - parentOffset.top - getStyle(node, "marginTop", true),
+        left: offset.left - parentOffset.left - getStyle(node, "marginLeft", true)
+    };
+};
+
+
+
+
 
 defineClass({
 
     $class: "$dialog.position.Target",
     $extends: "$dialog.position.Abstract",
 
-    getCoords: function(e, type) {
+    getCoords: function(e, type, absolute) {
 
         var self    = this,
             dlg     = self.dialog,
@@ -6191,7 +6316,7 @@ defineClass({
 
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
-            offset  = pBase ? getPosition(target, pBase) : getOffset(target),
+            offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
             tsize   = dlg.getTargetSize(),
             pos     = {},
             type    = type || self.type,
@@ -6199,7 +6324,7 @@ defineClass({
             sec     = type.substr(1),
             offsetX = cfg.position.offsetX,
             offsetY = cfg.position.offsetY,
-            pntOfs  = dlg.pointer.getDialogPositionOffset();
+            pntOfs  = dlg.pointer.getDialogPositionOffset(type);
 
 
 
@@ -6270,6 +6395,18 @@ defineClass({
         }
 
         return pos;
+    },
+
+    getPrimaryPosition: function() {
+        return this.type.substr(0, 1);
+    },
+
+    getSecondaryPosition: function() {
+        return this.type.substr(1);
+    },
+
+    getAllPositions: function() {
+        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb", "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
     }
 
 });
@@ -6295,7 +6432,7 @@ defineClass({
         self.$super(dialog);
     },
 
-    getCoords: function(e) {
+    getCoords: function(e, type, absolute) {
 
         if (!e) {
             return null;
@@ -6305,69 +6442,77 @@ defineClass({
             dlg     = self.dialog,
             cfg     = dlg.getCfg(),
             size    = dlg.getDialogSize(),
+            base    = self.getPositionBase(),
             pos     = {},
-            type    = self.type.substr(1),
+            type    = (type || self.type).substr(1),
             offsetX = cfg.position.offsetX,
             offsetY = cfg.position.offsetY,
-            axis    = cfg.position.axis;/*,
-            pntOfs  = pnt ? pnt.getDialogPositionOffset() : null;*/
+            axis    = cfg.position.axis,
+            pntOfs  = dlg.getPointer().getDialogPositionOffset(type),
+            absOfs  = {x: 0, y: 0};
+
+        if (!absolute && base) {
+            var baseOfs = getOffset(base);
+            absOfs.x = baseOfs.left;
+            absOfs.y = baseOfs.top;
+        }
 
         switch (type) {
             case "": {
-                pos     = self.get.call(dlg.$$callbackContext, dlg, e);
+                pos     = self.get.call(dlg.$$callbackContext, dlg, e, type, absolute);
                 break;
             }
             case "c": {
-                pos.y   = e.pageY - (size.height / 2);
-                pos.x   = e.pageX - (size.width / 2);
+                pos.y   = e.pageY - absOfs.y - (size.height / 2);
+                pos.x   = e.pageX - absOfs.x - (size.width / 2);
                 break;
             }
             case "t": {
-                pos.y   = e.pageY - size.height - offsetY;
-                pos.x   = e.pageX - (size.width / 2);
+                pos.y   = e.pageY - absOfs.y - size.height - offsetY;
+                pos.x   = e.pageX - absOfs.x - (size.width / 2);
                 break;
             }
             case "r": {
-                pos.y   = e.pageY - (size.height / 2);
-                pos.x   = e.pageX + offsetX;
+                pos.y   = e.pageY - absOfs.y - (size.height / 2);
+                pos.x   = e.pageX - absOfs.x + offsetX;
                 break;
             }
             case "b": {
-                pos.y   = e.pageY + offsetY;
-                pos.x   = e.pageX - (size.width / 2);
+                pos.y   = e.pageY - absOfs.y + offsetY;
+                pos.x   = e.pageX - absOfs.x - (size.width / 2);
                 break;
             }
             case "l": {
-                pos.y   = e.pageY - (size.height / 2);
-                pos.x   = e.pageX - size.width - offsetX;
+                pos.y   = e.pageY - absOfs.y - (size.height / 2);
+                pos.x   = e.pageX - absOfs.x - size.width - offsetX;
                 break;
             }
             case "rt": {
-                pos.y   = e.pageY - size.height - offsetY;
-                pos.x   = e.pageX + offsetX;
+                pos.y   = e.pageY - absOfs.y - size.height - offsetY;
+                pos.x   = e.pageX - absOfs.x + offsetX;
                 break;
             }
             case "rb": {
-                pos.y   = e.pageY + offsetY;
-                pos.x   = e.pageX + offsetX;
+                pos.y   = e.pageY - absOfs.y + offsetY;
+                pos.x   = e.pageX - absOfs.x + offsetX;
                 break;
             }
             case "lt": {
-                pos.y   = e.pageY - size.height - offsetY;
-                pos.x   = e.pageX - size.width - offsetX;
+                pos.y   = e.pageY - absOfs.y - size.height - offsetY;
+                pos.x   = e.pageX - absOfs.x - size.width - offsetX;
                 break;
             }
             case "lb": {
-                pos.y   = e.pageY + offsetY;
-                pos.x   = e.pageX - size.width - offsetX;
+                pos.y   = e.pageY - absOfs.y + offsetY;
+                pos.x   = e.pageX - absOfs.x - size.width - offsetX;
                 break;
             }
         }
 
-        /*if (pntOfs) {
+        if (pntOfs) {
             pos.x += pntOfs.x;
             pos.y += pntOfs.y;
-        }*/
+        }
 
         if (axis) {
             var tp = self.$super(e, type);
@@ -6398,6 +6543,18 @@ defineClass({
 
     onMouseMove: function(e) {
         this.dialog.reposition(normalizeEvent(e));
+    },
+
+    getPrimaryPosition: function() {
+        return this.type.substr(1, 1);
+    },
+
+    getSecondaryPosition: function() {
+        return this.type.substr(2);
+    },
+
+    getAllPositions: function() {
+        return ["mt", "mr", "mb", "ml", "mrt", "mrb", "mlb", "mlt"];
     }
 });
 
@@ -6476,7 +6633,19 @@ defineClass({
         }
 
         return pos;
-    }
+    },
+
+    getPrimaryPosition: function() {
+        return this.type.substr(1, 1);
+    },
+
+    getSecondaryPosition: function() {
+        return this.type.substr(2);
+    },
+
+    // window positioning doesn't need correction
+    correctType: function() {},
+    correctPosition: function() {}
 });
 
 
@@ -6557,10 +6726,10 @@ defineClass({
         return this.enabled ? this.size : 0;
     },
 
-    getDialogPositionOffset: function() {
+    getDialogPositionOffset: function(position) {
         var self    = this,
-            pp      = (self.detectPointerPosition() || "").substr(0,1),
-            dp      = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1),
+            pp      = (self.detectPointerPosition(position) || "").substr(0,1),
+            dp      = self.dialog.getPosition().getPrimaryPosition(),
             ofs     = {x: 0, y: 0};
 
         if (!self.enabled) {
@@ -6575,23 +6744,40 @@ defineClass({
         return ofs;
     },
 
-    detectPointerPosition: function() {
+    detectPointerPosition: function(dialogPosition) {
 
-        var self = this;
+        var self = this,
+            pri, sec;
 
-        if (self.position) {
+        if (self.position && !dialogPosition) {
             if (isFunction(self.position)) {
                 return self.position.call(self.dialog.$$callbackContext, self.dialog, self.origCfg);
             }
             return self.position;
         }
-        var pri = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1);
+
+        if (dialogPosition) {
+            dialogPosition = dialogPosition.replace(/w|c|m/, "");
+            pri = dialogPosition.substr(0, 1);
+            sec = dialogPosition.substr(1);
+        }
+        else {
+            pri = self.dialog.getPosition().getPrimaryPosition();
+            sec = self.dialog.getPosition().getSecondaryPosition();
+        }
 
         if (!pri) {
             return null;
         }
 
-        return self.opposite[pri];
+        var position = self.opposite[pri];
+
+        if (sec) {
+            sec = sec.substr(0, 1);
+            position += self.opposite[sec];
+        }
+
+        return position;
     },
 
     detectPointerDirection: function(position) {
@@ -6617,9 +6803,18 @@ defineClass({
         }
     },
 
-    render: function() {
 
+
+    setType: function(position, direction) {
+        var self = this;
+        self.position = position;
+        self.direction = direction;
+        self.update();
+        self.reposition();
     },
+
+
+    render: function() {},
 
     destroy: function() {
         var self = this;
@@ -7887,10 +8082,9 @@ var Dialog = (function(){
             type:			't',
 
             /**
-             * Works when type = 'auto'
              * @type {string}
              */
-            preferredType:  't',
+            preferredType:  null,
 
             /**
              * Add this offset to dialog's x position
@@ -8220,10 +8414,6 @@ var Dialog = (function(){
 
         images:             0,
 
-        /*position:           null,
-        positionBase:       null,
-        positionType:       null,
-        positionFn:         null,*/
         positionGetType:    null,
         positionClass:      null,
         positionAttempt:    0,
@@ -8281,9 +8471,6 @@ var Dialog = (function(){
             if (!cfg.render.lazy) {
                 self.render();
             }
-
-            self.$$observable.createEvent("reposition", false);
-            self.$$observable.createEvent("correct-reposition", false);
 
             self.trigger("init", self);
             self.setHandlers("bind");
@@ -8665,13 +8852,6 @@ var Dialog = (function(){
                 else {
                     self.reposition(e);
                     returnMode = "reposition";
-                    /*if (!cfg.render.fn) {
-                        self.reposition(e);
-                        returnMode = "reposition";
-                    }
-                    else {
-                        self.hide(null, true);
-                    }*/
                 }
             }
 
@@ -8751,7 +8931,6 @@ var Dialog = (function(){
             }
 
             self.reposition(e);
-
 
 
             if (cfg.show.preventScroll) {
@@ -9225,41 +9404,23 @@ var Dialog = (function(){
          * @param {Event} e Optional.
          */
         reposition: function(e) {
+            var self = this;
+
+            if (self.repositioning) {
+                return;
+            }
+
+            self.repositioning = true;
 
             e && (e = normalizeEvent(e));
 
-            var self = this,
-                cfgPos = self.cfg.position;
 
-            if (self.trigger("reposition", self) === false) {
-                return;
-            }
+            self.getPosition(e);
+            self.trigger("before-reposition", self, e);
+            self.getPosition(e);
+            self.trigger("reposition", self, e);
 
-            var pos = self.getPosition(e);
-
-            if (!pos) {
-                return;
-            }
-
-            var coords = pos.getCoords(e);
-
-            if (cfgPos.screenX || cfgPos.screenY) {
-                if (self.trigger("correct-position", self, coords) === false) {
-                    self.positionAttempt++;
-
-                    if (self.positionAttempt < 5) {
-                        self.reposition(e);
-                    }
-                }
-            }
-
-            pos.apply(coords);
-
-            self.positionAttempt = 0;
-
-            if (pos) {
-                setStyle(self.node, pos);
-            }
+            self.repositioning = false;
         },
 
 

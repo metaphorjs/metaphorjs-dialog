@@ -33,10 +33,6 @@ var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
     isBool          = require("metaphorjs/src/func/isBool.js"),
 
     ucfirst         = require("metaphorjs/src/func/ucfirst.js"),
-    getScrollTop    = require("metaphorjs/src/func/dom/getScrollTop.js"),
-    getScrollLeft   = require("metaphorjs/src/func/dom/getScrollLeft.js"),
-    getOffset       = require("metaphorjs/src/func/dom/getOffset.js"),
-    getPosition     = require("metaphorjs/src/func/dom/getPosition.js"),
     getOuterWidth   = require("metaphorjs/src/func/dom/getOuterWidth.js"),
     getOuterHeight  = require("metaphorjs/src/func/dom/getOuterHeight.js"),
 
@@ -717,10 +713,9 @@ module.exports = (function(){
             type:			't',
 
             /**
-             * Works when type = 'auto'
              * @type {string}
              */
-            preferredType:  't',
+            preferredType:  null,
 
             /**
              * Add this offset to dialog's x position
@@ -1050,10 +1045,6 @@ module.exports = (function(){
 
         images:             0,
 
-        /*position:           null,
-        positionBase:       null,
-        positionType:       null,
-        positionFn:         null,*/
         positionGetType:    null,
         positionClass:      null,
         positionAttempt:    0,
@@ -1111,9 +1102,6 @@ module.exports = (function(){
             if (!cfg.render.lazy) {
                 self.render();
             }
-
-            self.$$observable.createEvent("reposition", false);
-            self.$$observable.createEvent("correct-reposition", false);
 
             self.trigger("init", self);
             self.setHandlers("bind");
@@ -1495,13 +1483,6 @@ module.exports = (function(){
                 else {
                     self.reposition(e);
                     returnMode = "reposition";
-                    /*if (!cfg.render.fn) {
-                        self.reposition(e);
-                        returnMode = "reposition";
-                    }
-                    else {
-                        self.hide(null, true);
-                    }*/
                 }
             }
 
@@ -1581,7 +1562,6 @@ module.exports = (function(){
             }
 
             self.reposition(e);
-
 
 
             if (cfg.show.preventScroll) {
@@ -2055,41 +2035,23 @@ module.exports = (function(){
          * @param {Event} e Optional.
          */
         reposition: function(e) {
+            var self = this;
+
+            if (self.repositioning) {
+                return;
+            }
+
+            self.repositioning = true;
 
             e && (e = normalizeEvent(e));
 
-            var self = this,
-                cfgPos = self.cfg.position;
 
-            if (self.trigger("reposition", self) === false) {
-                return;
-            }
+            self.getPosition(e);
+            self.trigger("before-reposition", self, e);
+            self.getPosition(e);
+            self.trigger("reposition", self, e);
 
-            var pos = self.getPosition(e);
-
-            if (!pos) {
-                return;
-            }
-
-            var coords = pos.getCoords(e);
-
-            if (cfgPos.screenX || cfgPos.screenY) {
-                if (self.trigger("correct-position", self, coords) === false) {
-                    self.positionAttempt++;
-
-                    if (self.positionAttempt < 5) {
-                        self.reposition(e);
-                    }
-                }
-            }
-
-            pos.apply(coords);
-
-            self.positionAttempt = 0;
-
-            if (pos) {
-                setStyle(self.node, pos);
-            }
+            self.repositioning = false;
         },
 
 

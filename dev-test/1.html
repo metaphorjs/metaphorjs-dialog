@@ -7,23 +7,65 @@
 
     <script>
         MetaphorJs.onReady(function(){
-            var d = new MetaphorJs.Dialog({
-                target: document.getElementById("target"),
+
+            var m = new MetaphorJs.Dialog({
+                target: ".mouse-trigger",
                 cls: {
                     dialog: "dialog"
                 },
-                content: false,
-                position: "wt",
-                modal: true,
-                overlay: {
-                    enabled: true,
-                    opacity:.2
+                content: "There is only one dialog and it is jumping between targets",
+                render: {
+                    appendTo: document.getElementById("boundary")
                 },
-                show: "click",
+                show: {
+                    events: {
+                        _html: {"click": ".mouse-trigger"}
+                    }
+                },
                 hide: {
                     events: {
                         _self: "click"
                     }
+                },
+                position: {
+                    type: "mt",
+                    base: document.getElementById("boundary"),
+                    screenX: 5,
+                    screenY: 5
+                },
+                pointer: {
+                    size: 10,
+                    color: "#444",
+                    position: "b",
+                    direction: "b"
+                }
+            });
+
+            var d = new MetaphorJs.Dialog({
+                target: ".trigger",
+                cls: {
+                    dialog: "dialog"
+                },
+                content: "There is only one dialog and it is jumping between targets",
+                render: {
+                    appendTo: document.getElementById("boundary")
+                },
+                show: {
+                    events: {
+                        _html: {"click": ".trigger"}
+                    }
+                },
+                hide: {
+                    events: {
+                        _self: "click"
+                    }
+                },
+                position: {
+                    type: "t",
+                    base: document.getElementById("boundary"),
+                    screenX: 5,
+                    screenY: 5,
+                    preferredType: ["t", "r", "b", "l", "tlc", "trc", "brc", "blc"]
                 },
                 pointer: {
                     size: 10,
@@ -38,18 +80,105 @@
     </script>
 
     <style>
+
+        #boundary {
+            width: 500px;
+            height: 500px;
+            border: 2px dashed #ccc;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+            overflow: hidden;
+        }
+
         .dialog {
             width: 100px;
             height: 100px;
             background-color: #444;
             position: absolute;
+            color: #fff;
+        }
+
+        .trigger {
+            position: absolute;
+        }
+
+        .trigger-1, .trigger-3 {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .trigger-2, .trigger-4 {
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .trigger-1 {
+            top: 10px;
+        }
+
+        .trigger-2 {
+            right: 10px;
+        }
+
+        .trigger-3 {
+            bottom: 10px;
+        }
+
+        .trigger-4 {
+            left: 10px;
+        }
+
+        .trigger-5 {
+            top: 50%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-50%);
+        }
+
+        .trigger-6 {
+            top: 10px;
+            left: 10px;
+        }
+
+        .trigger-7 {
+            right: 10px;
+            top: 10px;
+        }
+
+        .trigger-8 {
+            bottom: 10px;
+            right: 10px;
+        }
+
+        .trigger-9 {
+            left: 10px;
+            bottom: 10px;
+        }
+
+        .mouse-trigger {
+            position: absolute;
+            left: 10px;
+            top: 25%;
         }
     </style>
 </head>
 <body>
 
-<a id="target" href="#">Click me</a>
+    <div id="boundary">
 
+        <a href="#" class="mouse-trigger">mouse trigger</a>
+
+        <a href="#" class="trigger trigger-1">trigger</a>
+        <a href="#" class="trigger trigger-2">trigger</a>
+        <a href="#" class="trigger trigger-3">trigger</a>
+        <a href="#" class="trigger trigger-4">trigger</a>
+        <a href="#" class="trigger trigger-5">trigger</a>
+        <a href="#" class="trigger trigger-6">trigger</a>
+        <a href="#" class="trigger trigger-7">trigger</a>
+        <a href="#" class="trigger trigger-8">trigger</a>
+        <a href="#" class="trigger trigger-9">trigger</a>
+    </div>
 
 </body>
 </html>

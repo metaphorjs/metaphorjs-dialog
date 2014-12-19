@@ -58,10 +58,10 @@ module.exports = defineClass({
         return this.enabled ? this.size : 0;
     },
 
-    getDialogPositionOffset: function() {
+    getDialogPositionOffset: function(position) {
         var self    = this,
-            pp      = (self.detectPointerPosition() || "").substr(0,1),
-            dp      = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1),
+            pp      = (self.detectPointerPosition(position) || "").substr(0,1),
+            dp      = self.dialog.getPosition().getPrimaryPosition(),
             ofs     = {x: 0, y: 0};
 
         if (!self.enabled) {
@@ -76,23 +76,40 @@ module.exports = defineClass({
         return ofs;
     },
 
-    detectPointerPosition: function() {
+    detectPointerPosition: function(dialogPosition) {
 
-        var self = this;
+        var self = this,
+            pri, sec;
 
-        if (self.position) {
+        if (self.position && !dialogPosition) {
             if (isFunction(self.position)) {
                 return self.position.call(self.dialog.$$callbackContext, self.dialog, self.origCfg);
             }
             return self.position;
         }
-        var pri = (self.dialog.getCfg().position.type || "").replace(/(w|m|c)/, "").substr(0,1);
+
+        if (dialogPosition) {
+            dialogPosition = dialogPosition.replace(/w|c|m/, "");
+            pri = dialogPosition.substr(0, 1);
+            sec = dialogPosition.substr(1);
+        }
+        else {
+            pri = self.dialog.getPosition().getPrimaryPosition();
+            sec = self.dialog.getPosition().getSecondaryPosition();
+        }
 
         if (!pri) {
             return null;
         }
 
-        return self.opposite[pri];
+        var position = self.opposite[pri];
+
+        if (sec) {
+            sec = sec.substr(0, 1);
+            position += self.opposite[sec];
+        }
+
+        return position;
     },
 
     detectPointerDirection: function(position) {
@@ -118,9 +135,18 @@ module.exports = defineClass({
         }
     },
 
-    render: function() {
 
+
+    setType: function(position, direction) {
+        var self = this;
+        self.position = position;
+        self.direction = direction;
+        self.update();
+        self.reposition();
     },
+
+
+    render: function() {},
 
     destroy: function() {
         var self = this;

@@ -72,6 +72,18 @@ defineClass({
         }
 
         return pos;
-    }
+    },
+
+    getPrimaryPosition: function() {
+        return this.type.substr(1, 1);
+    },
+
+    getSecondaryPosition: function() {
+        return this.type.substr(2);
+    },
+
+    // window positioning doesn't need correction
+    correctType: function() {},
+    correctPosition: function() {}
 });
 
