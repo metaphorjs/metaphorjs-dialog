@@ -104,12 +104,12 @@ defineClass({
         return pos;
     },
 
-    getPrimaryPosition: function() {
-        return this.type.substr(0, 1);
+    getPrimaryPosition: function(pos) {
+        return (pos || this.type).substr(0, 1);
     },
 
-    getSecondaryPosition: function() {
-        return this.type.substr(1);
+    getSecondaryPosition: function(pos) {
+        return (pos || this.type).substr(1);
     },
 
     getAllPositions: function() {

@@ -16,7 +16,7 @@ defineClass({
     $class: "$dialog.position.Abstract",
     dialog: null,
     positionBase: null,
-    correct: "boundary",
+    correct: "solid",
 
     $init: function(dialog) {
         var self = this;
@@ -40,7 +40,6 @@ defineClass({
             self.preferredType = self.getAllPositions();
         }
 
-        dialog.on("before-reposition", self.onBeforeReposition, self);
         dialog.on("reposition", self.onReposition, self);
         dialog.on("show-after-delay", self.onShowAfterDelay, self);
         dialog.on("hide-after-delay", self.onHideAfterDelay, self);
@@ -78,39 +77,42 @@ defineClass({
         var self    = this,
             base    = self.getPositionBase(),
             sx      = self.screenX || 0,
-            sy      = self.screenY || 0;
+            sy      = self.screenY || 0,
+            w, h,
+            ofs;
 
         if (base) {
-            var ofs = getOffset(base);
+            ofs = getOffset(base);
+            w = getOuterWidth(base);
+            h = getOuterHeight(base);
             return {
                 x: ofs.left + sx,
                 y: ofs.top + sy,
-                x1: ofs.left + getOuterWidth(base) - sx,
-                y1: ofs.top + getOuterHeight(base) - sy
+                x1: ofs.left + w - sx,
+                y1: ofs.top + h - sy,
+                w: w,
+                h: h
             };
         }
         else {
+            w = getWidth(window);
+            h = getHeight(window);
             return {
                 x: sx,
                 y: sy,
-                x1: getWidth(window) - sx,
-                y1: getHeight(window) - sy
+                x1: w - sx,
+                y1: h - sy,
+                w: w,
+                h: h
             };
         }
     },
 
-    onBeforeReposition: function(dlg, e) {
-        var self = this;
 
-        if (self.screenX !== false || self.screenY !== false) {
-            self.correctType(e);
-        }
-    },
-
-    getPrimaryPosition: function() {
+    getPrimaryPosition: function(pos) {
         return false;
     },
-    getSecondaryPosition: function() {
+    getSecondaryPosition: function(pos) {
         return false;
     },
 
@@ -118,7 +120,7 @@ defineClass({
         return [];
     },
 
-    correctType: function(e) {
+    correctPosition: function(e) {
 
         var self        = this,
             pri         = self.getPrimaryPosition(),
@@ -131,31 +133,96 @@ defineClass({
         var dlg         = self.dialog,
             boundary    = self.getBoundary(),
             size        = dlg.getDialogSize(),
+            pts         = self.preferredType,
+            pt          = pts[0],
             i, l;
 
-        if (self.preferredType[0] != self.type &&
-            self.checkIfFits(e, self.preferredType[0], boundary, size)) {
-            self.changeType(self.preferredType[0]);
-            return;
-        }
+        if (strategy && strategy != "solid") {
+            if (self.type != pt && self.checkIfFits(e, pt, boundary, size, false)) {
+                self.changeType(pt);
+                return self.fitToBoundary(self.getCoords(e), boundary, size);
+            }
 
-        for (i = 0, l = self.preferredType.length; i < l; i++) {
-            if (self.checkIfFits(e, self.preferredType[i], boundary, size)) {
-                self.changeType(self.preferredType[i]);
-                break;
+            if (self.checkIfFits(e, self.type, boundary, size, false)) {
+                return self.fitToBoundary(self.getCoords(e), boundary, size);
             }
         }
+        if (strategy && strategy != "position-only") {
+            for (i = 0, l = pts.length; i < l; i++) {
+                if (self.checkIfFits(e, pts[i], boundary, size, true)) {
+                    self.changeType(pts[i]);
+                    return self.getCoords(e);
+                }
+            }
+        }
+
+        return self.getCoords(e);
     },
 
-    checkIfFits: function(e, position, boundary, size) {
+    checkIfFits: function(e, position, boundary, size, fully) {
 
         var self    = this,
             coords  = self.getCoords(e, position, true);
 
-        return !(coords.x < boundary.x ||
-                    coords.y < boundary.y ||
-                    coords.x + size.width > boundary.x1 ||
-                    coords.y + size.height > boundary.y1);
+        // leave only basic positions here
+        if (!fully && self.getSecondaryPosition(position)) {
+            return false;
+        }
+
+        if (fully) {
+            return !(coords.x < boundary.x ||
+                     coords.y < boundary.y ||
+                     coords.x + size.width > boundary.x1 ||
+                     coords.y + size.height > boundary.y1);
+        }
+        else {
+            var pri = self.getPrimaryPosition(position);
+            switch (pri) {
+                case "t":
+                    return coords.y >= boundary.y;
+                case "r":
+                    return coords.x + size.width <= boundary.x1;
+                case "b":
+                    return coords.y + size.height <= boundary.y1;
+                case "l":
+                    return coords.x >= boundary.x;
+            }
+        }
+    },
+
+    fitToBoundary: function(coords, boundary, size) {
+
+        var self = this,
+            base = self.getPositionBase(),
+            x = base ? 0 : boundary.x,
+            y = base ? 0 : boundary.y,
+            x1 = base ? boundary.w : boundary.x1,
+            y1 = base ? boundary.h : boundary.y1,
+            xDiff = 0,
+            yDiff = 0,
+            pointer = self.dialog.getPointer();
+
+        if (coords.x < x) {
+            xDiff = coords.x - x;
+            coords.x = x;
+        }
+        if (coords.y < y) {
+            yDiff = coords.y - x;
+            coords.y = y;
+        }
+        if (coords.x + size.width > x1) {
+            xDiff = (coords.x + size.width) - x1;
+            coords.x -= xDiff;
+        }
+        if (coords.y + size.height > y1) {
+            yDiff = (coords.y + size.height) - y1;
+            coords.y -= yDiff;
+        }
+
+        pointer.setCorrectionOffset(xDiff, yDiff);
+        pointer.reposition();
+
+        return coords;
     },
 
     changeType: function(type) {
@@ -170,40 +237,16 @@ defineClass({
     onReposition: function(dlg, e) {
 
         var self    = this,
-            coords  = self.getCoords(e);
+            coords;
 
         if (self.screenX !== false || self.screenY !== false) {
-            self.correctPosition(coords, e);
+            coords  = self.correctPosition(e);
+        }
+        else {
+            coords  = self.getCoords(e);
         }
 
         self.apply(coords);
-    },
-
-
-    correctPosition: function(pos, e) {
-
-        /*var self    = this,
-            pBase   = self.getPositionBase() || window,
-            size    = dlg.getDialogSize(),
-            st      = getScrollTop(pBase),
-            sl      = getScrollLeft(pBase),
-            ww      = getOuterWidth(pBase),
-            wh      = getOuterHeight(pBase),
-            offsetY = self.screenY,
-            offsetX = self.screenX;
-
-        if (offsetY && pos.y + size.height > wh + st - offsetY) {
-            pos.y   = wh + st - offsetY - size.height;
-        }
-        if (offsetX && pos.x + size.width > ww + sl - offsetX) {
-            pos.x   = ww + sl - offsetX - size.width;
-        }
-        if (offsetY && pos.y < st + offsetY) {
-            pos.y = st + offsetY;
-        }
-        if (offsetX && pos.x < sl + offsetX) {
-            pos.x = sl + offsetX;
-        }*/
     },
 
     getCoords: function(e){
@@ -263,7 +306,6 @@ defineClass({
         var self = this,
             dlg = self.dialog;
 
-        dlg.un("before-reposition", self.onBeforeReposition, self);
         dlg.un("reposition", self.onReposition, self);
         dlg.un("show-after-delay", self.onShowAfterDelay, self);
         dlg.un("hide-after-delay", self.onHideAfterDelay, self);

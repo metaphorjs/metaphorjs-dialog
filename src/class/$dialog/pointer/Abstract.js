@@ -7,6 +7,8 @@ module.exports = defineClass({
     $class: "$dialog.pointer.Abstract",
     enabled: null,
     node: null,
+    correctX: 0,
+    correctY: 0,
 
     $init: function(dialog, cfg) {
 
@@ -58,6 +60,53 @@ module.exports = defineClass({
         return this.enabled ? this.size : 0;
     },
 
+    setCorrectionOffset: function(x, y) {
+        this.correctX = x;
+        this.correctY = y;
+    },
+
+    getCorrectionValue: function(type, value, position) {
+
+        if (!value) {
+            return 0;
+        }
+
+        var self    = this,
+            pri     = position.substr(0,1),
+            sec     = position.substr(1,1),
+            tsize   = self.dialog.getDialogSize(),
+            width   = self.width,
+            sprop   = pri == "t" || pri == "b" ? "width" : "height",
+            min,
+            max;
+
+        switch (sec) {
+            case "":
+                max = (tsize[sprop] / 2) - (width / 2);
+                min = -max;
+                break;
+            case "l":
+                min = 0;
+                max = tsize[sprop] - (width / 2);
+                break;
+            case "r":
+                min = -(tsize[sprop] - (width / 2));
+                max = 0;
+                break;
+        }
+
+        value = value < 0 ? Math.max(min, value) : Math.min(max, value);
+
+        if ((pri == "t" || pri == "b") && type == "x") {
+            return value;
+        }
+        if ((pri == "l" || pri == "r") && type == "y") {
+            return value;
+        }
+
+        return 0;
+    },
+
     getDialogPositionOffset: function(position) {
         var self    = this,
             pp      = (self.detectPointerPosition(position) || "").substr(0,1),
@@ -88,15 +137,8 @@ module.exports = defineClass({
             return self.position;
         }
 
-        if (dialogPosition) {
-            dialogPosition = dialogPosition.replace(/w|c|m/, "");
-            pri = dialogPosition.substr(0, 1);
-            sec = dialogPosition.substr(1);
-        }
-        else {
-            pri = self.dialog.getPosition().getPrimaryPosition();
-            sec = self.dialog.getPosition().getSecondaryPosition();
-        }
+        pri = self.dialog.getPosition().getPrimaryPosition(dialogPosition);
+        sec = self.dialog.getPosition().getSecondaryPosition(dialogPosition);
 
         if (!pri) {
             return null;

@@ -14,6 +14,7 @@ defineClass({
 
     $class: "$dialog.position.Mouse",
     $extends: "$dialog.position.Target",
+    correct: "position",
 
     $init: function(dialog) {
 
@@ -30,6 +31,7 @@ defineClass({
         }
 
         var self    = this,
+            origType= type || self.type,
             dlg     = self.dialog,
             cfg     = dlg.getCfg(),
             size    = dlg.getDialogSize(),
@@ -39,7 +41,7 @@ defineClass({
             offsetX = cfg.position.offsetX,
             offsetY = cfg.position.offsetY,
             axis    = cfg.position.axis,
-            pntOfs  = dlg.getPointer().getDialogPositionOffset(type),
+            pntOfs  = dlg.getPointer().getDialogPositionOffset(origType),
             absOfs  = {x: 0, y: 0};
 
         if (!absolute && base) {
@@ -136,12 +138,12 @@ defineClass({
         this.dialog.reposition(normalizeEvent(e));
     },
 
-    getPrimaryPosition: function() {
-        return this.type.substr(1, 1);
+    getPrimaryPosition: function(pos) {
+        return (pos || this.type).substr(1, 1);
     },
 
-    getSecondaryPosition: function() {
-        return this.type.substr(2);
+    getSecondaryPosition: function(pos) {
+        return (pos || this.type).substr(2);
     },
 
     getAllPositions: function() {

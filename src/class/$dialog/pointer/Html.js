@@ -3,7 +3,8 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     factory = require("metaphorjs-class/src/func/factory.js"),
     ucfirst = require("metaphorjs/src/func/ucfirst.js"),
     setStyle = require("metaphorjs/src/func/dom/setStyle.js"),
-    addClass = require("metaphorjs/src/func/dom/addClass.js");
+    addClass = require("metaphorjs/src/func/dom/addClass.js"),
+    getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js");
 
 require("./Abstract.js");
 
@@ -57,7 +58,7 @@ require("./Abstract.js");
             newcfg.border = null;
             newcfg.borderColor = null;
             newcfg.borderCls = null;
-            newcfg.offset = null;
+            newcfg.offset = 0;
             newcfg.inner = self.border;
 
             self.sub = factory("$dialog.pointer.Html", self.dialog, newcfg);
@@ -114,17 +115,17 @@ require("./Abstract.js");
                 window.document.body.appendChild(self.node);
                 switch (pri) {
                     case "t":
-                    case "b": {
+                    case "b":
                         self.size = getOuterHeight(self.node);
                         self.width = getOuterWidth(self.node);
                         break;
-                    }
+
                     case "l":
-                    case "r": {
+                    case "r":
                         self.width = getOuterHeight(self.node);
                         self.size = getOuterWidth(self.node);
                         break;
-                    }
+
                 }
             }
 
@@ -136,28 +137,27 @@ require("./Abstract.js");
                 var margin;
 
                 switch (position) {
-                    case 't': case 'r': case 'b': case 'l': {
-                    if (direction != position) {
-                        if (direction == 'l' || direction == 't') {
-                            margin = self.offset;
+                    case 't': case 'r': case 'b': case 'l':
+                        if (direction != position) {
+                            if (direction == 'l' || direction == 't') {
+                                margin = self.offset;
+                            }
+                            else {
+                                margin = -self.width + self.offset;
+                            }
                         }
                         else {
-                            margin = -self.width + self.offset;
+                            margin = -self.width/2 + self.offset;
                         }
-                    }
-                    else {
-                        margin = -self.width/2 + self.offset;
-                    }
-                    break;
-                }
-                    case 'bl': case 'tl': case 'lt': case 'rt': {
-                    margin = self.offset;
-                    break;
-                }
-                    default: {
+                        break;
+
+                    case 'bl': case 'tl': case 'lt': case 'rt':
+                        margin = self.offset;
+                        break;
+
+                    default:
                         margin = -self.width - self.offset;
                         break;
-                    }
                 }
 
                 offsets['margin' + ucfirst(names[opposite[auto]])] = margin + "px";
@@ -165,21 +165,38 @@ require("./Abstract.js");
                 var positionOffset;
 
                 switch (position) {
-                    case 't': case 'r': case 'b': case 'l': {
-                    positionOffset = '50%';
-                    break;
-                }
-                    case 'tr': case 'rb': case 'br': case 'lb': {
-                    positionOffset = '100%';
-                    break;
-                }
-                    default: {
+                    case 't': case 'r': case 'b': case 'l':
+                        positionOffset = '50%';
+                        break;
+
+                    case 'tr': case 'rb': case 'br': case 'lb':
+                        positionOffset = '100%';
+                        break;
+
+                    default:
                         positionOffset = 0;
                         break;
-                    }
                 }
 
                 offsets[names[opposite[auto]]]  = positionOffset;
+
+                var pfxs = getAnimationPrefixes(),
+                    transformPfx = pfxs.transform,
+                    transform = "",
+                    cx = self.correctX,
+                    cy = self.correctY;
+
+                if (transformPfx) {
+
+                    if (cx) {
+                        transform += " translateX(" + self.getCorrectionValue("x", cx, position) + "px)";
+                    }
+                    if (cy) {
+                        transform += " translateY(" + self.getCorrectionValue("y", cy, position) + "px)";
+                    }
+
+                    offsets[transformPfx] = transform;
+                }
             }
             else {
 
