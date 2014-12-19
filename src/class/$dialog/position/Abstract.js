@@ -9,7 +9,9 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     getScrollTop    = require("metaphorjs/src/func/dom/getScrollTop.js"),
     getScrollLeft   = require("metaphorjs/src/func/dom/getScrollLeft.js"),
     getOuterWidth   = require("metaphorjs/src/func/dom/getOuterWidth.js"),
-    getOuterHeight  = require("metaphorjs/src/func/dom/getOuterHeight.js");
+    getOuterHeight  = require("metaphorjs/src/func/dom/getOuterHeight.js"),
+    getWidth   = require("metaphorjs/src/func/dom/getWidth.js"),
+    getHeight  = require("metaphorjs/src/func/dom/getHeight.js");
 
 defineClass({
 
@@ -79,6 +81,7 @@ defineClass({
             sx      = self.screenX || 0,
             sy      = self.screenY || 0,
             w, h,
+            st, sl,
             ofs;
 
         if (base) {
@@ -97,11 +100,13 @@ defineClass({
         else {
             w = getWidth(window);
             h = getHeight(window);
+            st = getScrollTop(window);
+            sl = getScrollLeft(window);
             return {
-                x: sx,
-                y: sy,
-                x1: w - sx,
-                y1: h - sy,
+                x: sl + sx,
+                y: st + sy,
+                x1: sl + w - sx,
+                y1: st + h - sy,
                 w: w,
                 h: h
             };
@@ -207,7 +212,7 @@ defineClass({
             coords.x = x;
         }
         if (coords.y < y) {
-            yDiff = coords.y - x;
+            yDiff = coords.y - y;
             coords.y = y;
         }
         if (coords.x + size.width > x1) {
