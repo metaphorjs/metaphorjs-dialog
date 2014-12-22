@@ -28,6 +28,7 @@ module.exports = Component.$extend({
         var self    = this;
 
         return extend({}, self.dialogCfg, {
+            preset: self.dialogPreset,
             render: {
                 el: self.dialogNode || self.node,
                 keepInDOM: true
@@ -38,11 +39,11 @@ module.exports = Component.$extend({
     _createDialog: function() {
 
         var self    = this;
-        self.dialog = new Dialog(self.dialogPreset, self._getDialogCfg());
+        self.dialog = new Dialog(self._getDialogCfg());
         self.dialog.on("show", self.onDialogShow, self);
         self.dialog.on("hide", self.onDialogHide, self);
-        self.dialog.on("beforeshow", self.onBeforeDialogShow, self);
-        self.dialog.on("beforehide", self.onBeforeDialogHide, self);
+        self.dialog.on("before-show", self.onBeforeDialogShow, self);
+        self.dialog.on("before-hide", self.onBeforeDialogHide, self);
         self.dialog.on("destroy", self.onDialogDestroy, self);
     },
 
@@ -51,7 +52,7 @@ module.exports = Component.$extend({
         var self = this;
         self.rendered   = true;
         self.afterRender();
-        self.trigger('afterrender', self);
+        self.trigger('after-render', self);
     },
 
     show: function() {

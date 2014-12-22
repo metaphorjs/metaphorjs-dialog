@@ -23,9 +23,9 @@ module.exports = defineClass({
         self.sides      = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']};
 
         if (self.enabled !== false && cfg.size) {
-            self.enable();
+            self.enabled = true;
         }
-        if (!self.size) {
+        else {
             self.enabled = false;
         }
     },
@@ -222,10 +222,15 @@ module.exports = defineClass({
 
     remove: function(){
 
-        var self = this;
+        var self = this,
+            node = self.node;
 
-        if (self.node) {
-            self.node.parentNode.removeChild(self.node);
+        if (node) {
+
+            if (node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+
             self.node = null;
         }
     }

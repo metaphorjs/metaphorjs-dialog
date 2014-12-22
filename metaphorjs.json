@@ -42,7 +42,7 @@
             },
             "files": [
                 [
-                    "src/metaphorjs.dialog.js",
+                    "src/class/Dialog.js",
                     {
                         "as": "Dialog"
                     }
@@ -78,7 +78,7 @@
             "target": "dist/metaphorjs.dialog.amd.js",
             "files": [
                 [
-                    "src/metaphorjs.dialog.js",
+                    "src/class/Dialog.js",
                     {
                         "as": "Dialog"
                     }

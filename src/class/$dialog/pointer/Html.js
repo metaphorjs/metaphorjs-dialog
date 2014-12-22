@@ -39,6 +39,7 @@ require("./Abstract.js");
             var self = this;
 
             self.$super(dialog, cfg);
+
             self.width = self.width || self.size * 2;
 
             if (self.inner) {
@@ -55,7 +56,7 @@ require("./Abstract.js");
             newcfg.size 	= self.size - (self.border * 2);
             newcfg.width	= self.width - (self.border * 4);
 
-            newcfg.border = null;
+            newcfg.border = 0;
             newcfg.borderColor = null;
             newcfg.borderCls = null;
             newcfg.offset = 0;
@@ -109,25 +110,6 @@ require("./Abstract.js");
                 opposite= self.opposite,
                 pri		= position.substr(0,1),
                 auto 	= (pri == 't' || pri == 'b') ? "r" : "b";
-
-            // custom element
-            if (!self.size) {
-                window.document.body.appendChild(self.node);
-                switch (pri) {
-                    case "t":
-                    case "b":
-                        self.size = getOuterHeight(self.node);
-                        self.width = getOuterWidth(self.node);
-                        break;
-
-                    case "l":
-                    case "r":
-                        self.width = getOuterHeight(self.node);
-                        self.size = getOuterWidth(self.node);
-                        break;
-
-                }
-            }
 
             offsets[names[pri]] = self.inner ? 'auto' : -self.size+"px";
             offsets[names[auto]] = "auto";

@@ -4964,7 +4964,7 @@ var ajax = function(){
             self.createJsonp();
         }
 
-        if (globalEvents.trigger("beforeSend", opt, transport) === false) {
+        if (globalEvents.trigger("before-send", opt, transport) === false) {
             self._promise = Promise.reject();
         }
         if (opt.beforeSend && opt.beforeSend.call(opt.callbackScope, opt, transport) === false) {
@@ -5071,8 +5071,8 @@ var ajax = function(){
 
             data    = processData(data, opt, contentType);
 
-            if (globalEvents.hasListener("processResponse")) {
-                data    = globalEvents.trigger("processResponse", data, self._deferred);
+            if (globalEvents.hasListener("process-response")) {
+                data    = globalEvents.trigger("process-response", data, self._deferred);
             }
 
             if (opt.processResponse) {
@@ -5800,10 +5800,11 @@ var ObservableMixin = ns.add("mixin.Observable", {
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context,
+                context = ls.context || ls.scope,
                 i;
 
             ls.context = null;
+            ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
@@ -5840,7 +5841,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
     },
 
     $beforeDestroy: function() {
-        this.$$observable.trigger("beforedestroy", this);
+        this.$$observable.trigger("before-destroy", this);
     },
 
     $afterDestroy: function() {
@@ -5850,6 +5851,7 @@ var ObservableMixin = ns.add("mixin.Observable", {
         self.$$observable = null;
     }
 });
+
 
 
 
@@ -6745,9 +6747,9 @@ defineClass({
         self.sides      = {t: ['l','r'], r: ['t','b'], b: ['r','l'], l: ['b','t']};
 
         if (self.enabled !== false && cfg.size) {
-            self.enable();
+            self.enabled = true;
         }
-        if (!self.size) {
+        else {
             self.enabled = false;
         }
     },
@@ -6944,10 +6946,15 @@ defineClass({
 
     remove: function(){
 
-        var self = this;
+        var self = this,
+            node = self.node;
 
-        if (self.node) {
-            self.node.parentNode.removeChild(self.node);
+        if (node) {
+
+            if (node.parentNode) {
+                node.parentNode.removeChild(node);
+            }
+
             self.node = null;
         }
     }
@@ -6988,6 +6995,7 @@ defineClass({
             var self = this;
 
             self.$super(dialog, cfg);
+
             self.width = self.width || self.size * 2;
 
             if (self.inner) {
@@ -7004,7 +7012,7 @@ defineClass({
             newcfg.size 	= self.size - (self.border * 2);
             newcfg.width	= self.width - (self.border * 4);
 
-            newcfg.border = null;
+            newcfg.border = 0;
             newcfg.borderColor = null;
             newcfg.borderCls = null;
             newcfg.offset = 0;
@@ -7058,25 +7066,6 @@ defineClass({
                 opposite= self.opposite,
                 pri		= position.substr(0,1),
                 auto 	= (pri == 't' || pri == 'b') ? "r" : "b";
-
-            // custom element
-            if (!self.size) {
-                window.document.body.appendChild(self.node);
-                switch (pri) {
-                    case "t":
-                    case "b":
-                        self.size = getOuterHeight(self.node);
-                        self.width = getOuterWidth(self.node);
-                        break;
-
-                    case "l":
-                    case "r":
-                        self.width = getOuterHeight(self.node);
-                        self.size = getOuterWidth(self.node);
-                        break;
-
-                }
-            }
 
             offsets[names[pri]] = self.inner ? 'auto' : -self.size+"px";
             offsets[names[auto]] = "auto";
@@ -7296,6 +7285,10 @@ defineClass({
             self.enabled = false;
             self.enable();
         }
+    },
+
+    getElem: function() {
+        return this.node;
     },
 
     enable: function() {
@@ -8910,7 +8903,6 @@ var Dialog = (function(){
                 returnMode = "disabled";
             }
 
-
             // if tooltip is already shown
             // and hide timeout was set.
             // we need to restart timer
@@ -8950,6 +8942,7 @@ var Dialog = (function(){
                 self.destroyDelay = null;
             }
 
+
             var dtChanged   = false;
 
             // if we have a dynamicTarget
@@ -8976,6 +8969,7 @@ var Dialog = (function(){
                     self.changeDynamicContent();
                 }
             }
+
 
             // if beforeShow callback returns false we stop.
             if (!returnMode && self.trigger('before-show', self, e) === false) {
@@ -9315,14 +9309,17 @@ var Dialog = (function(){
                 return;
             }
 
+
             var rnd	    = cfg.render,
                 cls     = cfg.cls;
+
 
             // custom rendering function
             if (rnd.fn) {
                 var res = rnd.fn.call(self.$$callbackContext, self);
                 rnd[isString(res) ? 'tpl' : 'el'] = res;
             }
+
 
             if (rnd.el) {
                 if (isString(rnd.el)) {
@@ -9338,6 +9335,7 @@ var Dialog = (function(){
                 tmp.innerHTML = rnd.tpl;
                 elem = tmp.firstChild;
             }
+
 
             if (!elem) {
                 elem = window.document.createElement("div");
@@ -9414,7 +9412,6 @@ var Dialog = (function(){
             }
 
             self.rendered = true;
-
 
             self.trigger('render', self);
         },
@@ -9526,7 +9523,6 @@ var Dialog = (function(){
 
             e && (e = normalizeEvent(e));
 
-
             self.getPosition(e);
             self.trigger("before-reposition", self, e);
             self.getPosition(e);
@@ -9590,7 +9586,7 @@ var Dialog = (function(){
 
             if (change) {
                 self.setHandlers('bind', '_target');
-                self.trigger("targetchange", self, newTarget, prev);
+                self.trigger("target-change", self, newTarget, prev);
             }
         },
 
@@ -9600,7 +9596,7 @@ var Dialog = (function(){
                 curr = self.dynamicTargetEl;
             if (curr) {
                 self.setHandlers("unbind", "_target");
-                self.trigger("targetchange", self, null, curr);
+                self.trigger("target-change", self, null, curr);
             }
         },
 
@@ -9648,7 +9644,7 @@ var Dialog = (function(){
                 self.dynamicTargetEl = t;
 
                 self.setHandlers("bind", "_target");
-                self.trigger("targetchange", self, t, curr);
+                self.trigger("target-change", self, t, curr);
                 return true;
             }
             else {
@@ -9760,7 +9756,7 @@ var Dialog = (function(){
 
             for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoadDelegate)){}
 
-            self.trigger('contentchange', self, content, mode);
+            self.trigger('content-change', self, content, mode);
             self.onContentChange();
         },
 
@@ -9804,7 +9800,7 @@ var Dialog = (function(){
 
             addClass(self.node, cfg.cls.loading);
             var opt = extend({}, cfg.ajax, options, true, true);
-            self.trigger('beforeajax', self, opt);
+            self.trigger('before-ajax', self, opt);
             return ajax(opt).done(self.onAjaxLoad, self);
         },
 
@@ -9858,8 +9854,13 @@ var Dialog = (function(){
 
         getDialogSize: function() {
 
-            var self    = this,
-                cfg     = self.cfg,
+            var self    = this;
+
+            if (!self.rendered) {
+                self.render();
+            }
+
+            var cfg     = self.cfg,
                 node    = self.node,
                 hidden  = cfg.cls.hidden ? hasClass(node, cfg.cls.hidden) : !isVisible(node),
                 size,

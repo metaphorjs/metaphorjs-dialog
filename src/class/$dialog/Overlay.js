@@ -36,6 +36,10 @@ module.exports = defineClass({
         }
     },
 
+    getElem: function() {
+        return this.node;
+    },
+
     enable: function() {
         var self = this;
         if (!self.enabled) {

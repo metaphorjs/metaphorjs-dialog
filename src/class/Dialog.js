@@ -1429,7 +1429,6 @@ module.exports = (function(){
                 returnMode = "disabled";
             }
 
-
             // if tooltip is already shown
             // and hide timeout was set.
             // we need to restart timer
@@ -1469,6 +1468,7 @@ module.exports = (function(){
                 self.destroyDelay = null;
             }
 
+
             var dtChanged   = false;
 
             // if we have a dynamicTarget
@@ -1495,6 +1495,7 @@ module.exports = (function(){
                     self.changeDynamicContent();
                 }
             }
+
 
             // if beforeShow callback returns false we stop.
             if (!returnMode && self.trigger('before-show', self, e) === false) {
@@ -1834,14 +1835,17 @@ module.exports = (function(){
                 return;
             }
 
+
             var rnd	    = cfg.render,
                 cls     = cfg.cls;
+
 
             // custom rendering function
             if (rnd.fn) {
                 var res = rnd.fn.call(self.$$callbackContext, self);
                 rnd[isString(res) ? 'tpl' : 'el'] = res;
             }
+
 
             if (rnd.el) {
                 if (isString(rnd.el)) {
@@ -1857,6 +1861,7 @@ module.exports = (function(){
                 tmp.innerHTML = rnd.tpl;
                 elem = tmp.firstChild;
             }
+
 
             if (!elem) {
                 elem = window.document.createElement("div");
@@ -1933,7 +1938,6 @@ module.exports = (function(){
             }
 
             self.rendered = true;
-
 
             self.trigger('render', self);
         },
@@ -2045,7 +2049,6 @@ module.exports = (function(){
 
             e && (e = normalizeEvent(e));
 
-
             self.getPosition(e);
             self.trigger("before-reposition", self, e);
             self.getPosition(e);
@@ -2109,7 +2112,7 @@ module.exports = (function(){
 
             if (change) {
                 self.setHandlers('bind', '_target');
-                self.trigger("targetchange", self, newTarget, prev);
+                self.trigger("target-change", self, newTarget, prev);
             }
         },
 
@@ -2119,7 +2122,7 @@ module.exports = (function(){
                 curr = self.dynamicTargetEl;
             if (curr) {
                 self.setHandlers("unbind", "_target");
-                self.trigger("targetchange", self, null, curr);
+                self.trigger("target-change", self, null, curr);
             }
         },
 
@@ -2167,7 +2170,7 @@ module.exports = (function(){
                 self.dynamicTargetEl = t;
 
                 self.setHandlers("bind", "_target");
-                self.trigger("targetchange", self, t, curr);
+                self.trigger("target-change", self, t, curr);
                 return true;
             }
             else {
@@ -2279,7 +2282,7 @@ module.exports = (function(){
 
             for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoadDelegate)){}
 
-            self.trigger('contentchange', self, content, mode);
+            self.trigger('content-change', self, content, mode);
             self.onContentChange();
         },
 
@@ -2323,7 +2326,7 @@ module.exports = (function(){
 
             addClass(self.node, cfg.cls.loading);
             var opt = extend({}, cfg.ajax, options, true, true);
-            self.trigger('beforeajax', self, opt);
+            self.trigger('before-ajax', self, opt);
             return ajax(opt).done(self.onAjaxLoad, self);
         },
 
@@ -2377,8 +2380,13 @@ module.exports = (function(){
 
         getDialogSize: function() {
 
-            var self    = this,
-                cfg     = self.cfg,
+            var self    = this;
+
+            if (!self.rendered) {
+                self.render();
+            }
+
+            var cfg     = self.cfg,
                 node    = self.node,
                 hidden  = cfg.cls.hidden ? hasClass(node, cfg.cls.hidden) : !isVisible(node),
                 size,
