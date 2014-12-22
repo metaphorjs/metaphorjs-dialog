@@ -7288,7 +7288,11 @@ defineClass({
     },
 
     getElem: function() {
-        return this.node;
+        var self = this;
+        if (self.enabled && !self.node) {
+            self.render();
+        }
+        return self.node;
     },
 
     enable: function() {
@@ -7372,7 +7376,7 @@ defineClass({
             dialog = self.dialog,
             node = self.node;
 
-        if (node) {
+        if (node && node.parentNode) {
             raf(function () {
                 if (!dialog.isVisible()) {
                     node.parentNode.removeChild(node);
@@ -8616,6 +8620,16 @@ var Dialog = (function(){
             return this.pointer;
         },
 
+
+        /**
+         * Get dialog's overlay object
+         * @returns {$dialog.Overlay}
+         */
+        getOverlay: function() {
+            return this.overlay;
+        },
+
+
         /**
          * @access public
          * @return {boolean}
@@ -8736,6 +8750,18 @@ var Dialog = (function(){
 
         /* **** Events **** */
 
+        resetHandlers: function(fn, context) {
+
+            var self = this;
+            self.setHandlers("unbind");
+            self.bindSelfOnRender = false;
+
+            if (fn) {
+                fn.call(context, self, self.getCfg());
+            }
+
+            self.setHandlers("bind");
+        },
 
         setHandlers: function(mode, only) {
 
@@ -9434,14 +9460,19 @@ var Dialog = (function(){
             if (self.positionClass != cls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
+                    self.position = null;
                 }
-                self.position = factory(self.getPositionClass(type), self);
+                if (cls) {
+                    self.position = factory(cls, self);
+                }
             }
             else {
                 self.position.type = type;
             }
 
-            self.reposition();
+            if (self.isVisible()) {
+                self.reposition();
+            }
         },
 
         getPosition: function(e) {

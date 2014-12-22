@@ -37,7 +37,11 @@ module.exports = defineClass({
     },
 
     getElem: function() {
-        return this.node;
+        var self = this;
+        if (self.enabled && !self.node) {
+            self.render();
+        }
+        return self.node;
     },
 
     enable: function() {
@@ -121,7 +125,7 @@ module.exports = defineClass({
             dialog = self.dialog,
             node = self.node;
 
-        if (node) {
+        if (node && node.parentNode) {
             raf(function () {
                 if (!dialog.isVisible()) {
                     node.parentNode.removeChild(node);

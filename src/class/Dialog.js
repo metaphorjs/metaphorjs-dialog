@@ -1142,6 +1142,16 @@ module.exports = (function(){
             return this.pointer;
         },
 
+
+        /**
+         * Get dialog's overlay object
+         * @returns {$dialog.Overlay}
+         */
+        getOverlay: function() {
+            return this.overlay;
+        },
+
+
         /**
          * @access public
          * @return {boolean}
@@ -1262,6 +1272,18 @@ module.exports = (function(){
 
         /* **** Events **** */
 
+        resetHandlers: function(fn, context) {
+
+            var self = this;
+            self.setHandlers("unbind");
+            self.bindSelfOnRender = false;
+
+            if (fn) {
+                fn.call(context, self, self.getCfg());
+            }
+
+            self.setHandlers("bind");
+        },
 
         setHandlers: function(mode, only) {
 
@@ -1960,14 +1982,19 @@ module.exports = (function(){
             if (self.positionClass != cls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
+                    self.position = null;
                 }
-                self.position = factory(self.getPositionClass(type), self);
+                if (cls) {
+                    self.position = factory(cls, self);
+                }
             }
             else {
                 self.position.type = type;
             }
 
-            self.reposition();
+            if (self.isVisible()) {
+                self.reposition();
+            }
         },
 
         getPosition: function(e) {
