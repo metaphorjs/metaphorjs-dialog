@@ -3232,7 +3232,8 @@ defineClass({
 
         if (sec) {
             sec = sec.substr(0, 1);
-            position += self.opposite[sec];
+            //position += self.opposite[sec];
+            position += sec;
         }
 
         return position;
