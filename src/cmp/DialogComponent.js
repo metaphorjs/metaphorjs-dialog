@@ -15,6 +15,21 @@ module.exports = Component.$extend({
 
     hidden: true,
 
+    target: null,
+    isTooltip: false,
+
+    $init: function(cfg) {
+
+        var self = this;
+
+        if (self.isTooltip) {
+            self.target = cfg.node;
+            cfg.node = null;
+        }
+
+        self.$super(cfg);
+    },
+
     initComponent: function() {
 
         var self    = this;
