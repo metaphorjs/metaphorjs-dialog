@@ -2728,6 +2728,8 @@ defineClass({
             return null;
         }
 
+        var otype = type;
+
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
             offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
@@ -2739,8 +2741,6 @@ defineClass({
             offsetX = cfg.position.offsetX,
             offsetY = cfg.position.offsetY,
             pntOfs  = dlg.pointer.getDialogPositionOffset(type);
-
-
 
         switch (pri) {
             case "t": {
@@ -3194,7 +3194,7 @@ defineClass({
     getDialogPositionOffset: function(position) {
         var self    = this,
             pp      = (self.detectPointerPosition(position) || "").substr(0,1),
-            dp      = self.dialog.getPosition().getPrimaryPosition(),
+            dp      = self.dialog.getPosition().getPrimaryPosition(position),
             ofs     = {x: 0, y: 0};
 
         if (!self.enabled) {

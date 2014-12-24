@@ -110,7 +110,7 @@ module.exports = defineClass({
     getDialogPositionOffset: function(position) {
         var self    = this,
             pp      = (self.detectPointerPosition(position) || "").substr(0,1),
-            dp      = self.dialog.getPosition().getPrimaryPosition(),
+            dp      = self.dialog.getPosition().getPrimaryPosition(position),
             ofs     = {x: 0, y: 0};
 
         if (!self.enabled) {
