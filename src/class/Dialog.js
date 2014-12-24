@@ -2610,14 +2610,13 @@ module.exports = (function(){
 
             removeListener(window, "resize", self.onWindowResizeDelegate);
             removeListener(window, "scroll", self.onWindowScrollDelegate);
+            self.setHandlers("unbind");
 
             self.destroyElem();
 
-            self.overlay.$destroy();
-            self.pointer.$destroy();
-            self.position.$destroy();
-
-            self.setHandlers("unbind");
+            self.overlay && self.overlay.$destroy();
+            self.pointer && self.pointer.$destroy();
+            self.position && self.position.$destroy();
         }
 
     }, {

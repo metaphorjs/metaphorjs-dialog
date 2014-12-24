@@ -125,9 +125,9 @@ module.exports = defineClass({
             dialog = self.dialog,
             node = self.node;
 
-        if (node && node.parentNode) {
-            raf(function () {
-                if (!dialog.isVisible()) {
+        if (node) {
+            raf(function() {
+                if (!dialog.isVisible() && node.parentNode) {
                     node.parentNode.removeChild(node);
                 }
             });
