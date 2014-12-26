@@ -13,7 +13,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     getWidth   = require("metaphorjs/src/func/dom/getWidth.js"),
     getHeight  = require("metaphorjs/src/func/dom/getHeight.js");
 
-defineClass({
+module.exports = defineClass({
 
     $class: "dialog.position.Abstract",
     dialog: null,

@@ -9,7 +9,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 require("./Abstract.js");
 
 
-(function(){
+module.exports = (function(){
 
     var ie6             = null,
         defaultProps    = {
@@ -22,7 +22,7 @@ require("./Abstract.js");
         };
 
 
-    defineClass({
+    return defineClass({
 
         $class: "dialog.pointer.Html",
         $extends: "dialog.pointer.Abstract",

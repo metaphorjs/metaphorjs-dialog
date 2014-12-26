@@ -40,10 +40,9 @@ var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
     undelegate      = require("metaphorjs/src/func/dom/undelegate.js"),
 
     raf             = require("metaphorjs-animate/src/func/raf.js"),
-    async           = require("metaphorjs/src/func/async.js"),
+    async           = require("metaphorjs/src/func/async.js");
 
-    ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js");
-
+require("metaphorjs-observable/src/mixin/Observable.js");
 
 require("./dialog/position/Abstract.js");
 require("./dialog/position/Target.js");
@@ -1018,7 +1017,7 @@ module.exports = (function(){
     var Dialog = defineClass({
 
         $class:             "Dialog",
-        $mixins:            [ObservableMixin],
+        $mixins:            ["mixin.Observable"],
 
         id:                 null,
         node:               null,

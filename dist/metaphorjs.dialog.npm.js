@@ -1015,9 +1015,9 @@ function async(fn, context, args, timeout) {
 
 
 /**
- * @mixin ObservableMixin
+ * @mixin Observable
  */
-var ObservableMixin = ns.add("mixin.Observable", {
+ns.register("mixin.Observable", {
 
     /**
      * @type {Observable}
@@ -2296,7 +2296,7 @@ var getAnimationPrefixes = function(){
         };
 
 
-    defineClass({
+    return defineClass({
 
         $class: "dialog.pointer.Html",
         $extends: "dialog.pointer.Abstract",
@@ -2836,6 +2836,7 @@ defineClass({
     }
 
 });
+
 
 
 
@@ -3814,7 +3815,7 @@ var Dialog = (function(){
     var Dialog = defineClass({
 
         $class:             "Dialog",
-        $mixins:            [ObservableMixin],
+        $mixins:            ["mixin.Observable"],
 
         id:                 null,
         node:               null,

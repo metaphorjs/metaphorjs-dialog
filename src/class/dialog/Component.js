@@ -1,11 +1,11 @@
 
-var Dialog = require("../class/Dialog.js"),
+var Dialog = require("../Dialog.js"),
     extend  = require("metaphorjs/src/func/extend.js"),
     Component = require("metaphorjs/src/class/Component.js");
 
 module.exports = Component.$extend({
 
-    $class: "DialogComponent",
+    $class: "dialog.Component",
 
     dialog: null,
     dialogPreset: null,

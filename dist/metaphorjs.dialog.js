@@ -1138,7 +1138,7 @@ var Class = function(){
                 for (i = 0, l = mixins.length; i < l; i++) {
                     mixin = mixins[i];
                     if (isString(mixin)) {
-                        mixin = ns.get("mixin." + mixin, true);
+                        mixin = ns.get(mixin, true);
                     }
                     mixinToPrototype(prototype, mixin);
                 }
@@ -5797,9 +5797,9 @@ function undelegate(el, selector, event, fn) {
 
 
 /**
- * @mixin ObservableMixin
+ * @mixin Observable
  */
-var ObservableMixin = ns.add("mixin.Observable", {
+ns.register("mixin.Observable", {
 
     /**
      * @type {Observable}
@@ -6994,7 +6994,7 @@ defineClass({
         };
 
 
-    defineClass({
+    return defineClass({
 
         $class: "dialog.pointer.Html",
         $extends: "dialog.pointer.Abstract",
@@ -7534,6 +7534,7 @@ defineClass({
     }
 
 });
+
 
 
 
@@ -8512,7 +8513,7 @@ var Dialog = (function(){
     var Dialog = defineClass({
 
         $class:             "Dialog",
-        $mixins:            [ObservableMixin],
+        $mixins:            ["mixin.Observable"],
 
         id:                 null,
         node:               null,

@@ -10,7 +10,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 require("./Target.js");
 
 
-defineClass({
+module.exports = defineClass({
 
     $class: "dialog.position.Mouse",
     $extends: "dialog.position.Target",

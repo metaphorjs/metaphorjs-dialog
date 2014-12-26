@@ -5,7 +5,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 require("./Abstract.js");
 
-defineClass({
+module.exports = defineClass({
 
     $class: "dialog.position.Target",
     $extends: "dialog.position.Abstract",
