@@ -2606,12 +2606,10 @@ module.exports = (function(){
             var self = this;
 
             self.trigger("destroy", self);
-
-            removeListener(window, "resize", self.onWindowResizeDelegate);
-            removeListener(window, "scroll", self.onWindowScrollDelegate);
             self.setHandlers("unbind");
 
             self.destroyElem();
+
 
             self.overlay && self.overlay.$destroy();
             self.pointer && self.pointer.$destroy();

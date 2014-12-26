@@ -311,11 +311,14 @@ module.exports = defineClass({
         var self = this,
             dlg = self.dialog;
 
+        removeListener(window, "resize", self.onWindowResizeDelegate);
+        removeListener(dlg.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+
         dlg.un("reposition", self.onReposition, self);
         dlg.un("show-after-delay", self.onShowAfterDelay, self);
         dlg.un("hide-after-delay", self.onHideAfterDelay, self);
 
-        if (self.dialog.isVisible()) {
+        if (dlg.isVisible()) {
             self.onHideAfterDelay();
         }
     }

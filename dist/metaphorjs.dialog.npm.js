@@ -1446,11 +1446,14 @@ defineClass({
         var self = this,
             dlg = self.dialog;
 
+        removeListener(window, "resize", self.onWindowResizeDelegate);
+        removeListener(dlg.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+
         dlg.un("reposition", self.onReposition, self);
         dlg.un("show-after-delay", self.onShowAfterDelay, self);
         dlg.un("hide-after-delay", self.onHideAfterDelay, self);
 
-        if (self.dialog.isVisible()) {
+        if (dlg.isVisible()) {
             self.onHideAfterDelay();
         }
     }
@@ -5404,12 +5407,10 @@ var Dialog = (function(){
             var self = this;
 
             self.trigger("destroy", self);
-
-            removeListener(window, "resize", self.onWindowResizeDelegate);
-            removeListener(window, "scroll", self.onWindowScrollDelegate);
             self.setHandlers("unbind");
 
             self.destroyElem();
+
 
             self.overlay && self.overlay.$destroy();
             self.pointer && self.pointer.$destroy();
