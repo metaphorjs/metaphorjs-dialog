@@ -49,16 +49,20 @@
                 ]
             ],
             "omit": [
-                "../metaphorjs-observable/src/metaphorjs.observable.js",
-                "../metaphorjs-promise/src/metaphorjs.promise.js",
-                "../metaphorjs-ajax/src/metaphorjs.ajax.js",
-                "../metaphorjs-select/src/metaphorjs.select.js",
-                "../metaphorjs-animate/src/metaphorjs.animate.js",
-                "../metaphorjs-animate/src/func/stopAnimation.js"
+                "metaphorjs-observable/src/lib/Observable.js",
+                "metaphorjs-namespace/src/lib/Namespace.js",
+                "metaphorjs-class/src/lib/Class.js",
+                "metaphorjs-promise/src/lib/Promise.js",
+                "metaphorjs-ajax/src/func/ajax.js",
+                "metaphorjs-select/src/func/select.js",
+                "metaphorjs-animate/src/func/animate.js",
+                "metaphorjs-animate/src/func/stopAnimation.js"
             ],
             "require": {
                 "metaphorjs-observable": "Observable",
                 "metaphorjs-promise": "Promise",
+                "metaphorjs-namespace": "Namespace",
+                "metaphorjs-class": "Class",
                 "metaphorjs-ajax": {
                     "as": "ajax",
                     "args": ["window"]
@@ -86,12 +90,14 @@
                 "src/jquery/plugin.js"
             ],
             "omit": [
-                "../metaphorjs-observable/src/metaphorjs.observable.js",
-                "../metaphorjs-promise/src/metaphorjs.promise.js",
-                "../metaphorjs-ajax/src/metaphorjs.ajax.js",
-                "../metaphorjs-select/src/metaphorjs.select.js",
-                "../metaphorjs-animate/src/metaphorjs.animate.js",
-                "../metaphorjs-animate/src/func/stopAnimation.js"
+                "metaphorjs-observable/src/lib/Observable.js",
+                "metaphorjs-namespace/src/lib/Namespace.js",
+                "metaphorjs-class/src/lib/Class.js",
+                "metaphorjs-promise/src/lib/Promise.js",
+                "metaphorjs-ajax/src/func/ajax.js",
+                "metaphorjs-select/src/func/select.js",
+                "metaphorjs-animate/src/func/animate.js",
+                "metaphorjs-animate/src/func/stopAnimation.js"
             ],
             "prepend": [
                 "src/amd/prepend.js"
@@ -104,7 +110,9 @@
                     "metaphorjs-promise": "Promise",
                     "metaphorjs-ajax": "ajax",
                     "metaphorjs-select": "select",
-                    "metaphorjs-animate": "animate"
+                    "metaphorjs-animate": "animate",
+                    "metaphorjs-namespace": "Namespace",
+                    "metaphorjs-class": "Class"
                 }
             }
         }

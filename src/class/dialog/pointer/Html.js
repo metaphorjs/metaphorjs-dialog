@@ -24,8 +24,8 @@ require("./Abstract.js");
 
     defineClass({
 
-        $class: "$dialog.pointer.Html",
-        $extends: "$dialog.pointer.Abstract",
+        $class: "dialog.pointer.Html",
+        $extends: "dialog.pointer.Abstract",
 
         node: null,
         sub: null,
@@ -62,7 +62,7 @@ require("./Abstract.js");
             newcfg.offset = 0;
             newcfg.inner = self.border;
 
-            self.sub = factory("$dialog.pointer.Html", self.dialog, newcfg);
+            self.sub = factory("dialog.pointer.Html", self.dialog, newcfg);
         },
 
 

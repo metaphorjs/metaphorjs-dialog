@@ -12,8 +12,8 @@ require("./Target.js");
 
 defineClass({
 
-    $class: "$dialog.position.Mouse",
-    $extends: "$dialog.position.Target",
+    $class: "dialog.position.Mouse",
+    $extends: "dialog.position.Target",
     correct: "position",
 
     $init: function(dialog) {

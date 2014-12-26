@@ -18,13 +18,13 @@ var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
     removeListener  = require("metaphorjs/src/func/event/removeListener.js"),
     normalizeEvent  = require("metaphorjs/src/func/event/normalizeEvent.js"),
     isVisible       = require("metaphorjs/src/func/dom/isVisible.js"),
-    select          = require("metaphorjs-select/src/metaphorjs.select.js"),
+    select          = require("metaphorjs-select/src/func/select.js"),
     is              = require("metaphorjs-select/src/func/is.js"),
-    animate         = require("metaphorjs-animate/src/metaphorjs.animate.js"),
+    animate         = require("metaphorjs-animate/src/func/animate.js"),
     stopAnimation   = require("metaphorjs-animate/src/func/stopAnimation.js"),
 
-    ajax            = require("metaphorjs-ajax/src/metaphorjs.ajax.js"),
-    Promise         = require("metaphorjs-promise/src/metaphorjs.promise.js"),
+    ajax            = require("metaphorjs-ajax/src/func/ajax.js"),
+    Promise         = require("metaphorjs-promise/src/lib/Promise.js"),
 
     isString        = require("metaphorjs/src/func/isString.js"),
     isFunction      = require("metaphorjs/src/func/isFunction.js"),
@@ -45,21 +45,21 @@ var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
     ObservableMixin = require("metaphorjs/src/mixin/ObservableMixin.js");
 
 
-require("./$dialog/position/Abstract.js");
-require("./$dialog/position/Target.js");
-require("./$dialog/position/Mouse.js");
-require("./$dialog/position/Window.js");
-require("./$dialog/position/Custom.js");
-require("./$dialog/pointer/Abstract.js");
-require("./$dialog/pointer/Html.js");
-require("./$dialog/Overlay.js");
-require("./$dialog/Manager.js");
+require("./dialog/position/Abstract.js");
+require("./dialog/position/Target.js");
+require("./dialog/position/Mouse.js");
+require("./dialog/position/Window.js");
+require("./dialog/position/Custom.js");
+require("./dialog/pointer/Abstract.js");
+require("./dialog/pointer/Html.js");
+require("./dialog/Overlay.js");
+require("./dialog/Manager.js");
 
 
 
 module.exports = (function(){
 
-    var manager = factory("$dialog.Manager");
+    var manager = factory("dialog.Manager");
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
         if (type == "show" || !returnMode) {
@@ -1078,10 +1078,10 @@ module.exports = (function(){
             if (cfg.modal) {
                 cfg.overlay.enabled = true;
             }
-            self.overlay    = factory("$dialog.Overlay", self);
+            self.overlay    = factory("dialog.Overlay", self);
 
             var pointerCls = ucfirst(cfg.pointer.$class || "Html");
-            self.pointer    = factory("$dialog.pointer." + pointerCls, self, cfg.pointer);
+            self.pointer    = factory("dialog.pointer." + pointerCls, self, cfg.pointer);
 
             if (isFunction(cfg.position.type)) {
                 self.positionGetType = cfg.position.type;
@@ -1136,7 +1136,7 @@ module.exports = (function(){
 
         /**
          * Get dialog's pointer object
-         * @returns {$dialog.pointer.Abstract}
+         * @returns {dialog.pointer.Abstract}
          */
         getPointer: function() {
             return this.pointer;
@@ -1145,7 +1145,7 @@ module.exports = (function(){
 
         /**
          * Get dialog's overlay object
-         * @returns {$dialog.Overlay}
+         * @returns {dialog.Overlay}
          */
         getOverlay: function() {
             return this.overlay;
@@ -2040,7 +2040,7 @@ module.exports = (function(){
             }
 
             if (isFunction(type) || type == "custom") {
-                return "$dialog.position.Custom";
+                return "dialog.position.Custom";
             }
 
             var fc = type.substr(0, 1);
@@ -2049,13 +2049,13 @@ module.exports = (function(){
                 return false;
             }
             else if (fc == "w") {
-                return "$dialog.position.Window";
+                return "dialog.position.Window";
             }
             else if (fc == "m") {
-                return "$dialog.position.Mouse";
+                return "dialog.position.Mouse";
             }
             else {
-                return "$dialog.position.Target";
+                return "dialog.position.Target";
             }
         },
 

@@ -7,8 +7,8 @@ require("./Abstract.js");
 
 defineClass({
 
-    $class: "$dialog.position.Target",
-    $extends: "$dialog.position.Abstract",
+    $class: "dialog.position.Target",
+    $extends: "dialog.position.Abstract",
 
     getCoords: function(e, type, absolute) {
 

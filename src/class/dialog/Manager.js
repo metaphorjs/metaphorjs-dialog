@@ -2,7 +2,7 @@
 var defineClass = require("metaphorjs-class/src/func/defineClass.js");
 
 defineClass({
-    $class: "$dialog.Manager",
+    $class: "dialog.Manager",
     all: null,
     groups: null,
 

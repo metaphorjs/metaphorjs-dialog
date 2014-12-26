@@ -8,12 +8,12 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     isFunction = require("metaphorjs/src/func/isFunction.js"),
     isString = require("metaphorjs/src/func/isString.js"),
     isBool = require("metaphorjs/src/func/isBool.js"),
-    animate = require("metaphorjs-animate/src/metaphorjs.animate.js");
+    animate = require("metaphorjs-animate/src/func/animate.js");
 
 
 module.exports = defineClass({
 
-    $class:         "$dialog.Overlay",
+    $class:         "dialog.Overlay",
     dialog:         null,
     enabled:		false,
     color:			'#000',

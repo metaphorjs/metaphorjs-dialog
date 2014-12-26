@@ -5,8 +5,8 @@ require("./Abstract.js");
 
 module.exports = defineClass({
 
-    $class: "$dialog.position.Custom",
-    $extends: "$dialog.position.Abstract",
+    $class: "dialog.position.Custom",
+    $extends: "dialog.position.Abstract",
 
     getCoords: function(e) {
 

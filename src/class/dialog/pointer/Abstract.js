@@ -4,7 +4,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 module.exports = defineClass({
 
-    $class: "$dialog.pointer.Abstract",
+    $class: "dialog.pointer.Abstract",
     enabled: null,
     node: null,
     correctX: 0,

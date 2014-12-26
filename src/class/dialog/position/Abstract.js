@@ -2,7 +2,7 @@
 var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     extend = require("metaphorjs/src/func/extend.js"),
     setStyle = require("metaphorjs/src/func/dom/setStyle.js"),
-    select = require("metaphorjs-select/src/metaphorjs.select.js"),
+    select = require("metaphorjs-select/src/func/select.js"),
     normalizeEvent = require("metaphorjs/src/func/event/normalizeEvent.js"),
     addListener = require("metaphorjs/src/func/event/addListener.js"),
     removeListener = require("metaphorjs/src/func/event/removeListener.js"),
@@ -15,7 +15,7 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 
 defineClass({
 
-    $class: "$dialog.position.Abstract",
+    $class: "dialog.position.Abstract",
     dialog: null,
     positionBase: null,
     correct: "solid",
