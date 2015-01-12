@@ -2015,6 +2015,7 @@ module.exports = (function(){
                     cls     = self.getPositionClass(type);
 
 
+
                 cfgPos.type     = type;
 
                 if (cls === false) {

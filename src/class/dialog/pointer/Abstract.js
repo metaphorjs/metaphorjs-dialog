@@ -128,7 +128,7 @@ module.exports = defineClass({
     detectPointerPosition: function(dialogPosition) {
 
         var self = this,
-            pri, sec;
+            pri, sec, thr;
 
         if (self.position && !dialogPosition) {
             if (isFunction(self.position)) {
@@ -139,6 +139,7 @@ module.exports = defineClass({
 
         pri = self.dialog.getPosition().getPrimaryPosition(dialogPosition);
         sec = self.dialog.getPosition().getSecondaryPosition(dialogPosition);
+        thr = sec.substr(1, 1);
 
         if (!pri) {
             return null;
@@ -148,8 +149,12 @@ module.exports = defineClass({
 
         if (sec) {
             sec = sec.substr(0, 1);
-            //position += self.opposite[sec];
-            position += sec;
+            if (thr == "c") {
+                position += self.opposite[sec];
+            }
+            else {
+                position += sec;
+            }
         }
 
         return position;

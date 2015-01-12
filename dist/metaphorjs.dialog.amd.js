@@ -1025,6 +1025,13 @@ ns.register("mixin.Observable", {
 
         self.$$observable = new Observable;
 
+        self.$initObservable(cfg);
+    },
+
+    $initObservable: function(cfg) {
+
+        var self = this;
+
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope,
@@ -1856,13 +1863,14 @@ defineClass({
     $extends: "dialog.position.Abstract",
 
 
-    getCoords: function(e) {
+    getCoords: function(e, type) {
+
         var self    = this,
             dlg     = self.dialog,
             pBase   = self.getPositionBase() || window,
             size    = dlg.getDialogSize(),
             pos     = {},
-            type    = self.type.substr(1),
+            type    = (type || self.type).substr(1),
             offsetX = self.offsetX,
             offsetY = self.offsetY,
             st      = getScrollTop(pBase),
@@ -1921,17 +1929,23 @@ defineClass({
         return pos;
     },
 
-    getPrimaryPosition: function() {
-        return this.type.substr(1, 1);
+    getPrimaryPosition: function(type) {
+        return (type || this.type).substr(1, 1);
     },
 
-    getSecondaryPosition: function() {
-        return this.type.substr(2);
+    getSecondaryPosition: function(type) {
+        return (type || this.type).substr(2);
     },
 
-    // window positioning doesn't need correction
-    correctType: function() {},
-    correctPosition: function() {}
+
+    getAllPositions: function() {
+        return ["wt", "wr", "wb", "wl", "wrt", "wrb", "wlb", "wlt", "wc"];
+    },
+
+    correctPosition: function(e) {
+        return this.getCoords(e);
+    }
+
 });
 
 
@@ -2082,7 +2096,7 @@ defineClass({
     detectPointerPosition: function(dialogPosition) {
 
         var self = this,
-            pri, sec;
+            pri, sec, thr;
 
         if (self.position && !dialogPosition) {
             if (isFunction(self.position)) {
@@ -2093,6 +2107,7 @@ defineClass({
 
         pri = self.dialog.getPosition().getPrimaryPosition(dialogPosition);
         sec = self.dialog.getPosition().getSecondaryPosition(dialogPosition);
+        thr = sec.substr(1, 1);
 
         if (!pri) {
             return null;
@@ -2102,8 +2117,12 @@ defineClass({
 
         if (sec) {
             sec = sec.substr(0, 1);
-            //position += self.opposite[sec];
-            position += sec;
+            if (thr == "c") {
+                position += self.opposite[sec];
+            }
+            else {
+                position += sec;
+            }
         }
 
         return position;
@@ -4808,6 +4827,7 @@ var Dialog = (function(){
                                 self.positionGetType.call(self.$$callbackContext, self, e) :
                                 cfgPos.type,
                     cls     = self.getPositionClass(type);
+
 
 
                 cfgPos.type     = type;

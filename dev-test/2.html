@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <script src="../dist/metaphorjs.dialog.js"></script>
+    <script>
+        MetaphorJs.onReady(function(){
+
+            var d = new MetaphorJs.Dialog({
+                cls: {
+                    dialog: "dialog"
+                },
+                content: "There is only one dialog and it is jumping between targets",
+                render: {
+                    appendTo: document.getElementById("boundary")
+                },
+                show: {
+                    events: false
+                },
+                hide: {
+                    events: false
+                },
+                position: {
+                    type: "wc",
+                    base: document.getElementById("boundary")
+                },
+                pointer: {
+                    size: 11,
+                    color: "#fff",
+                    position: "r",
+                    direction: "r",
+                    border: 1,
+                    borderColor: "#ccc"
+                }
+            });
+
+            d.show();
+        })
+    </script>
+    <style>
+        .dialog {
+            width: 100px;
+            height: 100px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            position: absolute;
+        }
+    </style>
+</head>
+<body>
+
+
+
+</body>
+</html>

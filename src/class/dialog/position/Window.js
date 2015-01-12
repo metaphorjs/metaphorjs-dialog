@@ -9,13 +9,14 @@ module.exports = defineClass({
     $extends: "dialog.position.Abstract",
 
 
-    getCoords: function(e) {
+    getCoords: function(e, type) {
+
         var self    = this,
             dlg     = self.dialog,
             pBase   = self.getPositionBase() || window,
             size    = dlg.getDialogSize(),
             pos     = {},
-            type    = self.type.substr(1),
+            type    = (type || self.type).substr(1),
             offsetX = self.offsetX,
             offsetY = self.offsetY,
             st      = getScrollTop(pBase),
@@ -74,16 +75,22 @@ module.exports = defineClass({
         return pos;
     },
 
-    getPrimaryPosition: function() {
-        return this.type.substr(1, 1);
+    getPrimaryPosition: function(type) {
+        return (type || this.type).substr(1, 1);
     },
 
-    getSecondaryPosition: function() {
-        return this.type.substr(2);
+    getSecondaryPosition: function(type) {
+        return (type || this.type).substr(2);
     },
 
-    // window positioning doesn't need correction
-    correctType: function() {},
-    correctPosition: function() {}
+
+    getAllPositions: function() {
+        return ["wt", "wr", "wb", "wl", "wrt", "wrb", "wlb", "wlt", "wc"];
+    },
+
+    correctPosition: function(e) {
+        return this.getCoords(e);
+    }
+
 });
 
