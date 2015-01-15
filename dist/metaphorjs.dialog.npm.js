@@ -932,8 +932,12 @@ function delegate(el, selector, event, fn) {
     var key = selector + "-" + event,
         listener    = function(e) {
             e = normalizeEvent(e);
-            if (is(e.target, selector)) {
-                return fn(e);
+            var trg = e.target;
+            while (trg) {
+                if (is(trg, selector)) {
+                    return fn(e);
+                }
+                trg = trg.parentNode;
             }
             return null;
         };
@@ -2718,7 +2722,8 @@ defineClass({
 
         if (node) {
             raf(function() {
-                if (!dialog.isVisible() && node.parentNode) {
+                //if (!dialog.isVisible() && node.parentNode) {
+                if (node.parentNode) {
                     node.parentNode.removeChild(node);
                 }
             });
