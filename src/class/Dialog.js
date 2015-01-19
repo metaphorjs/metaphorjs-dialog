@@ -1445,6 +1445,10 @@ module.exports = (function(){
                 scfg        = cfg.show,
                 returnMode  = null;
 
+            if (e) {
+                e = normalizeEvent(e);
+            }
+
             // if tooltip is disabled, we do not stop propagation and do not return false.s
             if (!self.isEnabled()) {
                 returnMode = "disabled";
@@ -1493,7 +1497,7 @@ module.exports = (function(){
             var dtChanged   = false;
 
             // if we have a dynamicTarget
-            if (e && e.stopPropagation && self.dynamicTarget) {
+            if (e && self.dynamicTarget) {
                 dtChanged = self.changeDynamicTarget(e);
             }
 
@@ -1523,7 +1527,7 @@ module.exports = (function(){
                 returnMode = "beforeshow";
             }
 
-            if (e && e.stopPropagation && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
+            if (e && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
                 var et = cfg.events.show[e.type] || cfg.events.show["*"];
 
                 if (et.process) {
@@ -1537,7 +1541,7 @@ module.exports = (function(){
             }
 
             if (returnMode) {
-                return returnMode;
+                return returnValue;
             }
 
             // first, we stop all current animations

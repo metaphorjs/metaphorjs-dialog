@@ -473,6 +473,7 @@ extend(DomEvent.prototype, {
         var e = this.originalEvent;
 
         this.isPropagationStopped = returnTrue;
+        e.cancelBubble = true;
 
         if ( e && e.stopPropagation ) {
             e.stopPropagation();
@@ -4264,6 +4265,10 @@ var Dialog = (function(){
                 scfg        = cfg.show,
                 returnMode  = null;
 
+            if (e) {
+                e = normalizeEvent(e);
+            }
+
             // if tooltip is disabled, we do not stop propagation and do not return false.s
             if (!self.isEnabled()) {
                 returnMode = "disabled";
@@ -4312,7 +4317,7 @@ var Dialog = (function(){
             var dtChanged   = false;
 
             // if we have a dynamicTarget
-            if (e && e.stopPropagation && self.dynamicTarget) {
+            if (e && self.dynamicTarget) {
                 dtChanged = self.changeDynamicTarget(e);
             }
 
@@ -4342,7 +4347,7 @@ var Dialog = (function(){
                 returnMode = "beforeshow";
             }
 
-            if (e && e.stopPropagation && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
+            if (e && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
                 var et = cfg.events.show[e.type] || cfg.events.show["*"];
 
                 if (et.process) {
@@ -4356,7 +4361,7 @@ var Dialog = (function(){
             }
 
             if (returnMode) {
-                return returnMode;
+                return returnValue;
             }
 
             // first, we stop all current animations
