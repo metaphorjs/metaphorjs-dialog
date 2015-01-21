@@ -147,7 +147,8 @@ var extend = function(){
         }
 
         while (args.length) {
-            if (src = args.shift()) {
+            // IE < 9 fix: check for hasOwnProperty presence
+            if ((src = args.shift()) && src.hasOwnProperty) {
                 for (k in src) {
 
                     if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
@@ -293,7 +294,7 @@ function removeClass(el, cls) {
 
 function setStyle(el, name, value) {
 
-    if (!el) {
+    if (!el || !el.style) {
         return;
     }
 
@@ -654,8 +655,16 @@ var addListener = function(){
     return function addListener(el, event, func) {
 
         if (fn === null) {
-            fn = el.attachEvent ? "attachEvent" : "addEventListener";
-            prefix = el.attachEvent ? "on" : "";
+            if (el.addEventListener) {
+                fn = "addEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "attachEvent";
+                prefix = "on";
+            }
+            //fn = el.attachEvent ? "attachEvent" : "addEventListener";
+            //prefix = el.attachEvent ? "on" : "";
         }
 
 
@@ -685,8 +694,16 @@ var removeListener = function(){
     return function removeListener(el, event, func) {
 
         if (fn === null) {
-            fn = el.detachEvent ? "detachEvent" : "removeEventListener";
-            prefix = el.detachEvent ? "on" : "";
+            if (el.removeEventListener) {
+                fn = "removeEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "detachEvent";
+                prefix = "on";
+            }
+            //fn = el.detachEvent ? "detachEvent" : "removeEventListener";
+            //prefix = el.detachEvent ? "on" : "";
         }
 
         el[fn](prefix + event, func);
@@ -1411,6 +1428,10 @@ defineClass({
     apply: function(coords) {
 
         if (!coords) {
+            return;
+        }
+
+        if (isNaN(coords.x) || isNaN(coords.y)) {
             return;
         }
 

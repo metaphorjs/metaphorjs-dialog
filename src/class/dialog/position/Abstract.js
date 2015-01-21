@@ -267,6 +267,10 @@ module.exports = defineClass({
             return;
         }
 
+        if (isNaN(coords.x) || isNaN(coords.y)) {
+            return;
+        }
+
         setStyle(this.dialog.getElem(), {
             left: coords.x + "px",
             top: coords.y + "px"
