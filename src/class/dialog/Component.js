@@ -1,7 +1,8 @@
 
 var Dialog = require("../Dialog.js"),
     extend  = require("metaphorjs/src/func/extend.js"),
-    Component = require("metaphorjs/src/class/Component.js");
+    Component = require("metaphorjs/src/class/Component.js"),
+    DomEvent = require("metaphorjs/src/lib/DomEvent.js");
 
 module.exports = Component.$extend({
 
@@ -70,12 +71,21 @@ module.exports = Component.$extend({
         self.trigger('after-render', self);
     },
 
-    show: function() {
-        this.dialog.show();
+    show: function(e) {
+        if (e && !(e instanceof DomEvent)) {
+            e = null;
+        }
+
+        this.dialog.show(e);
     },
 
-    hide: function() {
-        this.dialog.hide();
+    hide: function(e) {
+
+        if (e && !(e instanceof DomEvent)) {
+            e = null;
+        }
+
+        this.dialog.hide(e);
     },
 
     onBeforeDialogShow: function() {
