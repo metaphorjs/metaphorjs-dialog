@@ -2725,11 +2725,13 @@ var error = (function(){
             listeners[i][0].call(listeners[i][1], e);
         }
 
-        var stack = e.stack || (new Error).stack;
+        var stack = (e ? e.stack : null) || (new Error).stack;
 
         if (typeof console != strUndef && console.log) {
             async(function(){
-                console.log(e);
+                if (e) {
+                    console.log(e);
+                }
                 if (stack) {
                     console.log(stack);
                 }
@@ -4711,6 +4713,71 @@ function isPrimitive(value) {
 };
 
 
+
+// partly from jQuery serialize.js
+
+var serializeParam = function(){
+
+    var r20 = /%20/g,
+        rbracket = /\[\]$/;
+
+    function buildParams(prefix, obj, add) {
+        var name,
+            i, l, v;
+
+        if (isArray(obj)) {
+            // Serialize array item.
+
+            for (i = 0, l = obj.length; i < l; i++) {
+                v = obj[i];
+
+                if (rbracket.test(prefix)) {
+                    // Treat each array item as a scalar.
+                    add(prefix, v);
+
+                } else {
+                    // Item is non-scalar (array or object), encode its numeric index.
+                    buildParams(
+                        prefix + "[" + ( typeof v === "object" ? i : "" ) + "]",
+                        v,
+                        add
+                    );
+                }
+            }
+        } else if (isPlainObject(obj)) {
+            // Serialize object item.
+            for (name in obj) {
+                buildParams(prefix + "[" + name + "]", obj[ name ], add);
+            }
+
+        } else {
+            // Serialize scalar item.
+            add(prefix, obj);
+        }
+    }
+
+    return function(obj) {
+
+        var prefix,
+            s = [],
+            add = function( key, value ) {
+                // If value is a function, invoke it and return its value
+                value = isFunction(value) ? value() : (value == null ? "" : value);
+                s[s.length] = encodeURIComponent( key ) + "=" + encodeURIComponent( value );
+            };
+
+        for ( prefix in obj ) {
+            buildParams(prefix, obj[prefix], add);
+        }
+
+        // Return the resulting serialization
+        return s.join( "&" ).replace( r20, "+" );
+    };
+
+
+}();
+
+
 /**
  * @mixin Promise
  */
@@ -5153,32 +5220,6 @@ defineClass({
             return data + "";
         },
 
-        buildParams     = function(data, params, name) {
-
-            var i, len;
-
-            if (isPrimitive(data) && name) {
-                params.push(encodeURIComponent(name) + "=" + encodeURIComponent(""+data));
-            }
-            else if (isArray(data) && name) {
-                for (i = 0, len = data.length; i < len; i++) {
-                    buildParams(data[i], params, name + "["+i+"]");
-                }
-            }
-            else if (isObject(data)) {
-                for (i in data) {
-                    if (data.hasOwnProperty(i)) {
-                        buildParams(data[i], params, name ? name + "["+i+"]" : i);
-                    }
-                }
-            }
-        },
-
-        prepareParams   = function(data) {
-            var params = [];
-            buildParams(data, params, null);
-            return params.join("&").replace(/%20/g, "+");
-        },
 
         fixUrlDomain    = function(url) {
 
@@ -5205,14 +5246,11 @@ defineClass({
                       url + (rquery.test(url) ? "&" : "?" ) + "_=" + stamp;
             }
 
-            if (opt.data && (!formDataSupport || !(opt.data instanceof window.FormData))) {
+            if (opt.data && opt.method != "POST" && !opt.contentType && (!formDataSupport || !(opt.data instanceof window.FormData))) {
 
-                opt.data = !isString(opt.data) ? prepareParams(opt.data) : opt.data;
-
-                if (rgethead.test(opt.method)) {
-                    url += (rquery.test(url) ? "&" : "?") + opt.data;
-                    opt.data = null;
-                }
+                opt.data = !isString(opt.data) ? serializeParam(opt.data) : opt.data;
+                url += (rquery.test(url) ? "&" : "?") + opt.data;
+                opt.data = null;
             }
 
             return url;
@@ -5243,10 +5281,11 @@ defineClass({
             }
         },
 
+
         // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
         serializeForm   = function(form) {
 
-            var oField, sFieldType, nFile, sSearch = "";
+            var oField, sFieldType, nFile, obj = {};
 
             for (var nItem = 0; nItem < form.elements.length; nItem++) {
 
@@ -5262,15 +5301,14 @@ defineClass({
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
                          nFile < oField.files.length;
-                         sSearch += "&" + encodeURIComponent(oField.name) + "=" +
-                                    encodeURIComponent(oField.files[nFile++].name)){}
+                         obj[oField.name] = oField.files[nFile++].name){}
 
                 } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
-                    sSearch += "&" + encodeURIComponent(oField.name) + "=" + encodeURIComponent(oField.value);
+                    obj[oField.name] = oField.value;
                 }
             }
 
-            return sSearch;
+            return serializeParam(obj);
         },
 
         globalEval = function(code){
@@ -5341,23 +5379,28 @@ defineClass({
                 }
             }
 
-            if (opt.form && opt.transport != "iframe") {
-                if (opt.method == "POST") {
+            if (opt.form && opt.transport != "iframe" && opt.method == "POST") {
+                if (formDataSupport) {
                     opt.data = new FormData(opt.form);
                 }
                 else {
+                    opt.contentType = "application/x-www-form-urlencoded";
                     opt.data = serializeForm(opt.form);
                 }
             }
-            else if (opt.method == "POST" && formDataSupport) {
+            else if (opt.contentType == "json") {
+                opt.contentType = "text/plain";
+                opt.data = isString(opt.data) ? opt.data : JSON.stringify(opt.data);
+            }
+            else if (isPlainObject(opt.data) && opt.method == "POST" && formDataSupport) {
+
                 var d = opt.data,
                     k;
+
                 opt.data = new FormData;
 
-                if (isPlainObject(d)) {
-                    for (k in d) {
-                        opt.data.append(k, d[k]);
-                    }
+                for (k in d) {
+                    opt.data.append(k, d[k]);
                 }
             }
 
@@ -5561,7 +5604,7 @@ defineClass({
             data    = processData(data, opt, contentType);
 
             if (globalEvents.hasListener("process-response")) {
-                data    = globalEvents.trigger("process-response", data, self.$$promise);
+                globalEvents.trigger("process-response", data, self.$$promise);
             }
 
             if (opt.processResponse) {
@@ -5661,9 +5704,9 @@ var ajax = function(){
             username:       null,
             password:       null,
             cache:          null,
-            dataType:       null,
+            dataType:       null, // response data type
             timeout:        0,
-            contentType:    "application/x-www-form-urlencoded",
+            contentType:    null, // request data type
             xhrFields:      null,
             jsonp:          false,
             jsonpParam:     null,
@@ -5725,11 +5768,11 @@ var ajax = function(){
     };
 
     ajax.on     = function() {
-        MetaphorJs.Ajax.global.on.apply(globalEvents, arguments);
+        MetaphorJs.Ajax.global.on.apply(MetaphorJs.Ajax.global, arguments);
     };
 
     ajax.un     = function() {
-        MetaphorJs.Ajax.global.un.apply(globalEvents, arguments);
+        MetaphorJs.Ajax.global.un.apply(MetaphorJs.Ajax.global, arguments);
     };
 
     ajax.get    = function(url, opt) {
@@ -8691,7 +8734,7 @@ var Dialog = (function(){
              * 'this' object for all callbacks, including render.fn, position.get, etc.
              * @type {object}
              */
-            scope:				null,
+            context:			null,
 
             /**
              * When content has changed.
@@ -8699,7 +8742,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {string} content
              */
-            contentchange:	 	null,
+            "content-change": 	null,
 
             /**
              * Before dialog appeared.<br>
@@ -8708,7 +8751,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {Event} event
              */
-            beforeshow: 		null,
+            "before-show": 		null,
 
             /**
              * Immediately after dialog appeared.
@@ -8725,7 +8768,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {Event} event
              */
-            beforehide: 		null,
+            "before-hide": 		null,
 
             /**
              * Immediately after dialog has been hidden.
@@ -8757,7 +8800,7 @@ var Dialog = (function(){
              * @param {Element} newTarget
              * @param {Element|null} prevTarget
              */
-            targetchange:       null,
+            "target-change":       null,
 
             /**
              * One handler for all configured buttons. Called on click, enter and space.

@@ -3771,7 +3771,7 @@ var Dialog = (function(){
              * 'this' object for all callbacks, including render.fn, position.get, etc.
              * @type {object}
              */
-            scope:				null,
+            context:			null,
 
             /**
              * When content has changed.
@@ -3779,7 +3779,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {string} content
              */
-            contentchange:	 	null,
+            "content-change": 	null,
 
             /**
              * Before dialog appeared.<br>
@@ -3788,7 +3788,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {Event} event
              */
-            beforeshow: 		null,
+            "before-show": 		null,
 
             /**
              * Immediately after dialog appeared.
@@ -3805,7 +3805,7 @@ var Dialog = (function(){
              * @param {MetaphorJs.lib.Dialog} dialog
              * @param {Event} event
              */
-            beforehide: 		null,
+            "before-hide": 		null,
 
             /**
              * Immediately after dialog has been hidden.
@@ -3837,7 +3837,7 @@ var Dialog = (function(){
              * @param {Element} newTarget
              * @param {Element|null} prevTarget
              */
-            targetchange:       null,
+            "target-change":       null,
 
             /**
              * One handler for all configured buttons. Called on click, enter and space.
