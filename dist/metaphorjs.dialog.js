@@ -2953,6 +2953,10 @@ var Promise = function(){
             return this._state == FULFILLED;
         },
 
+        isResolved: function() {
+            return this._state == FULFILLED;
+        },
+
         isRejected: function() {
             return this._state == REJECTED;
         },
@@ -4704,13 +4708,6 @@ var Observable = (function(){
 
     return Observable;
 }());
-
-
-
-function isPrimitive(value) {
-    var vt = varType(value);
-    return vt < 3 && vt > -1;
-};
 
 
 
@@ -10414,9 +10411,9 @@ var Dialog = (function(){
 
             var self = this;
 
-            self.trigger("destroy", self);
             self.setHandlers("unbind");
 
+            self.trigger("destroy", self);
             self.destroyElem();
 
 

@@ -120,7 +120,7 @@ module.exports = Component.$extend({
     onDialogDestroy: function() {
         var self    = this;
 
-        if (!self.destroying) {
+        if (!self.$destroying) {
             self.dialog = null;
             self.$destroy();
         }
@@ -129,8 +129,6 @@ module.exports = Component.$extend({
     destroy: function() {
 
         var self    = this;
-
-        self.destroying = true;
 
         if (self.dialog) {
             self.dialog.destroy();

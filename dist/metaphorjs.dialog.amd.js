@@ -5451,9 +5451,9 @@ var Dialog = (function(){
 
             var self = this;
 
-            self.trigger("destroy", self);
             self.setHandlers("unbind");
 
+            self.trigger("destroy", self);
             self.destroyElem();
 
 
