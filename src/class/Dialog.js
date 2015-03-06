@@ -1048,6 +1048,21 @@ module.exports = (function(){
         positionClass:      null,
         positionAttempt:    0,
 
+        $constructor: function() {
+
+            this.$$events = {
+                "before-show": {
+                    returnResult: false
+                },
+                "before-hide": {
+                    returnResult: false
+                }
+            };
+
+            this.$super.apply(this, arguments);
+
+        },
+
         $init: function(cfg) {
 
             cfg = cfg || {};

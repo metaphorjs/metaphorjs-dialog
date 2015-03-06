@@ -1052,19 +1052,25 @@ ns.register("mixin.Observable", {
 
     $initObservable: function(cfg) {
 
-        var self = this;
+        var self    = this,
+            obs     = self.$$observable;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
-                context = ls.context || ls.scope,
+                context = ls.context || ls.scope || ls.$context,
+                events = extend({}, self.$$events, ls.$events, true, false),
                 i;
+
+            for (i in events) {
+                obs.createEvent(i, events[i]);
+            }
 
             ls.context = null;
             ls.scope = null;
 
             for (i in ls) {
                 if (ls[i]) {
-                    self.$$observable.on(i, ls[i], context || self);
+                    obs.on(i, ls[i], context || self);
                 }
             }
 
@@ -3888,6 +3894,21 @@ var Dialog = (function(){
         positionGetType:    null,
         positionClass:      null,
         positionAttempt:    0,
+
+        $constructor: function() {
+
+            this.$$events = {
+                "before-show": {
+                    returnResult: false
+                },
+                "before-hide": {
+                    returnResult: false
+                }
+            };
+
+            this.$super.apply(this, arguments);
+
+        },
 
         $init: function(cfg) {
 
