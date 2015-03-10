@@ -4699,11 +4699,10 @@ var Dialog = (function(){
             if (node && cfg.hide.destroy) {
                 raf(function(){
                     data(node, cfg.instanceName, null);
-                    self.destroy();
+                    self.$destroy();
                 });
             }
-
-            if (node && cfg.hide.remove) {
+            else if (node && cfg.hide.remove) {
                 raf(function(){
                     self.removeElem();
                 });
