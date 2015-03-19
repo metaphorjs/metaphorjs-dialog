@@ -5232,7 +5232,7 @@ defineClass({
 
             url.replace(rhash, "");
 
-            if (opt.cache === false) {
+            if (!opt.allowCache) {
 
                 var stamp   = (new Date).getTime();
 
@@ -5519,7 +5519,7 @@ defineClass({
                 }
                 else {
                     if (window.File && item instanceof File) {
-                        name = "upload" + (l > 1 ? "[]" : "");
+                        name = item.uploadName || ("upload" + (l > 1 ? "[]" : ""));
                     }
                     else {
                         name = item.name || "upload" + (l > 1 ? "[]" : "");

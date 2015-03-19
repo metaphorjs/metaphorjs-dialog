@@ -111,10 +111,12 @@ module.exports = Component.$extend({
 
     onDialogHide: function() {
         var self = this;
-        self.template.setAnimation(false);
-        self.hidden = true;
-        self.onHide();
-        self.trigger("hide", self);
+        if (!self.$destroyed) {
+            self.template.setAnimation(false);
+            self.hidden = true;
+            self.onHide();
+            self.trigger("hide", self);
+        }
     },
 
     onDialogDestroy: function() {
