@@ -4839,7 +4839,7 @@ var Dialog = (function(){
             }
 
             var ecfg;
-            if (e && e.stopPropagation && (ecfg = self.getEventConfig(e, "show"))) {
+            if (e && e.stopPropagation && (ecfg = self.getEventConfig(e, "hide"))) {
 
                 if (ecfg.process) {
                     returnValue = ecfg.process(self, e, "hide", returnMode);
