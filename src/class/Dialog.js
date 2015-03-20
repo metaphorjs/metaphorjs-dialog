@@ -40,7 +40,9 @@ var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
     undelegate      = require("metaphorjs/src/func/dom/undelegate.js"),
 
     raf             = require("metaphorjs-animate/src/func/raf.js"),
-    async           = require("metaphorjs/src/func/async.js");
+    async           = require("metaphorjs/src/func/async.js"),
+
+    createGetter    = require("metaphorjs-watchable/src/func/createGetter.js");
 
 require("metaphorjs-observable/src/mixin/Observable.js");
 
@@ -66,6 +68,28 @@ module.exports = (function(){
             e.stopPropagation();
             return false;
         }
+    };
+
+    var getEventConfig = function(e, dlgEl) {
+
+        var type    = e.type,
+            trg     = e.target,
+            cfg     = null,
+            data;
+
+        while (trg && trg !== dlgEl) {
+
+            data    = getAttr(trg, "data-" + type);
+
+            if (data) {
+                cfg = createGetter(data)({});
+                break;
+            }
+
+            trg     = trg.parentNode;
+        }
+
+        return cfg;
     };
 
     /*
@@ -1442,6 +1466,19 @@ module.exports = (function(){
             }
         },
 
+        getEventConfig: function(e, action) {
+
+            var self    = this,
+                ecfg    = getEventConfig(e, self.node),
+                cfg     = self.cfg;
+
+            if (!ecfg && cfg.events[action]) {
+                ecfg   = cfg.events[action][e.type] || cfg.events[action]['*'];
+            }
+
+            return ecfg;
+        },
+
 
         /* **** Show **** */
 
@@ -1542,16 +1579,17 @@ module.exports = (function(){
                 returnMode = "beforeshow";
             }
 
-            if (e && cfg.events.show && (cfg.events.show[e.type] || cfg.events.show['*'])) {
-                var et = cfg.events.show[e.type] || cfg.events.show["*"];
+            var ecfg;
 
-                if (et.process) {
-                    returnValue	= et.process(self, e, "show", returnMode);
+            if (e && (ecfg = self.getEventConfig(e, "show"))) {
+
+                if (ecfg.process) {
+                    returnValue	= ecfg.process(self, e, "show", returnMode);
                 }
                 else {
-                    et.stopPropagation && e.stopPropagation();
-                    et.preventDefault && e.preventDefault();
-                    returnValue = et.returnValue;
+                    ecfg.stopPropagation && e.stopPropagation();
+                    ecfg.preventDefault && e.preventDefault();
+                    returnValue = ecfg.returnValue;
                 }
             }
 
@@ -1729,17 +1767,16 @@ module.exports = (function(){
                 returnMode = "beforehide";
             }
 
+            var ecfg;
+            if (e && e.stopPropagation && (ecfg = self.getEventConfig(e, "show"))) {
 
-            if (e && e.stopPropagation && cfg.events.hide && (cfg.events.hide[e.type] || cfg.events.hide["*"])) {
-                var et = cfg.events.hide[e.type] || cfg.events.hide["*"];
-
-                if (et.process) {
-                    returnValue = et.process(self, e, "hide", returnMode);
+                if (ecfg.process) {
+                    returnValue = ecfg.process(self, e, "hide", returnMode);
                 }
                 else {
-                    if (et.stopPropagation) e.stopPropagation();
-                    if (et.preventDefault) e.preventDefault();
-                    returnValue = et.returnValue;
+                    if (ecfg.stopPropagation) e.stopPropagation();
+                    if (ecfg.preventDefault) e.preventDefault();
+                    returnValue = ecfg.returnValue;
                 }
             }
 
