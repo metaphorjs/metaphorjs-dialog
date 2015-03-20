@@ -3141,7 +3141,7 @@ var Dialog = (function(){
         }
     };
 
-    var getEventConfig = function(e, dlgEl) {
+    var getEventConfig = function(e, action, dlgEl) {
 
         var type    = e.type,
             trg     = e.target,
@@ -3150,7 +3150,7 @@ var Dialog = (function(){
 
         while (trg && trg !== dlgEl) {
 
-            data    = getAttr(trg, "data-" + type);
+            data    = getAttr(trg, "data-" + action + "-" + type);
 
             if (data) {
                 cfg = createGetter(data)({});
@@ -4540,7 +4540,7 @@ var Dialog = (function(){
         getEventConfig: function(e, action) {
 
             var self    = this,
-                ecfg    = getEventConfig(e, self.node),
+                ecfg    = getEventConfig(e, action, self.node),
                 cfg     = self.cfg;
 
             if (!ecfg && cfg.events[action]) {
