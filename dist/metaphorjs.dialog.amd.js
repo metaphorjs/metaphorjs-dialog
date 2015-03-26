@@ -1310,22 +1310,22 @@ ns.register("mixin.Observable", {
 
     on: function() {
         var o = this.$$observable;
-        return o.on.apply(o, arguments);
+        return o ? o.on.apply(o, arguments) : null;
     },
 
     un: function() {
         var o = this.$$observable;
-        return o.un.apply(o, arguments);
+        return o ? o.un.apply(o, arguments) : null;
     },
 
     once: function() {
         var o = this.$$observable;
-        return o.once.apply(o, arguments);
+        return o ? o.once.apply(o, arguments) : null;
     },
 
     trigger: function() {
         var o = this.$$observable;
-        return o.trigger.apply(o, arguments);
+        return o ? o.trigger.apply(o, arguments) : null;
     },
 
     $beforeDestroy: function() {
@@ -1661,10 +1661,15 @@ defineClass({
             return;
         }
 
-        setStyle(this.dialog.getElem(), {
-            left: coords.x + "px",
-            top: coords.y + "px"
-        });
+        var self    = this,
+            dlg     = self.dialog,
+            axis    = dlg.getCfg().position.axis,
+            pos     = {};
+
+        axis != "y" && (pos.left = coords.x + "px");
+        axis != "x" && (pos.top = coords.y + "px");
+
+        setStyle(dlg.getElem(), pos);
     },
 
     onWindowResize: function(e) {

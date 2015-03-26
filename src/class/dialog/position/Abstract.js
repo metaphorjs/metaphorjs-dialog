@@ -271,10 +271,15 @@ module.exports = defineClass({
             return;
         }
 
-        setStyle(this.dialog.getElem(), {
-            left: coords.x + "px",
-            top: coords.y + "px"
-        });
+        var self    = this,
+            dlg     = self.dialog,
+            axis    = dlg.getCfg().position.axis,
+            pos     = {};
+
+        axis != "y" && (pos.left = coords.x + "px");
+        axis != "x" && (pos.top = coords.y + "px");
+
+        setStyle(dlg.getElem(), pos);
     },
 
     onWindowResize: function(e) {
