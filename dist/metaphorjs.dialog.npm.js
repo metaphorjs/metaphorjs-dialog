@@ -987,6 +987,17 @@ function undelegate(el, selector, event, fn) {
 };
 
 var strUndef = "undefined";
+/**
+ * @param {Function} fn
+ * @param {Object} context
+ * @param {[]} args
+ * @param {number} timeout
+ */
+function async(fn, context, args, timeout) {
+    return setTimeout(function(){
+        fn.apply(context, args || []);
+    }, timeout || 0);
+};
 
 
 
@@ -1006,8 +1017,10 @@ var raf = function() {
                     w.webkitCancelRequestAnimationFrame;
 
         if (raf) {
-            return function(fn) {
-                var id = raf(fn);
+            return function(fn, context, args) {
+                var id = raf(context || args ? function(){
+                    fn.apply(context, args || []);
+                } : fn);
                 return function() {
                     cancel(id);
                 };
@@ -1015,24 +1028,14 @@ var raf = function() {
         }
     }
 
-    return function(fn) {
-        var id = setTimeout(fn, 0);
-        return function() {
+    return function(fn, context, args){
+        var id = async(fn, context, args, 0);
+        return function(){
             clearTimeout(id);
-        }
+        };
     };
+
 }();
-/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- * @param {number} timeout
- */
-function async(fn, context, args, timeout) {
-    return setTimeout(function(){
-        fn.apply(context, args || []);
-    }, timeout || 0);
-};
 
 
 
@@ -1045,18 +1048,20 @@ var error = (function(){
         var i, l;
 
         for (i = 0, l = listeners.length; i < l; i++) {
-            listeners[i][0].call(listeners[i][1], e);
+            if (listeners[i][0].call(listeners[i][1], e) === false) {
+                return;
+            }
         }
 
         var stack = (e ? e.stack : null) || (new Error).stack;
 
-        if (typeof console != strUndef && console.log) {
+        if (typeof console != strUndef && console.error) {
             async(function(){
                 if (e) {
-                    console.log(e);
+                    console.error(e);
                 }
                 if (stack) {
-                    console.log(stack);
+                    console.error(stack);
                 }
             });
         }
@@ -1358,6 +1363,13 @@ var getScrollTopOrLeft = function(vertical) {
         body = doc.body,
         html = doc.documentElement;
 
+    var ret = function(scroll, allowNegative) {
+        if (scroll < 0 && allowNegative === false) {
+            return 0;
+        }
+        return scroll;
+    };
+
     if(window[wProp] !== undf) {
         //most browsers except IE before #9
         defaultST = function(){
@@ -1377,16 +1389,16 @@ var getScrollTopOrLeft = function(vertical) {
         }
     }
 
-    return function(node) {
+    return function(node, allowNegative) {
         if (!node || node === window) {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
         else if (node && node.nodeType == 1 &&
             node !== body && node !== html) {
-            return node[sProp];
+            return ret(node[sProp], allowNegative);
         }
         else {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
     }
 
@@ -2865,6 +2877,8 @@ var getAnimationPrefixes = function(){
 
 
 
+
+
 defineClass({
 
     $class:         "dialog.Overlay",
@@ -2876,13 +2890,17 @@ defineClass({
     animateShow:	false,
     animateHide:	false,
 
-    $init: function(dialog){
+    $mixins:        ["mixin.Observable"],
+
+    $init: function(dialog) {
 
         var self = this;
 
         self.dialog = dialog;
         self.onClickDelegate = bind(self.onClick, self);
         extend(self, dialog.getCfg().overlay, true, false);
+
+        self.$$observable.createEvent("click", false);
 
         if (self.enabled) {
             self.enabled = false;
@@ -3039,7 +3057,16 @@ defineClass({
     },
 
     onClick: function(e) {
-        if (this.modal) {
+
+        var self = this;
+
+        var res = self.trigger("click", self.dialog, self, e);
+
+        if (res === false) {
+            return null;
+        }
+
+        if (self.modal) {
             e = normalizeEvent(e);
             e.preventDefault();
             e.stopPropagation();

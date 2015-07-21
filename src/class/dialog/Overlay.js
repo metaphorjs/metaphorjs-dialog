@@ -11,6 +11,8 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     animate = require("metaphorjs-animate/src/func/animate.js");
 
 
+require("metaphorjs-observable/src/mixin/Observable.js");
+
 module.exports = defineClass({
 
     $class:         "dialog.Overlay",
@@ -22,13 +24,17 @@ module.exports = defineClass({
     animateShow:	false,
     animateHide:	false,
 
-    $init: function(dialog){
+    $mixins:        ["mixin.Observable"],
+
+    $init: function(dialog) {
 
         var self = this;
 
         self.dialog = dialog;
         self.onClickDelegate = bind(self.onClick, self);
         extend(self, dialog.getCfg().overlay, true, false);
+
+        self.$$observable.createEvent("click", false);
 
         if (self.enabled) {
             self.enabled = false;
@@ -185,7 +191,16 @@ module.exports = defineClass({
     },
 
     onClick: function(e) {
-        if (this.modal) {
+
+        var self = this;
+
+        var res = self.trigger("click", self.dialog, self, e);
+
+        if (res === false) {
+            return null;
+        }
+
+        if (self.modal) {
             e = normalizeEvent(e);
             e.preventDefault();
             e.stopPropagation();

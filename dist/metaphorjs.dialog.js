@@ -890,6 +890,14 @@ var Class = function(){
             },
 
             /**
+             * @param {string} cls
+             * @returns {boolean}
+             */
+            $is: function(cls) {
+                return isInstanceOf(this, cls);
+            },
+
+            /**
              * Get parent class name
              * @method
              * @returns {string | null}
@@ -911,8 +919,8 @@ var Class = function(){
             $intercept: function(method, fn, newContext, when, replaceValue) {
                 var self = this,
                     orig = self[method];
-                self[method] = intercept(orig, fn, newContext || self, self, when, replaceValue);
-                return orig;
+                self[method] = intercept(orig || emptyFn, fn, newContext || self, self, when, replaceValue);
+                return orig || emptyFn;
             },
 
             /**
@@ -922,7 +930,7 @@ var Class = function(){
             $implement: function(methods) {
                 var $self = this.constructor;
                 if ($self && $self.$parent) {
-                    preparePrototype(this, methods, $self.$parent);
+                    preparePrototype(this, methods, $self.$parent, true);
                 }
             },
 
@@ -941,6 +949,20 @@ var Class = function(){
              */
             $getPlugin: function(cls) {
                 return this.$pluginMap[ns.normalize(cls)] || null;
+            },
+
+            /**
+             * @param {function} fn
+             * @returns {Function}
+             */
+            $bind: function(fn) {
+                var self = this;
+                return function() {
+                    if (self.$isDestroyed()) {
+                        return;
+                    }
+                    return fn.apply(self, arguments);
+                };
             },
 
             /**
@@ -2730,18 +2752,20 @@ var error = (function(){
         var i, l;
 
         for (i = 0, l = listeners.length; i < l; i++) {
-            listeners[i][0].call(listeners[i][1], e);
+            if (listeners[i][0].call(listeners[i][1], e) === false) {
+                return;
+            }
         }
 
         var stack = (e ? e.stack : null) || (new Error).stack;
 
-        if (typeof console != strUndef && console.log) {
+        if (typeof console != strUndef && console.error) {
             async(function(){
                 if (e) {
-                    console.log(e);
+                    console.error(e);
                 }
                 if (stack) {
-                    console.log(stack);
+                    console.error(stack);
                 }
             });
         }
@@ -2969,6 +2993,20 @@ var Promise = function(){
             return this._state == REJECTED;
         },
 
+        hasListeners: function() {
+            var self = this,
+                ls  = [self._fulfills, self._rejects, self._dones, self._fails],
+                i, l;
+
+            for (i = 0, l = ls.length; i < l; i++) {
+                if (ls[i] && ls[i].length) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+
         _cleanup: function() {
             var self    = this;
 
@@ -3122,13 +3160,23 @@ var Promise = function(){
         /**
          * @param {Function} resolve -- called when this promise is resolved; returns new resolve value
          * @param {Function} reject -- called when this promise is rejects; returns new reject reason
+         * @param {object} context -- resolve's and reject's functions "this" object
          * @returns {Promise} new promise
          */
-        then: function(resolve, reject) {
+        then: function(resolve, reject, context) {
 
             var self            = this,
                 promise         = new Promise,
                 state           = self._state;
+
+            if (context) {
+                if (resolve) {
+                    resolve = bind(resolve, context);
+                }
+                if (reject) {
+                    reject = bind(reject, context);
+                }
+            }
 
             if (state == PENDING || self._wait != 0) {
 
@@ -3525,6 +3573,46 @@ var Promise = function(){
         return promise;
     };
 
+    Promise.forEach = function(items, fn, context, allResolved) {
+
+        var left = items.slice(),
+            p = new Promise,
+            values = [],
+            i = 0;
+
+        var next = function() {
+
+            if (!left.length) {
+                p.resolve(values);
+                return;
+            }
+
+            var item = left.shift(),
+                index = i;
+
+            i++;
+
+            Promise.fcall(fn, context, [item, index])
+                .done(function(result){
+                    values.push(result);
+                    next();
+                })
+                .fail(function(reason){
+                    if (allResolved) {
+                        p.reject(reason);
+                    }
+                    else {
+                        values.push(null);
+                        next();
+                    }
+                });
+        };
+
+        next();
+
+        return p;
+    };
+
     Promise.counter = function(cnt) {
 
         var promise     = new Promise;
@@ -3562,8 +3650,10 @@ var raf = function() {
                     w.webkitCancelRequestAnimationFrame;
 
         if (raf) {
-            return function(fn) {
-                var id = raf(fn);
+            return function(fn, context, args) {
+                var id = raf(context || args ? function(){
+                    fn.apply(context, args || []);
+                } : fn);
                 return function() {
                     cancel(id);
                 };
@@ -3571,12 +3661,13 @@ var raf = function() {
         }
     }
 
-    return function(fn) {
-        var id = setTimeout(fn, 0);
-        return function() {
+    return function(fn, context, args){
+        var id = async(fn, context, args, 0);
+        return function(){
             clearTimeout(id);
-        }
+        };
     };
+
 }();
 
 
@@ -4298,6 +4389,10 @@ var ObservableEvent = (function(){
                     continue;
                 }
 
+                if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
+                    continue;
+                }
+
                 l.count++;
 
                 if (l.count < l.start) {
@@ -4875,22 +4970,9 @@ ns.register("mixin.Promise", {
             self._ajax          = ajax;
 
             if (opt.progress) {
-                /*if (xhr.addEventListener) {
-                    xhr.addEventListener("progress", bind(opt.progress, opt.context));
-                }
-                else {
-                    addListener(xhr, "progress", bind(opt.progress, opt.context));
-                }*/
                 xhr.onprogress = bind(opt.progress, opt.context);
             }
             if (opt.uploadProgress && xhr.upload) {
-                /*if (xhr.addEventListener) {
-                    xhr.upload.addEventListener("progress", bind(opt.uploadProgress, opt.context));
-                }
-                else {
-                    addListener(xhr.upload, "progress", bind(opt.uploadProgress, opt.context));
-                }*/
-
                 xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
             }
 
@@ -4947,6 +5029,17 @@ ns.register("mixin.Promise", {
                     );
                 }
                 else {
+
+                    xhr.responseData = null;
+
+                    try {
+                        xhr.responseData = self._ajax.returnResponse(
+                            isString(xhr.responseText) ? xhr.responseText : undf,
+                            xhr.getResponseHeader("content-type") || ''
+                        );
+                    }
+                    catch (thrownErr) {}
+
                     deferred.reject(xhr);
                 }
             }
@@ -5450,31 +5543,52 @@ defineClass({
             }
 
             if (globalEvents.trigger("before-send", opt, transport) === false) {
-                self._promise = Promise.reject();
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
             }
             if (opt.beforeSend && opt.beforeSend.call(opt.context, opt, transport) === false) {
-                self._promise = Promise.reject();
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
             }
 
-            if (!self._promise) {
+            if (self.$$promise.isPending()) {
                 async(transport.send, transport);
 
                 //deferred.abort = bind(self.abort, self);
-                self.$$promise.always(self.$destroy, self);
+                self.$$promise.always(self.asyncDestroy, self);
 
                 //self._promise = deferred;
             }
+            else {
+                async(self.asyncDestroy, self, [], 1000);
+            }
         },
 
+        asyncDestroy: function() {
+
+            var self = this;
+
+            if (self.$isDestroyed()) {
+                return;
+            }
+
+            if (self.$$promise.hasListeners()) {
+                async(self.asyncDestroy, self, [], 1000);
+                return;
+            }
+
+            self.$destroy();
+        },
 
         /*promise: function() {
             return this._promise;
         },*/
 
         abort: function(reason) {
-            this._transport.abort();
             this.$$promise.reject(reason || "abort");
+            this._transport.abort();
             //this._deferred.reject(reason || "abort");
+            return this;
         },
 
         onTimeout: function() {
@@ -5617,6 +5731,17 @@ defineClass({
             }
 
             return data;
+        },
+
+        returnResponse: function(data, contentType) {
+
+            var self    = this;
+
+            if (!self._opt.jsonp) {
+                return self.processResponseData(data, contentType);
+            }
+
+            return null;
         },
 
         processResponse: function(data, contentType) {
@@ -6350,6 +6475,13 @@ var getScrollTopOrLeft = function(vertical) {
         body = doc.body,
         html = doc.documentElement;
 
+    var ret = function(scroll, allowNegative) {
+        if (scroll < 0 && allowNegative === false) {
+            return 0;
+        }
+        return scroll;
+    };
+
     if(window[wProp] !== undf) {
         //most browsers except IE before #9
         defaultST = function(){
@@ -6369,16 +6501,16 @@ var getScrollTopOrLeft = function(vertical) {
         }
     }
 
-    return function(node) {
+    return function(node, allowNegative) {
         if (!node || node === window) {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
         else if (node && node.nodeType == 1 &&
             node !== body && node !== html) {
-            return node[sProp];
+            return ret(node[sProp], allowNegative);
         }
         else {
-            return defaultST();
+            return ret(defaultST(), allowNegative);
         }
     }
 
@@ -7773,6 +7905,8 @@ defineClass({
 
 
 
+
+
 defineClass({
 
     $class:         "dialog.Overlay",
@@ -7784,13 +7918,17 @@ defineClass({
     animateShow:	false,
     animateHide:	false,
 
-    $init: function(dialog){
+    $mixins:        ["mixin.Observable"],
+
+    $init: function(dialog) {
 
         var self = this;
 
         self.dialog = dialog;
         self.onClickDelegate = bind(self.onClick, self);
         extend(self, dialog.getCfg().overlay, true, false);
+
+        self.$$observable.createEvent("click", false);
 
         if (self.enabled) {
             self.enabled = false;
@@ -7947,7 +8085,16 @@ defineClass({
     },
 
     onClick: function(e) {
-        if (this.modal) {
+
+        var self = this;
+
+        var res = self.trigger("click", self.dialog, self, e);
+
+        if (res === false) {
+            return null;
+        }
+
+        if (self.modal) {
             e = normalizeEvent(e);
             e.preventDefault();
             e.stopPropagation();
