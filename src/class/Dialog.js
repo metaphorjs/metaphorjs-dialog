@@ -2644,7 +2644,7 @@ module.exports = (function(){
 
             if (node) {
                 if (!self.cfg.render.keepInDOM) {
-                    node.parentNode.removeChild(node);
+                    node.parentNode && node.parentNode.removeChild(node);
                 }
                 self.node = null;
             }
