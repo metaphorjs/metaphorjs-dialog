@@ -63,6 +63,10 @@ module.exports = Component.$extend({
         self.dialog.on("destroy", self.onDialogDestroy, self);
     },
 
+    getDialog: function() {
+        return this.dialog;
+    },
+
     // skips the append part
     onRenderingFinished: function() {
         var self = this;

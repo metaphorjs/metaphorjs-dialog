@@ -21,14 +21,15 @@ module.exports = defineClass({
             return null;
         }
 
-        var otype = type;
+        type    = type || self.type;
 
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
-            offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
+            offset  = pBase && !absolute ?
+                        getPosition(target, pBase) :
+                            getOffset(target),
             tsize   = dlg.getTargetSize(),
             pos     = {},
-            type    = type || self.type,
             pri     = type.substr(0, 1),
             sec     = type.substr(1),
             offsetX = cfg.position.offsetX,
@@ -83,12 +84,14 @@ module.exports = defineClass({
                 switch (pri) {
                     case "t":
                     case "b": {
-                        pos.x   = offset.left + (tsize.width / 2) - (size.width / 2);
+                        pos.x   = offset.left + (tsize.width / 2) -
+                                    (size.width / 2);
                         break;
                     }
                     case "r":
                     case "l": {
-                        pos.y   = offset.top + (tsize.height / 2) - (size.height / 2);
+                        pos.y   = offset.top + (tsize.height / 2) -
+                                    (size.height / 2);
                         break;
                     }
                 }
@@ -113,7 +116,8 @@ module.exports = defineClass({
     },
 
     getAllPositions: function() {
-        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb", "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
+        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb",
+                "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
     }
 
 });
