@@ -63,7 +63,7 @@ module.exports = (function(){
     var manager = factory("dialog.Manager");
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
-        if (type == "show" || !returnMode) {
+        if (type === "show" || !returnMode) {
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -1129,7 +1129,7 @@ module.exports = (function(){
 
             if (cfg.target && cfg.useHref) {
                 var href = getAttr(self.getTarget(), "href");
-                if (href.substr(0, 1) == "#") {
+                if (href.substr(0, 1) === "#") {
                     cfg.render.el = href;
                 }
                 else {
@@ -1328,8 +1328,8 @@ module.exports = (function(){
             var self    = this,
                 cfg     = self.cfg,
                 fns     = ["show", "hide", "toggle"],
-                lfn     = mode == "bind" ? addListener : removeListener,
-                dfn     = mode == "bind" ? delegate : undelegate,
+                lfn     = mode === "bind" ? addListener : removeListener,
+                dfn     = mode === "bind" ? delegate : undelegate,
                 fn,
                 fnCfg,
                 selector,
@@ -1361,17 +1361,21 @@ module.exports = (function(){
                 for (selector in fnCfg) {
 
                     if (only) {
-                        if (only == '_self') {
-                            if (selector != '_self' && selector != "_overlay" && selector.substr(0,1) != '>') {
+                        if (only === '_self') {
+                            if (selector !== '_self' &&
+                                selector !== "_overlay" &&
+                                selector.substr(0,1) !== '>') {
                                 continue;
                             }
                         }
-                        else if (selector != only) {
+                        else if (selector !== only) {
                             continue;
                         }
                     }
 
-                    if ((selector == '_self' || selector == '_overlay' || selector.substr(0,1) == '>')
+                    if ((selector === '_self' ||
+                            selector === '_overlay' ||
+                            selector.substr(0,1) === '>')
                         && !self.node) {
 
                         self.bindSelfOnRender = true;
@@ -1410,7 +1414,7 @@ module.exports = (function(){
                             break;
 
                         default:
-                            el  = selector.substr(0,1) == '>' ?
+                            el  = selector.substr(0,1) === '>' ?
                                   select(selector.substr(1), self.node) :
                                   select(selector);
 
@@ -1456,7 +1460,7 @@ module.exports = (function(){
         },
 
         onButtonKeyup: function(e) {
-            if (e.keyCode == 13 || e.keyCode == 32) {
+            if (e.keyCode === 13 || e.keyCode === 32) {
                 var target  = e.target,
                     btnId   = data(target, "metaphorjsTooltip-button-id");
 
@@ -2033,7 +2037,7 @@ module.exports = (function(){
 
             self.cfg.position.type = type;
 
-            if (self.positionClass != cls || !self.position) {
+            if (self.positionClass !== cls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
                     self.position = null;
@@ -2058,8 +2062,8 @@ module.exports = (function(){
 
             if (!self.position) {
 
-                if (!self.positionGetType && cfgPos.type != "custom") {
-                    if (isFunction(cfgPos.get) && cfgPos.type != "m") {
+                if (!self.positionGetType && cfgPos.type !== "custom") {
+                    if (isFunction(cfgPos.get) && cfgPos.type !== "m") {
                         cfgPos.type = "custom";
                     }
                 }
@@ -2077,7 +2081,7 @@ module.exports = (function(){
                     return;
                 }
 
-                if (self.positionClass != cls) {
+                if (self.positionClass !== cls) {
                     self.position   = factory(self.getPositionClass(type), self);
                 }
                 else {
@@ -2094,7 +2098,7 @@ module.exports = (function(){
                 return false;
             }
 
-            if (isFunction(type) || type == "custom") {
+            if (isFunction(type) || type === "custom") {
                 return "dialog.position.Custom";
             }
 
@@ -2103,10 +2107,10 @@ module.exports = (function(){
             if (!fc) {
                 return false;
             }
-            else if (fc == "w") {
+            else if (fc === "w") {
                 return "dialog.position.Window";
             }
-            else if (fc == "m") {
+            else if (fc === "m") {
                 return "dialog.position.Mouse";
             }
             else {
@@ -2180,7 +2184,7 @@ module.exports = (function(){
 
             var isStr = isString(newTarget);
 
-            if (isStr && newTarget.substr(0,1) != "#") {
+            if (isStr && newTarget.substr(0,1) !== "#") {
                 self.dynamicTarget = true;
                 self.target        = null;
             }
@@ -2548,7 +2552,7 @@ module.exports = (function(){
             if (cfgScroll === true || cfgScroll === false) {
                 return window;
             }
-            else if (typeof cfgScroll == "string") {
+            else if (typeof cfgScroll === "string") {
                 return select(cfgScroll).shift();
             }
             else {
@@ -2581,7 +2585,7 @@ module.exports = (function(){
             }
 
             return animate(node, a, function(){
-                if (section == "show" && !skipDisplay) {
+                if (section === "show" && !skipDisplay) {
 
                     var p = new Promise;
 
@@ -2623,7 +2627,7 @@ module.exports = (function(){
 
             self.overlay.append();
 
-            if (self.node) {
+            if (self.node && cfg.render.appendTo !== false) {
                 to.appendChild(self.node);
             }
         },
@@ -2643,8 +2647,8 @@ module.exports = (function(){
             self.overlay.remove();
 
             if (node) {
-                if (!self.cfg.render.keepInDOM && node.parentNode) {
-                    node.parentNode.removeChild(node);
+                if (!self.cfg.render.keepInDOM) {
+                    node.parentNode && node.parentNode.removeChild(node);
                 }
                 self.node = null;
             }
