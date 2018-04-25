@@ -2643,7 +2643,7 @@ module.exports = (function(){
             self.overlay.remove();
 
             if (node) {
-                if (!self.cfg.render.keepInDOM) {
+                if (!self.cfg.render.keepInDOM && node.parentNode) {
                     node.parentNode.removeChild(node);
                 }
                 self.node = null;
