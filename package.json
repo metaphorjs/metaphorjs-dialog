@@ -2,7 +2,6 @@
     "name": "metaphorjs-dialog",
     "version": "1.0.5",
     "description": "MetaphorJs.Dialog -- tooltip and popup library",
-    "main": "dist/metaphorjs.dialog.npm.js",
     "directories": {
         "test": "test"
     },
@@ -18,12 +17,5 @@
     "bugs": {
         "url": "https://github.com/metaphorjs/metaphorjs-dialog/issues"
     },
-    "homepage": "https://github.com/metaphorjs/metaphorjs-dialog",
-    "dependencies": {
-        "metaphorjs-observable": "*",
-        "metaphorjs-promise": "*",
-        "metaphorjs-ajax": "*",
-        "metaphorjs-select": "*",
-        "metaphorjs-animate": "*"
-    }
+    "homepage": "https://github.com/metaphorjs/metaphorjs-dialog"
 }

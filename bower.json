@@ -5,7 +5,6 @@
         "kuindji <kuindji@gmail.com>"
     ],
     "description": "MetaphorJs.Dialog -- tooltip and popup library",
-    "main": "dist/metaphorjs.dialog.amd.min.js",
     "moduleType": [
         "amd"
     ],
