@@ -6,7 +6,7 @@ var Dialog = require("../Dialog.js"),
 
 module.exports = Component.$extend({
 
-    $class: "dialog.Component",
+    $class: "MetaphorJs.dialog.Component",
 
     dialog: null,
     dialogPreset: null,
@@ -132,12 +132,12 @@ module.exports = Component.$extend({
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self    = this;
 
         if (self.dialog) {
-            self.dialog.destroy();
+            self.dialog.$destroy();
         }
 
         self.$super();

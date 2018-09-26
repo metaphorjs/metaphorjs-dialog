@@ -1,7 +1,6 @@
 
 
-var defineClass     = require("metaphorjs-class/src/func/defineClass.js"),
-    factory         = require("metaphorjs-class/src/func/factory.js"),
+var cls             = require("metaphorjs-class/src/cls.js"),
     extend          = require("metaphorjs/src/func/extend.js"),
     nextUid         = require("metaphorjs/src/func/nextUid.js"),
     bind            = require("metaphorjs/src/func/bind.js"),
@@ -60,7 +59,7 @@ require("./dialog/Manager.js");
 
 module.exports = (function(){
 
-    var manager = factory("dialog.Manager");
+    var manager = new MetaphorJs.dialog.Manager;
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
         if (type === "show" || !returnMode) {
@@ -1038,10 +1037,10 @@ module.exports = (function(){
 
 
 
-    var Dialog = defineClass({
+    var Dialog = cls({
 
-        $class:             "Dialog",
-        $mixins:            ["mixin.Observable"],
+        $class:             "MetaphorJs.dialog.Dialog",
+        $mixins:            [MetaphorJs.mixin.Observable],
 
         id:                 null,
         node:               null,
@@ -1116,10 +1115,12 @@ module.exports = (function(){
             if (cfg.modal) {
                 cfg.overlay.enabled = true;
             }
-            self.overlay    = factory("dialog.Overlay", self);
+            self.overlay    = new MetaphorJs.dialog.Overlay(self);
 
             var pointerCls = ucfirst(cfg.pointer.$class || "Html");
-            self.pointer    = factory("dialog.pointer." + pointerCls, self, cfg.pointer);
+            self.pointer    = cls.factory(
+                                "MetaphorJs.dialog.pointer." + pointerCls, 
+                                self, cfg.pointer);
 
             if (isFunction(cfg.position.type)) {
                 self.positionGetType = cfg.position.type;
@@ -2033,17 +2034,17 @@ module.exports = (function(){
 
         setPositionType: function(type) {
             var self    = this,
-                cls     = self.getPositionClass(type);
+                positionCls     = self.getPositionClass(type);
 
             self.cfg.position.type = type;
 
-            if (self.positionClass !== cls || !self.position) {
+            if (self.positionClass !== positionCls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
                     self.position = null;
                 }
-                if (cls) {
-                    self.position = factory(cls, self);
+                if (positionCls) {
+                    self.position = cls.factory(positionCls, self);
                 }
             }
             else {
@@ -2071,18 +2072,16 @@ module.exports = (function(){
                 var type    = self.positionGetType ?
                                 self.positionGetType.call(self.$$callbackContext, self, e) :
                                 cfgPos.type,
-                    cls     = self.getPositionClass(type);
-
-
+                    positionCls = self.getPositionClass(type);
 
                 cfgPos.type     = type;
 
-                if (cls === false) {
+                if (positionCls === false) {
                     return;
                 }
 
-                if (self.positionClass !== cls) {
-                    self.position   = factory(self.getPositionClass(type), self);
+                if (self.positionClass !== positionCls) {
+                    self.position   = cls.factory(positionCls, self);
                 }
                 else {
                     self.position.type = type;
@@ -2661,7 +2660,7 @@ module.exports = (function(){
          * @access public
          * @method
          */
-        destroy: function() {
+        onDestroy: function() {
 
             var self = this;
 

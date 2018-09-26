@@ -1,8 +1,8 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js");
+var cls = require("metaphorjs-class/src/cls.js");
 
-module.exports = defineClass({
-    $class: "dialog.Manager",
+module.exports = cls({
+    $class: "MetaphorJs.dialog.Manager",
     all: null,
     groups: null,
 

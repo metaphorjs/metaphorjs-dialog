@@ -1,10 +1,10 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var cls = require("metaphorjs-class/src/cls.js"),
     extend = require("metaphorjs/src/func/extend.js");
 
-module.exports = defineClass({
+module.exports = cls({
 
-    $class: "dialog.pointer.Abstract",
+    $class: "MetaphorJs.dialog.pointer.Abstract",
     enabled: null,
     node: null,
     correctX: 0,
@@ -196,7 +196,7 @@ module.exports = defineClass({
 
     render: function() {},
 
-    destroy: function() {
+    onDestroy: function() {
         var self = this;
         self.remove();
     },

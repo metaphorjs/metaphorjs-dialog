@@ -1,5 +1,5 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var cls = require("metaphorjs-class/src/cls.js"),
     extend = require("metaphorjs/src/func/extend.js"),
     setStyle = require("metaphorjs/src/func/dom/setStyle.js"),
     select = require("metaphorjs-select/src/func/select.js"),
@@ -13,9 +13,9 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     getWidth   = require("metaphorjs/src/func/dom/getWidth.js"),
     getHeight  = require("metaphorjs/src/func/dom/getHeight.js");
 
-module.exports = defineClass({
+module.exports = cls({
 
-    $class: "dialog.position.Abstract",
+    $class: "MetaphorJs.dialog.position.Abstract",
     dialog: null,
     positionBase: null,
     correct: "solid",
@@ -315,7 +315,7 @@ module.exports = defineClass({
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self = this,
             dlg = self.dialog;

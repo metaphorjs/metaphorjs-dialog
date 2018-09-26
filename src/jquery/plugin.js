@@ -36,10 +36,10 @@ if (window.jQuery) {
                 options.target          = el;
                 options.instanceName    = dataName;
                 options.preset          = preset;
-                data(el, dataName, new MetaphorJs.Dialog(options));
+                data(el, dataName, new MetaphorJs.dialog.Dialog(options));
             }
             else if (options == "destroy") {
-                t.destroy();
+                t.$destroy();
                 data(el, dataName, null);
             }
             else {

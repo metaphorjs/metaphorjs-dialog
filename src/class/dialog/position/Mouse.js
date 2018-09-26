@@ -1,5 +1,5 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     bind = require("metaphorjs/src/func/bind.js"),
     normalizeEvent = require("metaphorjs/src/func/event/normalizeEvent.js"),
     addListener = require("metaphorjs/src/func/event/addListener.js"),
@@ -10,10 +10,9 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
 require("./Target.js");
 
 
-module.exports = defineClass({
+module.exports = MetaphorJs.dialog.position.Target.$extend({
 
-    $class: "dialog.position.Mouse",
-    $extends: "dialog.position.Target",
+    $class: "MetaphorJs.dialog.position.Mouse",
     correct: "position",
 
     $init: function(dialog) {

@@ -1,6 +1,7 @@
 
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
+var cls = require("metaphorjs-class/src/cls.js"),
+    MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     setStyle = require("metaphorjs/src/func/dom/setStyle.js"),
     bind = require("metaphorjs/src/func/bind.js"),
     addListener = require("metaphorjs/src/func/event/addListener.js"),
@@ -10,12 +11,11 @@ var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
     isBool = require("metaphorjs/src/func/isBool.js"),
     animate = require("metaphorjs-animate/src/func/animate.js");
 
-
 require("metaphorjs-observable/src/mixin/Observable.js");
 
-module.exports = defineClass({
+module.exports = cls({
 
-    $class:         "dialog.Overlay",
+    $class:         "MetaphorJs.dialog.Overlay",
     dialog:         null,
     enabled:		false,
     color:			'#000',
@@ -24,7 +24,7 @@ module.exports = defineClass({
     animateShow:	false,
     animateHide:	false,
 
-    $mixins:        ["mixin.Observable"],
+    $mixins:        [MetaphorJs.mixin.Observable],
 
     $init: function(dialog) {
 
@@ -209,7 +209,7 @@ module.exports = defineClass({
         return null;
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self = this;
         self.remove();

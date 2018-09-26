@@ -1,15 +1,13 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js");
+var MetaphorJs = require("metaphorjs/src/MetaphorJs.js");
 
 require("./Abstract.js");
 
-module.exports = defineClass({
+module.exports = MetaphorJs.dialog.position.Abstract.$extend({
 
-    $class: "dialog.position.Custom",
-    $extends: "dialog.position.Abstract",
+    $class: "MetaphorJs.dialog.position.Custom",
 
     getCoords: function(e) {
-
         var dlg = this.dialog;
         return this.get.call(dlg.$$callbackContext, dlg, e);
     }

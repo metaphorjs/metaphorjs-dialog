@@ -7,114 +7,67 @@
     ],
     "build": {
         "standalone": {
-            "wrap": true,
-            "global": true,
-            "auto": true,
             "target": "dist/metaphorjs.dialog.js",
             "files": [
-                "metaphorjs/src/MetaphorJs.js",
-                [
-                    "src/class/Dialog.js",
-                    {
-                        "as": "Dialog"
-                    }
-                ],
-                [
-                    "metaphorjs/src/func/dom/onReady.js",
-                    {
-                        "as": "onReady"
-                    }
-                ],
-                "src/jquery/plugin.js"
+                ["metaphorjs/src/MetaphorJs.js", {"as": "*"}],
+                ["src/class/Dialog.js", {"as": "*"}],
+                ["metaphorjs/src/func/dom/onReady.js", {"as": "*"}]
             ],
-            "expose": [
-                "Dialog",
-                "onReady"
-            ]
-        },
-        "npm": {
-            "target": "dist/metaphorjs.dialog.npm.js",
-            "compile": false,
-            "wrap": {
-                "exported": true,
-                "deferred": true,
-                "args": ["window"]
-            },
-            "files": [
-                [
-                    "src/class/Dialog.js",
-                    {
-                        "as": "Dialog"
-                    }
+            "options": {
+                "wrap": true,
+                "global": true,
+                "expose": [
+                    "Dialog",
+                    "onReady"
                 ]
-            ],
-            "omit": [
-                "metaphorjs-observable/src/lib/Observable.js",
-                "metaphorjs-namespace/src/lib/Namespace.js",
-                "metaphorjs-class/src/lib/Class.js",
-                "metaphorjs-promise/src/lib/Promise.js",
-                "metaphorjs-ajax/src/func/ajax.js",
-                "metaphorjs-select/src/func/select.js",
-                "metaphorjs-animate/src/func/animate.js",
-                "metaphorjs-animate/src/func/stopAnimation.js"
-            ],
-            "require": {
-                "metaphorjs-observable": "Observable",
-                "metaphorjs-promise": "Promise",
-                "metaphorjs-namespace": "Namespace",
-                "metaphorjs-class": "Class",
-                "metaphorjs-ajax": {
-                    "as": "ajax",
-                    "args": ["window"]
-                },
-                "metaphorjs-select": {
-                    "as": "select",
-                    "args": ["window"]
-                },
-                "metaphorjs-animate": {
-                    "as": "animate",
-                    "args": ["window"]
-                }
-            },
-            "returns": "Dialog"
+            }  
         },
+
+        "standalone-min": {
+            "extend": "standalone",
+            "target": "dist/metaphorjs.dialog.min.js",
+            "pipe": ["build", "compile", "write"]
+        },
+        
         "amd": {
             "target": "dist/metaphorjs.dialog.amd.js",
             "files": [
-                [
-                    "src/class/Dialog.js",
-                    {
-                        "as": "Dialog"
-                    }
-                ],
-                "src/jquery/plugin.js"
+                ["src/class/Dialog.js", {"as": "Dialog"}]
             ],
             "omit": [
                 "metaphorjs-observable/src/lib/Observable.js",
                 "metaphorjs-namespace/src/lib/Namespace.js",
-                "metaphorjs-class/src/lib/Class.js",
+                "metaphorjs-class/src/cls.js",
                 "metaphorjs-promise/src/lib/Promise.js",
                 "metaphorjs-ajax/src/func/ajax.js",
                 "metaphorjs-select/src/func/select.js",
                 "metaphorjs-animate/src/func/animate.js",
                 "metaphorjs-animate/src/func/stopAnimation.js"
             ],
-            "prepend": [
-                "src/amd/prepend.js"
-            ],
-            "define": {
-                "name": "metaphorjs-dialog",
-                "return": "Dialog",
-                "deps": {
-                    "metaphorjs-observable": "Observable",
-                    "metaphorjs-promise": "Promise",
-                    "metaphorjs-ajax": "ajax",
-                    "metaphorjs-select": "select",
-                    "metaphorjs-animate": "animate",
-                    "metaphorjs-namespace": "Namespace",
-                    "metaphorjs-class": "Class"
+            "options": {
+                "prepend": [        
+                    "src/amd/prepend.js"
+                ],
+                "amd": {
+                    "name": "metaphorjs-dialog",
+                    "return": "Dialog",
+                    "deps": {
+                        "metaphorjs-observable": "Observable",
+                        "metaphorjs-promise": "Promise",
+                        "metaphorjs-ajax": "ajax",
+                        "metaphorjs-select": "select",
+                        "metaphorjs-animate": "animate",
+                        "metaphorjs-namespace": "Namespace",
+                        "metaphorjs-class": "cls"
+                    }
                 }
             }
+        },
+
+        "amd-min": {
+            "extend": "amd",
+            "target": "dist/metaphorjs.dialog.amd.min.js",
+            "pipe": ["build", "compile", "write"]
         }
     }
 }

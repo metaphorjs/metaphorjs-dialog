@@ -1,34 +1,12 @@
 define("metaphorjs-dialog", ['metaphorjs-observable', 'metaphorjs-promise', 'metaphorjs-ajax', 'metaphorjs-select', 'metaphorjs-animate', 'metaphorjs-namespace', 'metaphorjs-class'], function(Observable, Promise, ajax, select, animate, Namespace, Class) {
 
 var stopAnimation = animate.stop;
+/* BUNDLE START 5AL */
+"use strict";
 
-
-var MetaphorJs = {
-
-
+function isFunction(value) {
+    return typeof value == 'function';
 };
-
-
-
-
-var ns  = new Namespace(MetaphorJs, "MetaphorJs");
-
-
-
-var cs = new Class(ns);
-
-
-
-
-
-var defineClass = cs.define;
-
-
-
-var factory = cs.factory;
-
-
-var slice = Array.prototype.slice;
 
 var toString = Object.prototype.toString;
 
@@ -51,7 +29,7 @@ var varType = function(){
     };
 
 
-    /**
+    /*
      * 'string': 0,
      * 'number': 1,
      * 'boolean': 2,
@@ -67,6 +45,9 @@ var varType = function(){
      * @param {*} value
      * @returns {number}
      */
+
+
+
     return function varType(val) {
 
         if (!val) {
@@ -84,7 +65,7 @@ var varType = function(){
             return -1;
         }
 
-        if (num == 1 && isNaN(val)) {
+        if (num === 1 && isNaN(val)) {
             return 8;
         }
 
@@ -92,6 +73,197 @@ var varType = function(){
     };
 
 }();
+
+
+
+function isString(value) {
+    return typeof value == "string" || value === ""+value;
+    //return typeof value == "string" || varType(value) === 0;
+};
+
+
+
+/**
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isArray(value) {
+    return typeof value === "object" && varType(value) === 5;
+};
+
+var strUndef = "undefined";
+
+
+
+function isObject(value) {
+    if (value === null || typeof value != "object") {
+        return false;
+    }
+    var vt = varType(value);
+    return vt > 2 || vt == -1;
+};
+
+
+
+var Cache = function(){
+
+    var globalCache;
+
+    /**
+     * @class Cache
+     */
+
+    /**
+     * @constructor
+     * @param {bool} cacheRewritable
+     */
+    var Cache = function(cacheRewritable) {
+
+        var storage = {},
+
+            finders = [];
+
+        if (arguments.length == 0) {
+            cacheRewritable = true;
+        }
+
+        return {
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             * @param {bool} prepend
+             */
+            addFinder: function(fn, context, prepend) {
+                finders[prepend? "unshift" : "push"]({fn: fn, context: context});
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @param {*} value
+             * @param {bool} rewritable
+             * @returns {*} value
+             */
+            add: function(name, value, rewritable) {
+
+                if (storage[name] && storage[name].rewritable === false) {
+                    return storage[name];
+                }
+
+                storage[name] = {
+                    rewritable: typeof rewritable != strUndef ? rewritable : cacheRewritable,
+                    value: value
+                };
+
+                return value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            get: function(name) {
+
+                if (!storage[name]) {
+                    if (finders.length) {
+
+                        var i, l, res,
+                            self = this;
+
+                        for (i = 0, l = finders.length; i < l; i++) {
+
+                            res = finders[i].fn.call(finders[i].context, name, self);
+
+                            if (res !== undf) {
+                                return self.add(name, res, true);
+                            }
+                        }
+                    }
+
+                    return undf;
+                }
+
+                return storage[name].value;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {*}
+             */
+            remove: function(name) {
+                var rec = storage[name];
+                if (rec && rec.rewritable === true) {
+                    delete storage[name];
+                }
+                return rec ? rec.value : undf;
+            },
+
+            /**
+             * @method
+             * @param {string} name
+             * @returns {boolean}
+             */
+            exists: function(name) {
+                return !!storage[name];
+            },
+
+            /**
+             * @param {function} fn
+             * @param {object} context
+             */
+            eachEntry: function(fn, context) {
+                var k;
+                for (k in storage) {
+                    fn.call(context, storage[k].value, k);
+                }
+            },
+
+            /**
+             * @method
+             */
+            destroy: function() {
+
+                var self = this;
+
+                if (self === globalCache) {
+                    globalCache = null;
+                }
+
+                storage = null;
+                cacheRewritable = null;
+
+                self.add = null;
+                self.get = null;
+                self.destroy = null;
+                self.exists = null;
+                self.remove = null;
+            }
+        };
+    };
+
+    /**
+     * @method
+     * @static
+     * @returns {Cache}
+     */
+    Cache.global = function() {
+
+        if (!globalCache) {
+            globalCache = new Cache(true);
+        }
+
+        return globalCache;
+    };
+
+    return Cache;
+
+}();
+
+
+var slice = Array.prototype.slice;
 
 
 
@@ -178,6 +350,86 @@ var extend = function(){
 
     return extend;
 }();
+
+
+function emptyFn(){};
+
+
+
+var instantiate = function(fn, args) {
+
+    var Temp = function(){},
+        inst, ret;
+
+    Temp.prototype  = fn.prototype;
+    inst            = new Temp;
+    ret             = fn.apply(inst, args);
+
+    // If an object has been returned then return it otherwise
+    // return the original instance.
+    // (consistent with behaviour of the new operator)
+    return isObject(ret) || ret === false ? ret : inst;
+
+};
+/**
+ * Function interceptor
+ * @param {function} origFn
+ * @param {function} interceptor
+ * @param {object|null} context
+ * @param {object|null} origContext
+ * @param {string} when
+ * @param {bool} replaceValue
+ * @returns {Function}
+ */
+function intercept(origFn, interceptor, context, origContext, when, replaceValue) {
+
+    when = when || "before";
+
+    return function() {
+
+        var intrRes,
+            origRes;
+
+        if (when == "instead") {
+            return interceptor.apply(context || origContext, arguments);
+        }
+        else if (when == "before") {
+            intrRes = interceptor.apply(context || origContext, arguments);
+            origRes = intrRes !== false ? origFn.apply(origContext || context, arguments) : null;
+        }
+        else {
+            origRes = origFn.apply(origContext || context, arguments);
+            intrRes = interceptor.apply(context || origContext, arguments);
+        }
+
+        return replaceValue ? intrRes : origRes;
+    };
+};
+
+
+var MetaphorJs = {
+
+
+};
+
+
+
+
+var ns = new Namespace(MetaphorJs, "MetaphorJs");
+
+
+
+var cs = new Class(ns);
+
+
+
+
+
+var defineClass = cs.define;
+
+
+
+var factory = cs.factory;
 
 
 var nextUid = function(){
@@ -296,7 +548,7 @@ function setStyle(el, name, value) {
         style = el.style,
         k;
 
-    if (typeof name == "string") {
+    if (typeof name === "string") {
         props = {};
         props[name] = value;
     }
@@ -307,16 +559,6 @@ function setStyle(el, name, value) {
     for (k in props) {
         style[k] = props[k];
     }
-};
-
-
-
-/**
- * @param {*} value
- * @returns {boolean}
- */
-function isArray(value) {
-    return typeof value == "object" && varType(value) === 5;
 };
 
 
@@ -714,6 +956,25 @@ function isVisible(el) {
 
 
 /**
+ * @param {*} list
+ * @returns {[]}
+ */
+function toArray(list) {
+    if (list && !list.length != undf && list !== ""+list) {
+        for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
+        return a;
+    }
+    else if (list) {
+        return [list];
+    }
+    else {
+        return [];
+    }
+};
+
+
+
+/**
  * @param {Element} el
  * @param {String} selector
  * @returns {boolean}
@@ -722,14 +983,1829 @@ var is = select.is;
 
 
 
-function isString(value) {
-    return typeof value == "string" || value === ""+value;
-    //return typeof value == "string" || varType(value) === 0;
+var getAnimationPrefixes = function(){
+
+    var domPrefixes         = ['Moz', 'Webkit', 'ms', 'O', 'Khtml'],
+        animationDelay      = "animationDelay",
+        animationDuration   = "animationDuration",
+        transitionDelay     = "transitionDelay",
+        transitionDuration  = "transitionDuration",
+        transform           = "transform",
+        transitionend       = null,
+        prefixes            = null,
+
+        probed              = false,
+
+        detectCssPrefixes   = function() {
+
+            var el = window.document.createElement("div"),
+                animation = false,
+                pfx,
+                i, len;
+
+            if (el.style['animationName'] !== undf) {
+                animation = true;
+            }
+            else {
+                for(i = 0, len = domPrefixes.length; i < len; i++) {
+                    pfx = domPrefixes[i];
+                    if (el.style[ pfx + 'AnimationName' ] !== undf) {
+                        animation           = true;
+                        animationDelay      = pfx + "AnimationDelay";
+                        animationDuration   = pfx + "AnimationDuration";
+                        transitionDelay     = pfx + "TransitionDelay";
+                        transitionDuration  = pfx + "TransitionDuration";
+                        transform           = pfx + "Transform";
+                        break;
+                    }
+                }
+            }
+
+            if (animation) {
+                if('ontransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'transitionend';
+                }
+                else if('onwebkittransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'webkitTransitionEnd';
+                }
+            }
+
+            return animation;
+        };
+
+
+    /**
+     * @function animate.getPrefixes
+     * @returns {object}
+     */
+    return function() {
+
+        if (!probed) {
+            if (detectCssPrefixes()) {
+                prefixes = {
+                    animationDelay: animationDelay,
+                    animationDuration: animationDuration,
+                    transitionDelay: transitionDelay,
+                    transitionDuration: transitionDuration,
+                    transform: transform,
+                    transitionend: transitionend
+                };
+            }
+            else {
+                prefixes = {};
+            }
+
+            probed = true;
+        }
+
+
+        return prefixes;
+    };
+}();
+
+
+
+var getAnimationDuration = function(){
+
+    var parseTime       = function(str) {
+            if (!str) {
+                return 0;
+            }
+            var time = parseFloat(str);
+            if (str.indexOf("ms") === -1) {
+                time *= 1000;
+            }
+            return time;
+        },
+
+        getMaxTimeFromPair = function(max, dur, delay) {
+
+            var i, sum, len = dur.length;
+
+            for (i = 0; i < len; i++) {
+                sum = parseTime(dur[i]) + parseTime(delay[i]);
+                max = Math.max(sum, max);
+            }
+
+            return max;
+        },
+
+        pfx                 = false,
+        animationDuration   = null,
+        animationDelay      = null,
+        transitionDuration  = null,
+        transitionDelay     = null;
+
+
+    /**
+     * @function animate.getDuration
+     * @param {Element} el
+     * @returns {number}
+     */
+    return function(el) {
+
+        if (pfx === false) {
+            pfx = getAnimationPrefixes();
+            animationDuration = pfx ? pfx.animationDuration : null;
+            animationDelay = pfx ? pfx.animationDelay : null;
+            transitionDuration = pfx ? pfx.transitionDuration : null;
+            transitionDelay = pfx ? pfx.transitionDelay : null;
+        }
+
+        if (!pfx) {
+            return 0;
+        }
+
+        var style       = window.getComputedStyle ? window.getComputedStyle(el, null) : el.style,
+            duration    = 0,
+            animDur     = (style[animationDuration] || '').split(','),
+            animDelay   = (style[animationDelay] || '').split(','),
+            transDur    = (style[transitionDuration] || '').split(','),
+            transDelay  = (style[transitionDelay] || '').split(',');
+
+        duration    = Math.max(duration, getMaxTimeFromPair(duration, animDur, animDelay));
+        duration    = Math.max(duration, getMaxTimeFromPair(duration, transDur, transDelay));
+
+        return duration;
+    };
+
+}();
+
+
+
+
+
+/**
+ * Returns 'then' function or false
+ * @param {*} any
+ * @returns {Function|boolean}
+ */
+function isThenable(any) {
+
+    // any.then must only be accessed once
+    // this is a promise/a+ requirement
+
+    if (!any) { //  || !any.then
+        return false;
+    }
+    var then, t;
+
+    //if (!any || (!isObject(any) && !isFunction(any))) {
+    if (((t = typeof any) != "object" && t != "function")) {
+        return false;
+    }
+    return isFunction((then = any.then)) ?
+           then : false;
+};
+/**
+ * @param {Function} fn
+ * @param {Object} context
+ * @param {[]} args
+ * @param {number} timeout
+ */
+function async(fn, context, args, timeout) {
+    return setTimeout(function(){
+        fn.apply(context, args || []);
+    }, timeout || 0);
 };
 
-function isFunction(value) {
-    return typeof value == 'function';
+
+
+var error = (function(){
+
+    var listeners = [];
+
+    var error = function error(e) {
+
+        var i, l;
+
+        for (i = 0, l = listeners.length; i < l; i++) {
+            if (listeners[i][0].call(listeners[i][1], e) === false) {
+                return;
+            }
+        }
+
+        var stack = (e ? e.stack : null) || (new Error).stack;
+
+        if (typeof console != strUndef && console.error) {
+            //async(function(){
+                if (e) {
+                    console.error(e);
+                }
+                if (stack) {
+                    console.error(stack);
+                }
+            //});
+        }
+        else {
+            throw e;
+        }
+    };
+
+    error.on = function(fn, context) {
+        error.un(fn, context);
+        listeners.push([fn, context]);
+    };
+
+    error.un = function(fn, context) {
+        var i, l;
+        for (i = 0, l = listeners.length; i < l; i++) {
+            if (listeners[i][0] === fn && listeners[i][1] === context) {
+                listeners.splice(i, 1);
+                break;
+            }
+        }
+    };
+
+    return error;
+}());
+
+
+
+
+
+var raf = function() {
+
+    var raf,
+        cancel;
+
+    if (typeof window !== strUndef) {
+        var w   = window;
+        raf     = w.requestAnimationFrame ||
+                    w.webkitRequestAnimationFrame ||
+                    w.mozRequestAnimationFrame;
+        cancel  = w.cancelAnimationFrame ||
+                    w.webkitCancelAnimationFrame ||
+                    w.mozCancelAnimationFrame ||
+                    w.webkitCancelRequestAnimationFrame;
+
+        if (raf) {
+            return function(fn, context, args) {
+                var id = raf(context || args ? function(){
+                    fn.apply(context, args || []);
+                } : fn);
+                return function() {
+                    cancel(id);
+                };
+            };
+        }
+    }
+
+    return function(fn, context, args){
+        var id = async(fn, context, args, 0);
+        return function(){
+            clearTimeout(id);
+        };
+    };
+
+}();
+
+
+
+/**
+ * @function trim
+ * @param {String} value
+ * @returns {string}
+ */
+var trim = function() {
+    // native trim is way faster: http://jsperf.com/angular-trim-test
+    // but IE doesn't have it... :-(
+    if (!String.prototype.trim) {
+        return function(value) {
+            return isString(value) ? value.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : value;
+        };
+    }
+    return function(value) {
+        return isString(value) ? value.trim() : value;
+    };
+}();
+
+
+
+var parseJSON = function() {
+
+    return typeof JSON != strUndef ?
+           function(data) {
+               return JSON.parse(data);
+           } :
+           function(data) {
+               return (new Function("return " + data))();
+           };
+}();
+
+
+
+
+
+function parseXML(data, type) {
+
+    var xml, tmp;
+
+    if (!data || !isString(data)) {
+        return null;
+    }
+
+    // Support: IE9
+    try {
+        tmp = new DOMParser();
+        xml = tmp.parseFromString(data, type || "text/xml");
+    } catch (thrownError) {
+        xml = undf;
+    }
+
+    if (!xml || xml.getElementsByTagName("parsererror").length) {
+        throw "Invalid XML: " + data;
+    }
+
+    return xml;
 };
+
+
+
+
+/**
+ * This class is private - you can't create an event other than via Observable.
+ * See {@link class:Observable} reference.
+ * @class ObservableEvent
+ * @private
+ */
+var ObservableEvent = function(name, options) {
+
+    var self    = this;
+
+    self.name           = name;
+    self.listeners      = [];
+    self.map            = {};
+    self.hash           = nextUid();
+    self.uni            = '$$' + name + '_' + self.hash;
+    self.suspended      = false;
+    self.lid            = 0;
+
+    if (typeof options === "object" && options !== null) {
+        extend(self, options, true, false);
+    }
+    else {
+        self.returnResult = options;
+    }
+};
+
+
+extend(ObservableEvent.prototype, {
+
+    name: null,
+    listeners: null,
+    map: null,
+    hash: null,
+    uni: null,
+    suspended: false,
+    lid: null,
+    returnResult: null,
+    autoTrigger: null,
+    lastTrigger: null,
+    triggerFilter: null,
+    filterContext: null,
+    expectPromises: false,
+    resolvePromises: false,
+
+    /**
+     * Get event name
+     * @method
+     * @returns {string}
+     */
+    getName: function() {
+        return this.name;
+    },
+
+    /**
+     * @method
+     */
+    destroy: function() {
+        var self        = this,
+            k;
+
+        for (k in self) {
+            self[k] = null;
+        }
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    on: function(fn, context, options) {
+
+        if (!fn) {
+            return null;
+        }
+
+        context     = context || null;
+        options     = options || {};
+
+        var self        = this,
+            uni         = self.uni,
+            uniContext  = fn || context;
+
+        if (uniContext[uni] && !options.allowDupes) {
+            return null;
+        }
+
+        var id      = ++self.lid,
+            first   = options.first || false;
+
+        uniContext[uni]  = id;
+
+        var e = {
+            fn:         fn,
+            context:    context,
+            uniContext: uniContext,
+            id:         id,
+            async:      false,
+            called:     0, // how many times the function was triggered
+            limit:      0, // how many times the function is allowed to trigger
+            start:      1, // from which attempt it is allowed to trigger the function
+            count:      0, // how many attempts to trigger the function was made
+            append:     null, // append parameters
+            prepend:    null // prepend parameters
+        };
+
+        extend(e, options, true, false);
+
+        if (e.async === true) {
+            e.async = 1;
+        }
+
+        if (first) {
+            self.listeners.unshift(e);
+        }
+        else {
+            self.listeners.push(e);
+        }
+
+        self.map[id] = e;
+
+        if (self.autoTrigger && self.lastTrigger && !self.suspended) {
+            var prevFilter = self.triggerFilter;
+            self.triggerFilter = function(l){
+                if (l.id === id) {
+                    return prevFilter ? prevFilter(l) !== false : true;
+                }
+                return false;
+            };
+            self.trigger.apply(self, self.lastTrigger);
+            self.triggerFilter = prevFilter;
+        }
+
+        return id;
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    once: function(fn, context, options) {
+
+        options = options || {};
+        options.limit = 1;
+
+        return this.on(fn, context, options);
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     */
+    un: function(fn, context) {
+
+        var self        = this,
+            inx         = -1,
+            uni         = self.uni,
+            listeners   = self.listeners,
+            id;
+
+        if (fn == parseInt(fn)) {
+            id      = parseInt(fn);
+        }
+        else {
+            context = context || fn;
+            id      = context[uni];
+        }
+
+        if (!id) {
+            return false;
+        }
+
+        for (var i = 0, len = listeners.length; i < len; i++) {
+            if (listeners[i].id === id) {
+                inx = i;
+                delete listeners[i].uniContext[uni];
+                break;
+            }
+        }
+
+        if (inx === -1) {
+            return false;
+        }
+
+        listeners.splice(inx, 1);
+        delete self.map[id];
+        return true;
+    },
+
+    /**
+     * @method hasListener
+     * @return bool
+     */
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     * @return boolean
+     */
+    hasListener: function(fn, context) {
+
+        var self    = this,
+            listeners   = self.listeners,
+            id;
+
+        if (fn) {
+
+            context = context || fn;
+
+            if (!isFunction(fn)) {
+                id  = parseInt(fn);
+            }
+            else {
+                id  = context[self.uni];
+            }
+
+            if (!id) {
+                return false;
+            }
+
+            for (var i = 0, len = listeners.length; i < len; i++) {
+                if (listeners[i].id === id) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        else {
+            return listeners.length > 0;
+        }
+    },
+
+
+    /**
+     * @method
+     */
+    removeAllListeners: function() {
+        var self    = this,
+            listeners = self.listeners,
+            uni     = self.uni,
+            i, len;
+
+        for (i = 0, len = listeners.length; i < len; i++) {
+            delete listeners[i].uniContext[uni];
+        }
+        self.listeners   = [];
+        self.map         = {};
+    },
+
+    /**
+     * @method
+     */
+    suspend: function() {
+        this.suspended = true;
+    },
+
+    /**
+     * @method
+     */
+    resume: function() {
+        this.suspended = false;
+    },
+
+
+    _prepareArgs: function(l, triggerArgs) {
+        var args;
+
+        if (l.append || l.prepend) {
+            args    = slice.call(triggerArgs);
+            if (l.prepend) {
+                args    = l.prepend.concat(args);
+            }
+            if (l.append) {
+                args    = args.concat(l.append);
+            }
+        }
+        else {
+            args = triggerArgs;
+        }
+
+        return args;
+    },
+
+    /**
+     * @method
+     * @return {*}
+     */
+    trigger: function() {
+
+        var self            = this,
+            listeners       = self.listeners,
+            rr              = self.returnResult,
+            filter          = self.triggerFilter,
+            filterContext   = self.filterContext,
+            expectPromises  = self.expectPromises,
+            results         = [],
+            prevPromise,
+            resPromise,
+            args, 
+            resolver;
+
+        if (self.suspended) {
+            return null;
+        }
+
+        if (self.autoTrigger) {
+            self.lastTrigger = slice.call(arguments);
+        }
+
+        if (listeners.length === 0) {
+            return null;
+        }
+
+        var ret     = rr === "all" || rr === "concat" ?
+                        [] : 
+                        (rr === "merge" ? {} : null),
+            q, l,
+            res;
+
+        if (rr === "first") {
+            q = [listeners[0]];
+        }
+        else {
+            // create a snapshot of listeners list
+            q = slice.call(listeners);
+        }
+
+        // now if during triggering someone unsubscribes
+        // we won't skip any listener due to shifted
+        // index
+        while (l = q.shift()) {
+
+            // listener may already have unsubscribed
+            if (!l || !self.map[l.id]) {
+                continue;
+            }
+
+            args = self._prepareArgs(l, arguments);
+
+            if (filter && filter.call(filterContext, l, args, self) === false) {
+                continue;
+            }
+
+            if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
+                continue;
+            }
+
+            l.count++;
+
+            if (l.count < l.start) {
+                continue;
+            }
+
+            if (l.async && !expectPromises) {
+                res = null;
+                async(l.fn, l.context, args, l.async);
+            }
+            else {
+                if (expectPromises) {
+                    resolver = function(l, rr, args){
+                        return function(value) {
+
+                            if (rr === "pipe") {
+                                args[0] = value;
+                                args = self._prepareArgs(l, args);
+                            }
+                            
+                            return l.fn.apply(l.context, args);
+                        }
+                    }(l, rr, slice.call(arguments));
+
+                    if (prevPromise) {
+                        res = prevPromise.then(resolver);
+                    }
+                    else {
+                        res = l.fn.apply(l.context, args);
+                    }
+
+                    res.catch(function(err){
+                        console.log(err);
+                    });
+                }
+                else {
+                    res = l.fn.apply(l.context, args);
+                }
+            }
+
+            l.called++;
+
+            if (l.called === l.limit) {
+                self.un(l.id);
+            }
+
+            // This rule is valid in all cases sync and async.
+            // It either returns first value or first promise.
+            if (rr === "first") {
+                return res;
+            }
+        
+            // Promise branch
+            if (expectPromises) {
+            
+                // we collect all results for further processing/resolving
+                results.push(res);
+
+                if (rr === "pipe" && res) {
+                    prevPromise = res;
+                }
+            }
+            else {
+                if (rr !== null) {
+                    if (rr === "all") {
+                        ret.push(res);
+                    }
+                    else if (rr === "concat" && res) {
+                        ret = ret.concat(res);
+                    }
+                    else if (rr === "merge") {
+                        extend(ret, res, true, false);
+                    }
+                    else if (rr === "nonempty" && res) {
+                        return res;
+                    }
+                    else if (rr === "pipe") {
+                        ret = res;
+                        arguments[0] = res;
+                    }
+                    else if (rr === "last") {
+                        ret = res;
+                    }
+                    else if (rr === false && res === false) {
+                        return false;
+                    }
+                    else if (rr === true && res === true) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (expectPromises) {
+            resPromise = Promise.all(results);
+            if (self.resolvePromises && rr !== null && rr !== "all") {
+                resPromise = resPromise.then(function(values){
+                    var i, l = values.length, res;
+                    for(i = 0; i < l; i++) {
+                        res = values[i];
+                        if (rr === "concat" && res) {
+                            ret = ret.concat(res);
+                        }
+                        else if (rr === "merge") {
+                            extend(ret, res, true, false);
+                        }
+                        else if (rr === "nonempty" && res) {
+                            return res;
+                        }
+                        else if (rr === false && res === false) {
+                            return false;
+                        }
+                        else if (rr === true && res === true) {
+                            return true;
+                        }
+                    }
+                    return ret;
+                });
+            }
+            return resPromise;
+        }
+        else return ret;
+    }
+}, true, false);
+
+
+
+
+
+
+
+// partly from jQuery serialize.js
+
+var serializeParam = function(){
+
+    var r20 = /%20/g,
+        rbracket = /\[\]$/;
+
+    function buildParams(prefix, obj, add) {
+        var name,
+            i, l, v;
+
+        if (isArray(obj)) {
+            // Serialize array item.
+
+            for (i = 0, l = obj.length; i < l; i++) {
+                v = obj[i];
+
+                if (rbracket.test(prefix)) {
+                    // Treat each array item as a scalar.
+                    add(prefix, v);
+
+                } else {
+                    // Item is non-scalar (array or object), encode its numeric index.
+                    buildParams(
+                        prefix + "[" + ( typeof v === "object" ? i : "" ) + "]",
+                        v,
+                        add
+                    );
+                }
+            }
+        } else if (isPlainObject(obj)) {
+            // Serialize object item.
+            for (name in obj) {
+                buildParams(prefix + "[" + name + "]", obj[ name ], add);
+            }
+
+        } else {
+            // Serialize scalar item.
+            add(prefix, obj);
+        }
+    }
+
+    return function(obj) {
+
+        var prefix,
+            s = [],
+            add = function( key, value ) {
+                // If value is a function, invoke it and return its value
+                value = isFunction(value) ? value() : (value == null ? "" : value);
+                s[s.length] = encodeURIComponent( key ) + "=" + encodeURIComponent( value );
+            };
+
+        for ( prefix in obj ) {
+            buildParams(prefix, obj[prefix], add);
+        }
+
+        // Return the resulting serialization
+        return s.join( "&" ).replace( r20, "+" );
+    };
+
+
+}();
+
+
+/**
+ * @mixin Promise
+ */
+ns.register("mixin.Promise", {
+
+    $$promise: null,
+
+    $beforeInit: function() {
+        this.$$promise = new Promise;
+    },
+
+    then: function(){
+        return this.$$promise.then.apply(this.$$promise, arguments);
+    },
+
+    done: function() {
+        this.$$promise.done.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    always: function() {
+        this.$$promise.always.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    fail: function() {
+        this.$$promise.fail.apply(this.$$promise, arguments);
+        return this;
+    }
+
+});
+
+
+
+
+(function(){
+
+
+
+    var accepts     = {
+            xml:        "application/xml, text/xml",
+            html:       "text/html",
+            script:     "text/javascript, application/javascript",
+            json:       "application/json, text/javascript",
+            text:       "text/plain",
+            _default:   "*/*"
+        },
+
+        createXHR       = function() {
+
+            var xhr;
+
+            if (!window.XMLHttpRequest || !(xhr = new XMLHttpRequest())) {
+                if (!(xhr = new ActiveXObject("Msxml2.XMLHTTP"))) {
+                    if (!(xhr = new ActiveXObject("Microsoft.XMLHTTP"))) {
+                        throw "Unable to create XHR object";
+                    }
+                }
+            }
+
+            return xhr;
+        },
+
+        httpSuccess     = function(r) {
+            try {
+                return (!r.status && location && location.protocol == "file:")
+                       || (r.status >= 200 && r.status < 300)
+                       || r.status === 304 || r.status === 1223; // || r.status === 0;
+            } catch(thrownError){}
+            return false;
+        };
+
+    return defineClass({
+
+        $class: "ajax.transport.XHR",
+
+        type: "xhr",
+        _xhr: null,
+        _deferred: null,
+        _ajax: null,
+
+        $init: function(opt, deferred, ajax) {
+
+            var self    = this,
+                xhr;
+
+            self._xhr = xhr     = createXHR();
+            self._deferred      = deferred;
+            self._opt           = opt;
+            self._ajax          = ajax;
+
+            if (opt.progress) {
+                xhr.onprogress = bind(opt.progress, opt.context);
+            }
+            if (opt.uploadProgress && xhr.upload) {
+                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
+            }
+
+            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+        },
+
+        setHeaders: function() {
+
+            var self = this,
+                opt = self._opt,
+                xhr = self._xhr,
+                i;
+
+            if (opt.xhrFields) {
+                for (i in opt.xhrFields) {
+                    xhr[i] = opt.xhrFields[i];
+                }
+            }
+            if (opt.data && opt.contentType) {
+                xhr.setRequestHeader("Content-Type", opt.contentType);
+            }
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.setRequestHeader("Accept",
+                opt.dataType && accepts[opt.dataType] ?
+                accepts[opt.dataType] + ", */*; q=0.01" :
+                accepts._default
+            );
+            for (i in opt.headers) {
+                xhr.setRequestHeader(i, opt.headers[i]);
+            }
+
+        },
+
+        onReadyStateChange: function() {
+
+            var self        = this,
+                xhr         = self._xhr,
+                deferred    = self._deferred;
+
+            if (xhr.readyState === 0) {
+                xhr.onreadystatechange = emptyFn;
+                deferred.resolve(xhr);
+                return;
+            }
+
+            if (xhr.readyState === 4) {
+                xhr.onreadystatechange = emptyFn;
+
+                if (httpSuccess(xhr)) {
+
+                    self._ajax.processResponse(
+                        isString(xhr.responseText) ? xhr.responseText : undf,
+                        xhr.getResponseHeader("content-type") || ''
+                    );
+                }
+                else {
+
+                    xhr.responseData = null;
+
+                    try {
+                        xhr.responseData = self._ajax.returnResponse(
+                            isString(xhr.responseText) ? xhr.responseText : undf,
+                            xhr.getResponseHeader("content-type") || ''
+                        );
+                    }
+                    catch (thrownErr) {}
+
+                    deferred.reject(xhr);
+                }
+            }
+        },
+
+        abort: function() {
+            var self    = this;
+            self._xhr.onreadystatechange = emptyFn;
+            self._xhr.abort();
+        },
+
+        send: function() {
+
+            var self    = this,
+                opt     = self._opt;
+
+            try {
+                self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
+                self.setHeaders();
+                self._xhr.send(opt.data);
+            }
+            catch (thrownError) {
+                if (self._deferred) {
+                    self._deferred.reject(thrownError);
+                }
+            }
+        }
+    });
+
+}());
+
+
+
+
+
+
+
+defineClass({
+    $class: "ajax.transport.Script",
+
+    type: "script",
+    _opt: null,
+    _deferred: null,
+    _ajax: null,
+    _el: null,
+
+    $init: function(opt, deferred, ajax) {
+        var self        = this;
+
+        self._opt       = opt;
+        self._ajax      = ajax;
+        self._deferred  = deferred;
+    },
+
+    send: function() {
+
+        var self    = this,
+            script  = document.createElement("script");
+
+        setAttr(script, "async", "async");
+        setAttr(script, "charset", "utf-8");
+        setAttr(script, "src", self._opt.url);
+
+        addListener(script, "load", bind(self.onLoad, self));
+        addListener(script, "error", bind(self.onError, self));
+
+        document.head.appendChild(script);
+
+        self._el = script;
+    },
+
+    onLoad: function(evt) {
+        if (this._deferred) { // haven't been destroyed yet
+            this._deferred.resolve(evt);
+        }
+    },
+
+    onError: function(evt) {
+        this._deferred.reject(evt);
+    },
+
+    abort: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    },
+
+    destroy: function() {
+
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    }
+});
+
+
+
+
+
+defineClass({
+
+    $class: "ajax.transport.IFrame",
+
+    type: "iframe",
+    _opt: null,
+    _deferred: null,
+    _ajax: null,
+    _el: null,
+    _sent: false,
+
+    $init: function(opt, deferred, ajax) {
+        var self        = this;
+
+        self._opt       = opt;
+        self._ajax      = ajax;
+        self._deferred  = deferred;
+    },
+
+    send: function() {
+
+        var self    = this,
+            frame   = document.createElement("iframe"),
+            id      = "frame-" + nextUid(),
+            form    = self._opt.form;
+
+        setAttr(frame, "id", id);
+        setAttr(frame, "name", id);
+        frame.style.display = "none";
+        document.body.appendChild(frame);
+
+        setAttr(form, "action", self._opt.url);
+        setAttr(form, "target", id);
+
+        addListener(frame, "load", bind(self.onLoad, self));
+        addListener(frame, "error", bind(self.onError, self));
+
+        self._el = frame;
+
+        var tries = 0;
+
+        var submit = function() {
+
+            tries++;
+
+            try {
+                form.submit();
+                self._sent = true;
+            }
+            catch (thrownError) {
+                if (tries > 2) {
+                    self._deferred.reject(thrownError);
+                }
+                else {
+                    async(submit, null, [], 1000);
+                }
+            }
+        };
+
+        submit();
+    },
+
+    onLoad: function() {
+
+        var self    = this,
+            frame   = self._el,
+            doc,
+            data;
+
+        if (!self._sent) {
+            return;
+        }
+
+        if (self._opt && !self._opt.jsonp) {
+
+            try {
+                doc = frame.contentDocument || frame.contentWindow.document;
+                data = doc.body.innerHTML;
+                self._ajax.processResponse(data);
+            }
+            catch (thrownError) {
+                self._deferred.reject(thrownError);
+            }
+        }
+    },
+
+    onError: function(evt) {
+
+        if (!this._sent) {
+            return;
+        }
+
+        this._deferred.reject(evt);
+    },
+
+    abort: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    },
+
+    destroy: function() {
+        var self    = this;
+
+        if (self._el.parentNode) {
+            self._el.parentNode.removeChild(self._el);
+        }
+    }
+
+});
+
+
+
+
+
+
+
+
+
+(function(){
+
+    var rquery          = /\?/,
+        rurl            = /^([\w.+-]+:)(?:\/\/(?:[^\/?#]*@|)([^\/?#:]*)(?::(\d+)|)|)/,
+        rhash           = /#.*$/,
+        rts             = /([?&])_=[^&]*/,
+        rgethead        = /^(?:GET|HEAD)$/i,
+
+        globalEvents    = new Observable,
+
+        formDataSupport = !!(window && window.FormData),
+
+        processData     = function(data, opt, ct) {
+
+            var type        = opt ? opt.dataType : null,
+                selector    = opt ? opt.selector : null,
+                doc;
+
+            if (!isString(data)) {
+                return data;
+            }
+
+            ct = ct || "";
+
+            if (type === "xml" || !type && ct.indexOf("xml") >= 0) {
+                doc = parseXML(trim(data));
+                return selector ? select(selector, doc) : doc;
+            }
+            else if (type === "html") {
+                doc = parseXML(data, "text/html");
+                return selector ? select(selector, doc) : doc;
+            }
+            else if (type == "fragment") {
+                var fragment    = document.createDocumentFragment(),
+                    div         = document.createElement("div");
+
+                div.innerHTML   = data;
+
+                while (div.firstChild) {
+                    fragment.appendChild(div.firstChild);
+                }
+
+                return fragment;
+            }
+            else if (type === "json" || !type && ct.indexOf("json") >= 0) {
+                return parseJSON(trim(data));
+            }
+            else if (type === "script" || !type && ct.indexOf("javascript") >= 0) {
+                globalEval(data);
+            }
+
+            return data + "";
+        },
+
+
+        fixUrlDomain    = function(url) {
+
+            if (url.substr(0,1) == "/") {
+                return location.protocol + "//" + location.host + url;
+            }
+            else {
+                return url;
+            }
+        },
+
+        prepareUrl  = function(url, opt) {
+
+            url.replace(rhash, "");
+
+            if (!opt.allowCache) {
+
+                var stamp   = (new Date).getTime();
+
+                url = rts.test(url) ?
+                    // If there is already a '_' parameter, set its value
+                      url.replace(rts, "$1_=" + stamp) :
+                    // Otherwise add one to the end
+                      url + (rquery.test(url) ? "&" : "?" ) + "_=" + stamp;
+            }
+
+            if (opt.data && opt.method != "POST" && !opt.contentType && (!formDataSupport || !(opt.data instanceof window.FormData))) {
+
+                opt.data = !isString(opt.data) ? serializeParam(opt.data) : opt.data;
+                url += (rquery.test(url) ? "&" : "?") + opt.data;
+                opt.data = null;
+            }
+
+            return url;
+        },
+
+        data2form       = function(data, form, name) {
+
+            var i, input, len;
+
+            if (!isObject(data) && !isFunction(data) && name) {
+                input   = document.createElement("input");
+                setAttr(input, "type", "hidden");
+                setAttr(input, "name", name);
+                setAttr(input, "value", data);
+                form.appendChild(input);
+            }
+            else if (isArray(data) && name) {
+                for (i = 0, len = data.length; i < len; i++) {
+                    data2form(data[i], form, name + "["+i+"]");
+                }
+            }
+            else if (isObject(data)) {
+                for (i in data) {
+                    if (data.hasOwnProperty(i)) {
+                        data2form(data[i], form, name ? name + "["+i+"]" : i);
+                    }
+                }
+            }
+        },
+
+
+        // https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/Using_XMLHttpRequest
+        serializeForm   = function(form) {
+
+            var oField, sFieldType, nFile, obj = {};
+
+            for (var nItem = 0; nItem < form.elements.length; nItem++) {
+
+                oField = form.elements[nItem];
+
+                if (getAttr(oField, "name") === null) {
+                    continue;
+                }
+
+                sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
+                             getAttr(oField, "type").toUpperCase() : "TEXT";
+
+                if (sFieldType === "FILE") {
+                    for (nFile = 0;
+                         nFile < oField.files.length;
+                         obj[oField.name] = oField.files[nFile++].name){}
+
+                } else if ((sFieldType !== "RADIO" && sFieldType !== "CHECKBOX") || oField.checked) {
+                    obj[oField.name] = oField.value;
+                }
+            }
+
+            return serializeParam(obj);
+        },
+
+        globalEval = function(code){
+            var script, indirect = eval;
+            if (code) {
+                if (/^[^\S]*use strict/.test(code)) {
+                    script = document.createElement("script");
+                    script.text = code;
+                    document.head.appendChild(script)
+                        .parentNode.removeChild(script);
+                } else {
+                    indirect(code);
+                }
+            }
+        };
+
+    defineClass({
+
+        $class: "Ajax",
+        $mixins: ["mixin.Promise"],
+
+        _jsonpName: null,
+        _transport: null,
+        _opt: null,
+        _deferred: null,
+        _promise: null,
+        _timeout: null,
+        _form: null,
+        _removeForm: false,
+
+        $init: function(opt) {
+
+            if (opt.url) {
+                opt.url = fixUrlDomain(opt.url);
+            }
+
+            var self        = this,
+                href        = window ? window.location.href : "",
+                local       = rurl.exec(href.toLowerCase()) || [],
+                parts       = rurl.exec(opt.url.toLowerCase());
+
+            self._opt       = opt;
+
+            if (opt.crossDomain !== true && opt.ignoreCrossDomain !== true) {
+                opt.crossDomain = !!(parts &&
+                                     (parts[1] !== local[1] || parts[2] !== local[2] ||
+                                      (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
+                                      (local[3] || (local[1] === "http:" ? "80" : "443"))));
+            }
+
+            //deferred    = new Promise,
+            var transport;
+
+            if (opt.files) {
+                if (!formDataSupport) {
+                    opt.transport = "iframe";
+                }
+            }
+
+            if (opt.transport == "iframe" && !opt.form) {
+                self.createForm();
+                opt.form = self._form;
+            }
+            else if (opt.form) {
+                self._form = opt.form;
+                if (opt.method == "POST" && !formDataSupport) {
+                    opt.transport = "iframe";
+                }
+            }
+
+            if (opt.form && opt.transport != "iframe" && opt.method == "POST") {
+                if (formDataSupport) {
+                    opt.data = new FormData(opt.form);
+                }
+                else {
+                    opt.contentType = "application/x-www-form-urlencoded";
+                    opt.data = serializeForm(opt.form);
+                }
+            }
+            else if (opt.contentType == "json") {
+                opt.contentType = opt.contentTypeHeader || "text/plain";
+                opt.data = isString(opt.data) ? opt.data : JSON.stringify(opt.data);
+            }
+            else if (isPlainObject(opt.data) && opt.method == "POST" && formDataSupport) {
+
+                var d = opt.data,
+                    k;
+
+                opt.data = new FormData;
+
+                for (k in d) {
+                    opt.data.append(k, d[k]);
+                }
+            }
+
+            if (opt.files) {
+                self.importFiles();
+            }
+
+            opt.url = prepareUrl(opt.url, opt);
+
+            if ((opt.crossDomain || opt.transport == "script") && !opt.form) {
+                transport   = new MetaphorJs.ajax.transport.Script(opt, self.$$promise, self);
+            }
+            else if (opt.transport == "iframe") {
+                transport   = new MetaphorJs.ajax.transport.IFrame(opt, self.$$promise, self);
+            }
+            else {
+                transport   = new MetaphorJs.ajax.transport.XHR(opt, self.$$promise, self);
+            }
+
+            //self._deferred      = deferred;
+            self._transport     = transport;
+
+            self.$$promise.done(function(value) {
+                globalEvents.trigger("success", value);
+            });
+            self.$$promise.fail(function(reason) {
+                globalEvents.trigger("error", reason);
+            });
+            self.$$promise.always(function(){
+                globalEvents.trigger("end");
+            });
+
+            globalEvents.trigger("start");
+
+
+            if (opt.timeout) {
+                self._timeout = setTimeout(bind(self.onTimeout, self), opt.timeout);
+            }
+
+            if (opt.jsonp) {
+                self.createJsonp();
+            }
+
+            if (globalEvents.trigger("before-send", opt, transport) === false) {
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
+            }
+            if (opt.beforeSend && opt.beforeSend.call(opt.context, opt, transport) === false) {
+                //self._promise = Promise.reject();
+                self.$$promise.reject();
+            }
+
+            if (self.$$promise.isPending()) {
+                async(transport.send, transport);
+
+                //deferred.abort = bind(self.abort, self);
+                self.$$promise.always(self.asyncDestroy, self);
+
+                //self._promise = deferred;
+            }
+            else {
+                async(self.asyncDestroy, self, [], 1000);
+            }
+        },
+
+        asyncDestroy: function() {
+
+            var self = this;
+
+            if (self.$isDestroyed()) {
+                return;
+            }
+
+            if (self.$$promise.hasListeners()) {
+                async(self.asyncDestroy, self, [], 1000);
+                return;
+            }
+
+            self.$destroy();
+        },
+
+        /*promise: function() {
+            return this._promise;
+        },*/
+
+        abort: function(reason) {
+            this.$$promise.reject(reason || "abort");
+            this._transport.abort();
+            //this._deferred.reject(reason || "abort");
+            return this;
+        },
+
+        onTimeout: function() {
+            this.abort("timeout");
+        },
+
+        getTransport: function() {
+            return this._transport;
+        },
+
+        createForm: function() {
+
+            var self    = this,
+                form    = document.createElement("form");
+
+            form.style.display = "none";
+            setAttr(form, "method", self._opt.method);
+            setAttr(form, "enctype", "multipart/form-data");
+
+            data2form(self._opt.data, form, null);
+
+            document.body.appendChild(form);
+
+            self._form = form;
+            self._removeForm = true;
+        },
+
+        importFiles: function() {
+
+            var self    = this,
+                opt     = self._opt,
+                files   = opt.files,
+                tr      = opt.transport,
+                form    = self._form,
+                data    = opt.data,
+                i, l,
+                j, jl,
+                name,
+                input,
+                file,
+                item;
+
+            for (i = 0, l = files.length; i < l; i++) {
+
+                item = files[i];
+
+                if (isArray(item)) {
+                    name = item[0];
+                    file = item[1];
+                }
+                else {
+                    if (window.File && item instanceof File) {
+                        name = item.uploadName || ("upload" + (l > 1 ? "[]" : ""));
+                    }
+                    else {
+                        name = item.name || "upload" + (l > 1 ? "[]" : "");
+                    }
+                    file = item;
+                }
+
+                if (!window.File || !(file instanceof File)) {
+                    input = file;
+                    file = null;
+                }
+
+                if (form) {
+                    if (input) {
+                        form.appendChild(input);
+                    }
+                }
+                else {
+                    if (file) {
+                        data.append(name, file);
+                    }
+                    else if (input.files && input.files.length) {
+                        for (j = 0, jl = input.files.length; j < jl; j++) {
+                            data.append(name, input.files[j]);
+                        }
+                    }
+                }
+            }
+        },
+
+        createJsonp: function() {
+
+            var self        = this,
+                opt         = self._opt,
+                paramName   = opt.jsonpParam || "callback",
+                cbName      = opt.jsonpCallback || "jsonp_" + nextUid();
+
+            opt.url += (rquery.test(opt.url) ? "&" : "?") + paramName + "=" + cbName;
+
+            self._jsonpName = cbName;
+
+            if (typeof window != strUndef) {
+                window[cbName] = bind(self.jsonpCallback, self);
+            }
+            if (typeof global != strUndef) {
+                global[cbName] = bind(self.jsonpCallback, self);
+            }
+
+            return cbName;
+        },
+
+        jsonpCallback: function(data) {
+
+            var self    = this,
+                res;
+
+            try {
+                res = self.processResponseData(data);
+            }
+            catch (thrownError) {
+                if (self.$$promise) {
+                    self.$$promise.reject(thrownError);
+                }
+                else {
+                    error(thrownError);
+                }
+            }
+
+            if (self.$$promise) {
+                self.$$promise.resolve(res);
+            }
+        },
+
+        processResponseData: function(data, contentType) {
+
+            var self    = this,
+                opt     = self._opt;
+
+            data    = processData(data, opt, contentType);
+
+            if (globalEvents.hasListener("process-response")) {
+                globalEvents.trigger("process-response", data, self.$$promise);
+            }
+
+            if (opt.processResponse) {
+                data    = opt.processResponse.call(opt.context, data, self.$$promise);
+            }
+
+            return data;
+        },
+
+        returnResponse: function(data, contentType) {
+
+            var self    = this;
+
+            if (!self._opt.jsonp) {
+                return self.processResponseData(data, contentType);
+            }
+
+            return null;
+        },
+
+        processResponse: function(data, contentType) {
+
+            var self        = this,
+                deferred    = self.$$promise,
+                result;
+
+            if (!self._opt.jsonp) {
+                try {
+                    result = self.processResponseData(data, contentType)
+                }
+                catch (thrownError) {
+                    deferred.reject(thrownError);
+                }
+
+                deferred.resolve(result);
+            }
+            else {
+                if (!data) {
+                    deferred.reject("jsonp script is empty");
+                    return;
+                }
+
+                try {
+                    globalEval(data);
+                }
+                catch (thrownError) {
+                    deferred.reject(thrownError);
+                }
+
+                if (deferred.isPending()) {
+                    deferred.reject("jsonp script didn't invoke callback");
+                }
+            }
+        },
+
+        destroy: function() {
+
+            var self    = this;
+
+            if (self._timeout) {
+                clearTimeout(self._timeout);
+            }
+
+            if (self._form && self._form.parentNode && self._removeForm) {
+                self._form.parentNode.removeChild(self._form);
+            }
+
+            self._transport.$destroy();
+
+            if (self._jsonpName) {
+                if (typeof window != strUndef) {
+                    delete window[self._jsonpName];
+                }
+                if (typeof global != strUndef) {
+                    delete global[self._jsonpName];
+                }
+            }
+        }
+
+    }, {
+
+        prepareUrl: prepareUrl,
+        global: globalEvents
+    });
+
+
+}());
 
 
 
@@ -817,7 +2893,7 @@ var getDimensions = function(type, name) {
 
     var rnumnonpx = new RegExp( "^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$", "i"),
         cssExpand = [ "Top", "Right", "Bottom", "Left" ],
-        defaultExtra = !type ? "content" : (type == "inner" ? "padding" : "");
+        defaultExtra = !type ? "content" : (type === "inner" ? "padding" : "");
 
     var augmentWidthOrHeight = function(elem, name, extra, isBorderBox, styles) {
         var i = extra === (isBorderBox ? "border" : "content") ?
@@ -980,209 +3056,43 @@ function undelegate(el, selector, event, fn) {
     }
 };
 
-var strUndef = "undefined";
-/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- * @param {number} timeout
- */
-function async(fn, context, args, timeout) {
-    return setTimeout(function(){
-        fn.apply(context, args || []);
-    }, timeout || 0);
-};
-
-
-
-var raf = function() {
-
-    var raf,
-        cancel;
-
-    if (typeof window != strUndef) {
-        var w   = window;
-        raf     = w.requestAnimationFrame ||
-                    w.webkitRequestAnimationFrame ||
-                    w.mozRequestAnimationFrame;
-        cancel  = w.cancelAnimationFrame ||
-                    w.webkitCancelAnimationFrame ||
-                    w.mozCancelAnimationFrame ||
-                    w.webkitCancelRequestAnimationFrame;
-
-        if (raf) {
-            return function(fn, context, args) {
-                var id = raf(context || args ? function(){
-                    fn.apply(context, args || []);
-                } : fn);
-                return function() {
-                    cancel(id);
-                };
-            };
-        }
-    }
-
-    return function(fn, context, args){
-        var id = async(fn, context, args, 0);
-        return function(){
-            clearTimeout(id);
-        };
-    };
-
-}();
-
-
-
-var error = (function(){
-
-    var listeners = [];
-
-    var error = function error(e) {
-
-        var i, l;
-
-        for (i = 0, l = listeners.length; i < l; i++) {
-            if (listeners[i][0].call(listeners[i][1], e) === false) {
-                return;
-            }
-        }
-
-        var stack = (e ? e.stack : null) || (new Error).stack;
-
-        if (typeof console != strUndef && console.error) {
-            async(function(){
-                if (e) {
-                    console.error(e);
-                }
-                if (stack) {
-                    console.error(stack);
-                }
-            });
-        }
-        else {
-            throw e;
-        }
-    };
-
-    error.on = function(fn, context) {
-        error.un(fn, context);
-        listeners.push([fn, context]);
-    };
-
-    error.un = function(fn, context) {
-        var i, l;
-        for (i = 0, l = listeners.length; i < l; i++) {
-            if (listeners[i][0] === fn && listeners[i][1] === context) {
-                listeners.splice(i, 1);
-                break;
-            }
-        }
-    };
-
-    return error;
-}());
-
-
-
-
-function emptyFn(){};
-
 
 
 var functionFactory = function() {
 
-    var REG_REPLACE_EXPR    = /(^|[^a-z0-9_$\]\)'"])(\.)([^0-9])/ig,
+    var REG_REPLACE_EXPR    = /((^|[^a-z0-9_$\]\)'"])|(this))(\.)([^0-9])/ig,
+        REG_REPLACER        = "$2____.$5",
 
         f               = Function,
         fnBodyStart     = 'try {',
-        //getterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____); }',
-        //setterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____, $$$$); }',
         getterBodyEnd   = ';} catch (thrownError) { return undefined; }',
         setterBodyEnd   = ';} catch (thrownError) { return undefined; }',
-
-
-        /*interceptor     = function(thrownError, func, scope, value) {
-
-            while (scope && !scope.$isRoot) {
-
-                scope = scope.$parent;
-
-                if (scope) {
-
-                    try {
-                        if (arguments.length == 4) {
-                            return func.call(null, scope, value, emptyFn, func);
-                        }
-                        else {
-                            return func.call(null, scope, emptyFn, func);
-                        }
-                    }
-                    catch (newError) {}
-                }
-            }
-
-            if (thrownError !== null) {
-                error(thrownError);
-            }
-
-            return undf;
-        },*/
-
-        isFailed        = function(val) {
-            return val === undf || (typeof val == "number" && isNaN(val));
-        },
-
-        wrapFunc        = function(func, returnsValue) {
-            return function(scope) {
-                var args = slice.call(arguments),
-                    val;
-
-                //args.push(interceptor);
-                args.push(null);
-                args.push(func);
-
-                val = func.apply(null, args);
-                return isFailed(val) ? undf : val;
-
-                /*if (returnsValue) {
-                    val = func.apply(null, args);
-                    while (isFailed(val) && !scope.$isRoot) {
-                        scope = scope.$parent;
-                        args[0] = scope;
-                        val = func.apply(null, args);
-                    }
-                    return val;
-                }
-                else {
-                    return func.apply(null, args);
-                }*/
-
-                /*if (returnsValue && isFailed(val)) {//) {
-                    args = slice.call(arguments);
-                    args.unshift(func);
-                    args.unshift(null);
-                    return interceptor.apply(null, args);
-                }
-                else {
-                    return val;
-                }*/
-            };
-        },
 
         getterCache     = {},
         getterCacheCnt  = 0,
 
-        createGetter    = function createGetter(expr) {
+        createGetter    = function createGetter(expr, returnAsCode) {
 
             try {
-                if (!getterCache[expr]) {
+                if (!getterCache[expr] || returnAsCode) {
                     getterCacheCnt++;
-                    return getterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, 'return ', expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ), true);
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        'return ',
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return getterCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
                 }
                 return getterCache[expr];
             }
@@ -1195,18 +3105,23 @@ var functionFactory = function() {
         setterCache     = {},
         setterCacheCnt  = 0,
 
-        createSetter    = function createSetter(expr) {
+        createSetter    = function createSetter(expr, returnAsCode) {
             try {
-                if (!setterCache[expr]) {
+                if (!setterCache[expr] || returnAsCode) {
                     setterCacheCnt++;
-                    var code = expr.replace(REG_REPLACE_EXPR, '$1____.$3');
-                    return setterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$$$',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd)
-                    ));
+                    var code = expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        body = "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd);
+
+                    if (returnAsCode) {
+                        return "function(____, $$$$) {" + body + "}";
+                    }
+                    else {
+                        return setterCache[expr] = new f(
+                            '____',
+                            '$$$$',
+                            body
+                        );
+                    }
                 }
                 return setterCache[expr];
             }
@@ -1219,16 +3134,26 @@ var functionFactory = function() {
         funcCache       = {},
         funcCacheCnt    = 0,
 
-        createFunc      = function createFunc(expr) {
+        createFunc      = function createFunc(expr, returnAsCode) {
             try {
-                if (!funcCache[expr]) {
+                if (!funcCache[expr] || returnAsCode) {
                     funcCacheCnt++;
-                    return funcCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ));
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return funcCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
                 }
                 return funcCache[expr];
             }
@@ -1263,34 +3188,72 @@ var createGetter = functionFactory.createGetter;
 
 /**
  * @mixin Observable
+ * @description Mixin adds observable features to the host object.
+ *              It adds 'callback' option to the host config. See $beforeInit.
+ *              Mixin is designed for MetaphorJs class system.
+ * @code examples/mixin.js
  */
 ns.register("mixin.Observable", {
 
     /**
+     * @private
      * @type {Observable}
+     * @description You can use this instance in your $init function
      */
     $$observable: null,
+
+    /**
+     * @private
+     * @type {object}
+     */
     $$callbackContext: null,
 
+    /**
+     * @protected
+     * @type {object} {
+     *      Override this to define event properties. 
+     *      Object's key is event name, value - either returnResult or 
+     *      options object. See {@link class:Observable.createEvent}
+     * }
+     */
+    $$events: null,
+
+    /**
+     * @method
+     * @private
+     * @param {object} cfg {
+     *      This is a config that was passed to the host object's constructor.
+     *      It is being passed to mixin's $beforeInit automatically.
+     *      @type {object} callback {
+     *          Here, except for 'context', '$context' and 'scope', 
+     *          keys are event names and values are listeners. 
+     *          @type {object} context All given listeners context
+     *          @type {object} scope The same
+     *      }
+     * }
+     */
     $beforeInit: function(cfg) {
-
         var self = this;
-
         self.$$observable = new Observable;
-
         self.$initObservable(cfg);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     * @param {object} cfg
+     */
     $initObservable: function(cfg) {
 
         var self    = this,
-            obs     = self.$$observable;
+            obs     = self.$$observable,
+            i;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope || ls.$context,
-                events = extend({}, self.$$events, ls.$events, true, false),
-                i;
+                events = extend({}, self.$$events, ls.$events, true, false);
 
             for (i in events) {
                 obs.createEvent(i, events[i]);
@@ -1311,32 +3274,63 @@ ns.register("mixin.Observable", {
                 self.$$callbackContext = context;
             }
         }
+        else if (self.$$events) {
+            for (i in self.$$events) {
+                obs.createEvent(i, self.$$events[i]);
+            }
+        }
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.on}
+     */
     on: function() {
         var o = this.$$observable;
         return o ? o.on.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.un}
+     */
     un: function() {
         var o = this.$$observable;
         return o ? o.un.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.once}
+     */
     once: function() {
         var o = this.$$observable;
         return o ? o.once.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.trigger}
+     */
     trigger: function() {
         var o = this.$$observable;
         return o ? o.trigger.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $beforeDestroy: function() {
         this.$$observable.trigger("before-destroy", this);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $afterDestroy: function() {
         var self = this;
         self.$$observable.trigger("destroy", self);
@@ -1880,14 +3874,15 @@ defineClass({
             return null;
         }
 
-        var otype = type;
+        type    = type || self.type;
 
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
-            offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
+            offset  = pBase && !absolute ?
+                        getPosition(target, pBase) :
+                            getOffset(target),
             tsize   = dlg.getTargetSize(),
             pos     = {},
-            type    = type || self.type,
             pri     = type.substr(0, 1),
             sec     = type.substr(1),
             offsetX = cfg.position.offsetX,
@@ -1942,12 +3937,14 @@ defineClass({
                 switch (pri) {
                     case "t":
                     case "b": {
-                        pos.x   = offset.left + (tsize.width / 2) - (size.width / 2);
+                        pos.x   = offset.left + (tsize.width / 2) -
+                                    (size.width / 2);
                         break;
                     }
                     case "r":
                     case "l": {
-                        pos.y   = offset.top + (tsize.height / 2) - (size.height / 2);
+                        pos.y   = offset.top + (tsize.height / 2) -
+                                    (size.height / 2);
                         break;
                     }
                 }
@@ -1972,7 +3969,8 @@ defineClass({
     },
 
     getAllPositions: function() {
-        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb", "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
+        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb",
+                "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
     }
 
 });
@@ -2484,90 +4482,6 @@ defineClass({
         }
     }
 });
-
-
-
-var getAnimationPrefixes = function(){
-
-    var domPrefixes         = ['Moz', 'Webkit', 'ms', 'O', 'Khtml'],
-        animationDelay      = "animationDelay",
-        animationDuration   = "animationDuration",
-        transitionDelay     = "transitionDelay",
-        transitionDuration  = "transitionDuration",
-        transform           = "transform",
-        transitionend       = null,
-        prefixes            = null,
-
-        probed              = false,
-
-        detectCssPrefixes   = function() {
-
-            var el = window.document.createElement("div"),
-                animation = false,
-                pfx,
-                i, len;
-
-            if (el.style['animationName'] !== undf) {
-                animation = true;
-            }
-            else {
-                for(i = 0, len = domPrefixes.length; i < len; i++) {
-                    pfx = domPrefixes[i];
-                    if (el.style[ pfx + 'AnimationName' ] !== undf) {
-                        animation           = true;
-                        animationDelay      = pfx + "AnimationDelay";
-                        animationDuration   = pfx + "AnimationDuration";
-                        transitionDelay     = pfx + "TransitionDelay";
-                        transitionDuration  = pfx + "TransitionDuration";
-                        transform           = pfx + "Transform";
-                        break;
-                    }
-                }
-            }
-
-            if (animation) {
-                if('ontransitionend' in window) {
-                    // Chrome/Saf (+ Mobile Saf)/Android
-                    transitionend = 'transitionend';
-                }
-                else if('onwebkittransitionend' in window) {
-                    // Chrome/Saf (+ Mobile Saf)/Android
-                    transitionend = 'webkitTransitionEnd';
-                }
-            }
-
-            return animation;
-        };
-
-
-    /**
-     * @function animate.getPrefixes
-     * @returns {object}
-     */
-    return function() {
-
-        if (!probed) {
-            if (detectCssPrefixes()) {
-                prefixes = {
-                    animationDelay: animationDelay,
-                    animationDuration: animationDuration,
-                    transitionDelay: transitionDelay,
-                    transitionDuration: transitionDuration,
-                    transform: transform,
-                    transitionend: transitionend
-                };
-            }
-            else {
-                prefixes = {};
-            }
-
-            probed = true;
-        }
-
-
-        return prefixes;
-    };
-}();
 
 
 
@@ -3166,7 +5080,7 @@ var Dialog = (function(){
     var manager = factory("dialog.Manager");
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
-        if (type == "show" || !returnMode) {
+        if (type === "show" || !returnMode) {
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -4232,7 +6146,7 @@ var Dialog = (function(){
 
             if (cfg.target && cfg.useHref) {
                 var href = getAttr(self.getTarget(), "href");
-                if (href.substr(0, 1) == "#") {
+                if (href.substr(0, 1) === "#") {
                     cfg.render.el = href;
                 }
                 else {
@@ -4431,8 +6345,8 @@ var Dialog = (function(){
             var self    = this,
                 cfg     = self.cfg,
                 fns     = ["show", "hide", "toggle"],
-                lfn     = mode == "bind" ? addListener : removeListener,
-                dfn     = mode == "bind" ? delegate : undelegate,
+                lfn     = mode === "bind" ? addListener : removeListener,
+                dfn     = mode === "bind" ? delegate : undelegate,
                 fn,
                 fnCfg,
                 selector,
@@ -4464,17 +6378,21 @@ var Dialog = (function(){
                 for (selector in fnCfg) {
 
                     if (only) {
-                        if (only == '_self') {
-                            if (selector != '_self' && selector != "_overlay" && selector.substr(0,1) != '>') {
+                        if (only === '_self') {
+                            if (selector !== '_self' &&
+                                selector !== "_overlay" &&
+                                selector.substr(0,1) !== '>') {
                                 continue;
                             }
                         }
-                        else if (selector != only) {
+                        else if (selector !== only) {
                             continue;
                         }
                     }
 
-                    if ((selector == '_self' || selector == '_overlay' || selector.substr(0,1) == '>')
+                    if ((selector === '_self' ||
+                            selector === '_overlay' ||
+                            selector.substr(0,1) === '>')
                         && !self.node) {
 
                         self.bindSelfOnRender = true;
@@ -4513,7 +6431,7 @@ var Dialog = (function(){
                             break;
 
                         default:
-                            el  = selector.substr(0,1) == '>' ?
+                            el  = selector.substr(0,1) === '>' ?
                                   select(selector.substr(1), self.node) :
                                   select(selector);
 
@@ -4559,7 +6477,7 @@ var Dialog = (function(){
         },
 
         onButtonKeyup: function(e) {
-            if (e.keyCode == 13 || e.keyCode == 32) {
+            if (e.keyCode === 13 || e.keyCode === 32) {
                 var target  = e.target,
                     btnId   = data(target, "metaphorjsTooltip-button-id");
 
@@ -5136,7 +7054,7 @@ var Dialog = (function(){
 
             self.cfg.position.type = type;
 
-            if (self.positionClass != cls || !self.position) {
+            if (self.positionClass !== cls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
                     self.position = null;
@@ -5161,8 +7079,8 @@ var Dialog = (function(){
 
             if (!self.position) {
 
-                if (!self.positionGetType && cfgPos.type != "custom") {
-                    if (isFunction(cfgPos.get) && cfgPos.type != "m") {
+                if (!self.positionGetType && cfgPos.type !== "custom") {
+                    if (isFunction(cfgPos.get) && cfgPos.type !== "m") {
                         cfgPos.type = "custom";
                     }
                 }
@@ -5180,7 +7098,7 @@ var Dialog = (function(){
                     return;
                 }
 
-                if (self.positionClass != cls) {
+                if (self.positionClass !== cls) {
                     self.position   = factory(self.getPositionClass(type), self);
                 }
                 else {
@@ -5197,7 +7115,7 @@ var Dialog = (function(){
                 return false;
             }
 
-            if (isFunction(type) || type == "custom") {
+            if (isFunction(type) || type === "custom") {
                 return "dialog.position.Custom";
             }
 
@@ -5206,10 +7124,10 @@ var Dialog = (function(){
             if (!fc) {
                 return false;
             }
-            else if (fc == "w") {
+            else if (fc === "w") {
                 return "dialog.position.Window";
             }
-            else if (fc == "m") {
+            else if (fc === "m") {
                 return "dialog.position.Mouse";
             }
             else {
@@ -5283,7 +7201,7 @@ var Dialog = (function(){
 
             var isStr = isString(newTarget);
 
-            if (isStr && newTarget.substr(0,1) != "#") {
+            if (isStr && newTarget.substr(0,1) !== "#") {
                 self.dynamicTarget = true;
                 self.target        = null;
             }
@@ -5651,7 +7569,7 @@ var Dialog = (function(){
             if (cfgScroll === true || cfgScroll === false) {
                 return window;
             }
-            else if (typeof cfgScroll == "string") {
+            else if (typeof cfgScroll === "string") {
                 return select(cfgScroll).shift();
             }
             else {
@@ -5684,7 +7602,7 @@ var Dialog = (function(){
             }
 
             return animate(node, a, function(){
-                if (section == "show" && !skipDisplay) {
+                if (section === "show" && !skipDisplay) {
 
                     var p = new Promise;
 
@@ -5726,7 +7644,7 @@ var Dialog = (function(){
 
             self.overlay.append();
 
-            if (self.node) {
+            if (self.node && cfg.render.appendTo !== false) {
                 to.appendChild(self.node);
             }
         },
@@ -5747,7 +7665,7 @@ var Dialog = (function(){
 
             if (node) {
                 if (!self.cfg.render.keepInDOM) {
-                    node.parentNode.removeChild(node);
+                    node.parentNode && node.parentNode.removeChild(node);
                 }
                 self.node = null;
             }
@@ -5784,59 +7702,7 @@ var Dialog = (function(){
     return Dialog;
 
 }());
-
-if (window.jQuery) {
-
-    /**
-     * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-     * @function
-     * @param {string|object} options See constructor.
-     * @param {string} instanceName {
-     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-     *   @default "default"
-     * }
-     * @return jQuery
-     */
-    jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
-
-        var dataName    = "dialog",
-            preset;
-
-        if (typeof options == "string" && options != "destroy") {
-            preset          = options;
-            options         = arguments[1];
-            instanceName    = arguments[2];
-        }
-
-        instanceName    = instanceName || "default";
-        options         = options || {};
-
-        dataName        += "-" + instanceName;
-
-        this.each(function() {
-
-            var el  = this,
-                t   = data(el, dataName);
-
-            if (!t) {
-                options.target          = el;
-                options.instanceName    = dataName;
-                options.preset          = preset;
-                data(el, dataName, new MetaphorJs.Dialog(options));
-            }
-            else if (options == "destroy") {
-                t.destroy();
-                data(el, dataName, null);
-            }
-            else {
-                throw new Error("MetaphorJs tooltip already instantiated for this html element");
-            }
-        });
-    };
-
-}
-
-
 return Dialog;
 });
 
+/* BUNDLE END 5AL */

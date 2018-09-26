@@ -1,13 +1,11 @@
 
-var defineClass = require("metaphorjs-class/src/func/defineClass.js"),
-    factory = require("metaphorjs-class/src/func/factory.js"),
+var MetaphorJs = require("metaphorjs/src/MetaphorJs.js"),
     ucfirst = require("metaphorjs/src/func/ucfirst.js"),
     setStyle = require("metaphorjs/src/func/dom/setStyle.js"),
     addClass = require("metaphorjs/src/func/dom/addClass.js"),
     getAnimationPrefixes = require("metaphorjs-animate/src/func/getAnimationPrefixes.js");
 
 require("./Abstract.js");
-
 
 module.exports = (function(){
 
@@ -21,11 +19,9 @@ module.exports = (function(){
             lineHeight:     '0px' // ie6
         };
 
+    return MetaphorJs.dialog.pointer.Abstract.$extend({
 
-    return defineClass({
-
-        $class: "dialog.pointer.Html",
-        $extends: "dialog.pointer.Abstract",
+        $class: "MetaphorJs.dialog.pointer.Html",
 
         node: null,
         sub: null,
@@ -62,7 +58,7 @@ module.exports = (function(){
             newcfg.offset = 0;
             newcfg.inner = self.border;
 
-            self.sub = factory("dialog.pointer.Html", self.dialog, newcfg);
+            self.sub = new MetaphorJs.dialog.pointer.Html(self.dialog, newcfg);
         },
 
 
@@ -275,7 +271,7 @@ module.exports = (function(){
             }
         },
 
-        destroy: function() {
+        onDestroy: function() {
 
             var self = this;
 
