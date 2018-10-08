@@ -1161,6 +1161,11 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
         },
 
+        /**
+         * @method
+         * @constructor
+         * @param {object} cfg See MetaphorJs.dialog.Dialog.defaults
+         */
         $init: function(cfg) {
 
             cfg = cfg || {};
