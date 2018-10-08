@@ -2,6 +2,7 @@
 if (window.jQuery) {
 
     /**
+     * @ignore
      * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
      * @function
      * @param {string|object} options See constructor.
@@ -10,6 +11,7 @@ if (window.jQuery) {
      *   @default "default"
      * }
      * @return jQuery
+     * @ignore
      */
     jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
 

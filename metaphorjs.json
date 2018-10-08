@@ -2,23 +2,37 @@
     "version": "1.0.5",
     "description": "MetaphorJs.Dialog -- tooltip and popup library",
 
-    "push": [
-        "github"
-    ],
+    "docs": {
+        "out": "docs",
+        "renderer": {
+            "type": "default",
+            "data": {
+                "title": "MetaphorJs.dialog.Dialog",
+                "description": "Tooltip and popup library",
+                "version": "v1.0.5"
+            }
+        },
+        
+        "src": [
+            "src/**"
+        ],
+        "includeExternal": false
+    },
+    
     "build": {
         "standalone": {
             "target": "dist/metaphorjs.dialog.js",
             "files": [
-                ["metaphorjs/src/MetaphorJs.js", {"as": "*"}],
-                ["src/class/Dialog.js", {"as": "*"}],
-                ["metaphorjs/src/func/dom/onReady.js", {"as": "*"}]
+                "src/dialog/Dialog.js"
+            ],
+            "omit": [
+                "src/dialog/Component.js"
             ],
             "options": {
                 "wrap": true,
                 "global": true,
                 "expose": [
-                    "Dialog",
-                    "onReady"
+                    {"name": "MetaphorJs.dialog.Dialog", "as": "Dialog"}
                 ]
             }  
         },
@@ -32,34 +46,12 @@
         "amd": {
             "target": "dist/metaphorjs.dialog.amd.js",
             "files": [
-                ["src/class/Dialog.js", {"as": "Dialog"}]
-            ],
-            "omit": [
-                "metaphorjs-observable/src/lib/Observable.js",
-                "metaphorjs-namespace/src/lib/Namespace.js",
-                "metaphorjs-class/src/cls.js",
-                "metaphorjs-promise/src/lib/Promise.js",
-                "metaphorjs-ajax/src/func/ajax.js",
-                "metaphorjs-select/src/func/select.js",
-                "metaphorjs-animate/src/func/animate.js",
-                "metaphorjs-animate/src/func/stopAnimation.js"
+                "src/dialog/Dialog.js"
             ],
             "options": {
-                "prepend": [        
-                    "src/amd/prepend.js"
-                ],
                 "amd": {
                     "name": "metaphorjs-dialog",
-                    "return": "Dialog",
-                    "deps": {
-                        "metaphorjs-observable": "Observable",
-                        "metaphorjs-promise": "Promise",
-                        "metaphorjs-ajax": "ajax",
-                        "metaphorjs-select": "select",
-                        "metaphorjs-animate": "animate",
-                        "metaphorjs-namespace": "Namespace",
-                        "metaphorjs-class": "cls"
-                    }
+                    "return": "MetaphorJs.dialog.Dialog"
                 }
             }
         },
