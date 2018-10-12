@@ -14,10 +14,10 @@ var cls             = require("metaphorjs-class/src/cls.js"),
     raf             = require("metaphorjs-animate/src/func/raf.js"),
     async           = require("metaphorjs-shared/src/func/async.js"),
     error           = require("metaphorjs-shared/src/func/error.js"),
-    createGetter    = require("metaphorjs-watchable/src/func/createGetter.js"),
     MetaphorJs      = require("metaphorjs-shared/src/MetaphorJs.js");
 
 require("../__init.js");
+require("metaphorjs/src/lib/Expression.js");
 require("metaphorjs/src/func/dom/addClass.js");
 require("metaphorjs/src/func/dom/hasClass.js");
 require("metaphorjs/src/func/dom/removeClass.js");
@@ -78,7 +78,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             data    = MetaphorJs.dom.getAttr(trg, "data-" + action + "-" + type);
 
             if (data) {
-                cfg = createGetter(data)({});
+                cfg = MetaphorJs.lib.Expression.parse(data)({});
                 break;
             }
 
