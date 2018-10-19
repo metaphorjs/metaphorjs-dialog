@@ -2,12 +2,12 @@
 require("../__init.js");
 require("metaphorjs/src/lib/DomEvent.js");
 require("./Dialog.js");
+require("metaphorjs/src/app/Component.js");
 
 var extend  = require("metaphorjs-shared/src/func/extend.js"),
-    Component = require("metaphorjs/src/class/Component.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
-module.exports = MetaphorJs.dialog.Component = Component.$extend({
+module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend({
 
     dialog: null,
     dialogPreset: null,
