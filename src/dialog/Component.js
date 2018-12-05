@@ -69,7 +69,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     },
 
     // skips the append part
-    onRenderingFinished: function() {
+    _onRenderingFinished: function() {
         var self = this;
         self.rendered   = true;
         self.afterRender();
@@ -106,20 +106,18 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
 
     onDialogShow: function() {
         var self = this;
-        self.onShow();
+        //self.onShow();
         self.trigger("show", self);
     },
 
-    onBeforeDialogHide: function() {
-
-    },
+    onBeforeDialogHide: function() {},
 
     onDialogHide: function() {
         var self = this;
         if (!self.$destroyed) {
             self.template.setAnimation(false);
             self.hidden = true;
-            self.onHide();
+            //self.onHide();
             self.trigger("hide", self);
         }
     },
