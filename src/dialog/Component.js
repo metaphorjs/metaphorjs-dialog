@@ -100,7 +100,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
             self.render();
         }
 
-        self.template.setAnimation(true);
+        self.template.config.set("animate", true);
         self.hidden = false;
     },
 
@@ -115,7 +115,8 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     onDialogHide: function() {
         var self = this;
         if (!self.$destroyed) {
-            self.template.setAnimation(false);
+            self.template.config.set("animate", false);
+            //self.template.setAnimation(false);
             self.hidden = true;
             //self.onHide();
             self.trigger("hide", self);
