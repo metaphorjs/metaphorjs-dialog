@@ -42,7 +42,7 @@ Directive.registerAttribute("dropdown", 1100,
                 cmpid = config.get("cmp"),
                 selector = config.get("selector"),
                 cmp;
-
+            
             if (node.getDomApi) {
                 self._hostCmp = node;
                 self.node = node.getDomApi("dropdown");
