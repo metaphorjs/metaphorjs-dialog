@@ -184,7 +184,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
         /**
          * Target element(s) which trigger dialog's show and hide.<br>
-         * If {Element}: will be used as a single target,<br>
+         * If {HTMLElement}: will be used as a single target,<br>
          * if selector: will be used as dynamic target.<br>
          * Dynamic targets work like this:<br>
          * you provide delegates: {someElem: {click: someClass}} -- see "show" function<br>
@@ -234,7 +234,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             /**
              * Must return content value
              * @property {function} fn
-             * @param {Element} target
+             * @param {HTMLElement} target
              * @param {MetaphorJs.dialog.Dialog} dialog
              * @returns {string}
              */
@@ -1082,7 +1082,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
              * Also called from setTarget().
              * @property {function} targetChange
              * @param {MetaphorJs.dialog.Dialog} dialog
-             * @param {Element} newTarget
+             * @param {HTMLElement} newTarget
              * @param {Element|null} prevTarget
              */
             "target-change":       null,
@@ -1232,7 +1232,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
         /**
          * @method
-         * @returns {Element}
+         * @returns {HTMLElement}
          */
         getElem: function() {
             return this.node;
@@ -2247,7 +2247,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
          * Get dialog's target.
          * @method
          * 
-         * @return {Element}
+         * @return {HTMLElement}
          */
         getTarget: function() {
             return this.dynamicTarget ? this.dynamicTargetEl : this.target;
@@ -2373,7 +2373,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
         /**
          * @method
          * 
-         * @return {Element}
+         * @return {HTMLElement}
          */
         getContentElem: function() {
             var self = this,
