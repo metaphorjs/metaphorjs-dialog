@@ -40,6 +40,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         self._createDialog();
     },
 
+
     _getDialogCfg: function() {
 
         var self    = this;
@@ -100,7 +101,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
             self.render();
         }
 
-        self.template.config.set("animate", true);
+        //self.template.config.set("animate", true);
         self.hidden = false;
     },
 
