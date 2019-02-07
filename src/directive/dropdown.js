@@ -11,18 +11,18 @@ var Directive = require("metaphorjs/src/app/Directive.js"),
 Directive.registerAttribute("dropdown", 1100,
     Directive.$extend({
         $class: "MetaphorJs.app.Directive.attr.Dropdown",
+        id: "dropdown",
 
+        _autoOnChange: false,
         _dialog: null,
         _contentNode: null,
         _hostCmp: null,
         _contentCmp: null,
 
-        $init: function(scope, node, config, renderer) {
+        _initConfig: function(config) {
+            this.$super(config);
 
-            var self = this,
-                s = MetaphorJs.lib.Config.MODE_STATIC;
-
-            // value holds the ref name or cmp id or cmp itself
+            var s = MetaphorJs.lib.Config.MODE_STATIC;
             config.disableProperty("value");
             config.setDefaultMode("ref", s);
             config.setDefaultMode("selector", s);
@@ -35,26 +35,29 @@ Directive.registerAttribute("dropdown", 1100,
             config.setDefaultMode("preset", s);
             config.setDefaultValue("dialog", "MetaphorJs.dialog.Dialog");
             config.setDefaultValue("on", "click");
+        },
 
-            this.$super.apply(this, arguments);
+        _initDirective: function() {
 
-            var ref = config.get("ref"),
+            var self = this,
+                config = self.config,
+                scope = self.scope,
+                ref = config.get("ref"),
                 cmpid = config.get("cmp"),
                 selector = config.get("selector"),
                 cmp;
-            
-            if (node.getDomApi) {
-                self._hostCmp = node;
-                self.node = node.getDomApi("dropdown");
 
+            if (self.component) {
                 if (ref) {
-                    cmp = self._hostCmp.getRefCmp(ref) || 
-                            self._hostCmp.getRefCmpPromise(ref);
+                    cmp = self.component.getRefCmp(ref) || 
+                            self.component.getRefCmpPromise(ref);
                 }
                 else if (cmpid) {
                     if (typeof cmpid === "string") {
-                        cmp = scope.$app.getCmp(cmpid) ||
-                                scope.$app.onAvailable(cmpid);
+                        if (scope.$app) {
+                            cmp = scope.$app.getCmp(cmpid) ||
+                                    scope.$app.onAvailable(cmpid);
+                        }
                     }
                     else {
                         cmp = cmpid;
@@ -66,26 +69,28 @@ Directive.registerAttribute("dropdown", 1100,
 
                 if (cmp) {
                     if (isThenable(cmp)) {
-                        cmp.done(function(component){
+                        cmp.done(function(component) {
                             self._contentCmp = component;
-                            self._contentNode = component.getEl();
+                            self._contentNode = component.getRefEl("main");
                         });
                         cmp.done(self._initDialog, self);
                     }
                     else {
                         self._contentCmp = cmp;
-                        self._contentNode = cmp.getEl();
+                        self._contentNode = cmp.getRefEl("main");
                         self._initDialog();
                     }
                 }
             }
             else {
-                this._contentNode = document.getElementById(ref);
+                self._contentNode = document.getElementById(ref);
                 self._initDialog();
-            }            
+            }
+
+            self.$super();
         },
 
-        initialSet: function(){
+        _initChange: function(){
             // skip setting onChange listener
         },
 

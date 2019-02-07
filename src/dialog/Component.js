@@ -40,6 +40,11 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         self._createDialog();
     },
 
+    _initTemplate: function() {
+        this._nodeCreated = false;
+        this.$super();
+    },
+
 
     _getDialogCfg: function() {
 
@@ -72,7 +77,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     // skips the append part
     _onRenderingFinished: function() {
         var self = this;
-        self.rendered   = true;
+        self._rendered   = true;
         self.afterRender();
         self.trigger('after-render', self);
     },
@@ -97,7 +102,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     onBeforeDialogShow: function() {
 
         var self = this;
-        if (!self.rendered) {
+        if (!self._rendered) {
             self.render();
         }
 
@@ -116,7 +121,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     onDialogHide: function() {
         var self = this;
         if (!self.$destroyed) {
-            self.template.config.set("animate", false);
+            //self.template.config.set("animate", false);
             //self.template.setAnimation(false);
             self.hidden = true;
             //self.onHide();
