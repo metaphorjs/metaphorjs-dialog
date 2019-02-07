@@ -12,7 +12,6 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     dialog: null,
     dialogPreset: null,
     dialogCfg: null,
-
     dialogNode: null,
 
     hidden: true,
@@ -30,21 +29,12 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         }
 
         self.$super(cfg);
+        this._createDialog();
     },
 
-    initComponent: function() {
-
-        var self    = this;
-
-        self.$super();
-        self._createDialog();
+    _initConfig: function() {
+        this.config.set("tag", "div");
     },
-
-    _initTemplate: function() {
-        this._nodeCreated = false;
-        this.$super();
-    },
-
 
     _getDialogCfg: function() {
 
@@ -80,6 +70,9 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         self._rendered   = true;
         self.afterRender();
         self.trigger('after-render', self);
+        if (self.directives) {
+            self._initDirectives();
+        }
     },
 
     show: function(e) {
@@ -106,13 +99,11 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
             self.render();
         }
 
-        //self.template.config.set("animate", true);
         self.hidden = false;
     },
 
     onDialogShow: function() {
         var self = this;
-        //self.onShow();
         self.trigger("show", self);
     },
 
@@ -121,10 +112,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     onDialogHide: function() {
         var self = this;
         if (!self.$destroyed) {
-            //self.template.config.set("animate", false);
-            //self.template.setAnimation(false);
             self.hidden = true;
-            //self.onHide();
             self.trigger("hide", self);
         }
     },
