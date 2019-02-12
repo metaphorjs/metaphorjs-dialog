@@ -19,6 +19,8 @@ Directive.registerAttribute("dropdown", 1100,
         _hostCmp: null,
         _contentCmp: null,
 
+        _asyncInit: true,
+
         _initConfig: function(config) {
             this.$super(config);
 
@@ -33,6 +35,7 @@ Directive.registerAttribute("dropdown", 1100,
             config.setDefaultMode("appendTo", s);
             config.setDefaultMode("position", s);
             config.setDefaultMode("preset", s);
+            config.setType("animate", "bool", s);
             config.setDefaultValue("dialog", "MetaphorJs.dialog.Dialog");
             config.setDefaultValue("on", "click");
         },
@@ -106,11 +109,13 @@ Directive.registerAttribute("dropdown", 1100,
 
         _getDialogConfig: function() {
             var self = this,
-                cfgCfg = self.config.get("config"),
-                on = self.config.get("on"),
-                un = self.config.get("un"),
-                appendTo = self.config.get("appendTo"),
-                position = self.config.get("position"),
+                config = self.config,
+                cfgCfg = config.get("config"),
+                on = config.get("on"),
+                un = config.get("un"),
+                appendTo = config.get("appendTo"),
+                position = config.get("position"),
+                animate = config.get("animate"),
                 opposite = {
                     "click": "click",
                     "mouseover": "mouseout"
@@ -121,7 +126,7 @@ Directive.registerAttribute("dropdown", 1100,
             }
 
             var defCfg = {
-                preset: self.config.get("preset") || null,
+                preset: config.get("preset") || null,
                 target: self.node,
                 content: false,
                 render: {
@@ -137,7 +142,14 @@ Directive.registerAttribute("dropdown", 1100,
                     events: {
                         show: {
                             "click": {
-                                stopPropagation: true
+                                stopPropagation: true,
+                                preventDefault: true
+                            }
+                        },
+                        hide: {
+                            click: {
+                                stopPropagation: false,
+                                preventDefault: false
                             }
                         }
                     },
@@ -147,20 +159,27 @@ Directive.registerAttribute("dropdown", 1100,
                         }
                     },
                     hide: {
+                        animate: animate,
                         events: {
                             body: "click"
                         }
+                    },
+                    show: {
+                        animate: animate
                     }
                 });
             }
             else if (on === "mouseover") {
                 extend(defCfg, {
                     show: {
+                        animate: animate,
                         events: {
-                            _target: on
+                            _target: on,
+                            _self: on
                         }
                     },
                     hide: {
+                        animate: animate,
                         events: {
                             _target: un || opposite[on]
                         }
