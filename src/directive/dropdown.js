@@ -21,10 +21,10 @@ Directive.registerAttribute("dropdown", 1100,
 
         _asyncInit: true,
 
-        _initConfig: function(config) {
-            this.$super(config);
-
-            var s = MetaphorJs.lib.Config.MODE_STATIC;
+        _initConfig: function() {
+            this.$super();
+            var s = MetaphorJs.lib.Config.MODE_STATIC,
+                config = this.config;
             config.disableProperty("value");
             config.setDefaultMode("ref", s);
             config.setDefaultMode("selector", s);
