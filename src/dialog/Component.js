@@ -32,7 +32,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         this._createDialog();
     },
 
-    _initConfig: function() {
+    initConfig: function() {
         this.$super();
         this.config.set("tag", "div");
     },

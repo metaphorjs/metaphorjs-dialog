@@ -21,7 +21,7 @@ Directive.registerAttribute("dropdown", 1100,
 
         _asyncInit: true,
 
-        _initConfig: function() {
+        initConfig: function() {
             this.$super();
             var s = MetaphorJs.lib.Config.MODE_STATIC,
                 config = this.config;
@@ -40,7 +40,7 @@ Directive.registerAttribute("dropdown", 1100,
             config.setDefaultValue("on", "click");
         },
 
-        _initDirective: function() {
+        initDirective: function() {
 
             var self = this,
                 config = self.config,
@@ -93,7 +93,7 @@ Directive.registerAttribute("dropdown", 1100,
             self.$super();
         },
 
-        _initChange: function(){
+        initChange: function(){
             // skip setting onChange listener
         },
 
