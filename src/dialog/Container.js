@@ -2,19 +2,19 @@
 require("../__init.js");
 require("metaphorjs/src/lib/DomEvent.js");
 require("./Dialog.js");
-require("metaphorjs/src/app/Component.js");
+require("metaphorjs/src/app/Container.js");
 
 var extend  = require("metaphorjs-shared/src/func/extend.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
-module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend({
+module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend({
 
     dialog: null,
     dialogPreset: null,
     dialogCfg: null,
-    dialogNode: null,
-
-    hidden: true,
+    
+    _attached: true,
+    _hidden: true,
 
     target: null,
     isTooltip: false,
@@ -23,18 +23,13 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
 
         var self = this;
 
-        if (self.isTooltip) {
-            self.target = cfg.node;
-            cfg.node = null;
+        if ((!cfg || !cfg.node) && 
+            !self.template && 
+            (!cfg || !cfg.template)) {
+            self.node = window.document.createElement("div");
         }
 
         self.$super(cfg);
-        this._createDialog();
-    },
-
-    initConfig: function() {
-        this.$super();
-        this.config.set("tag", "div");
     },
 
     _getDialogCfg: function() {
@@ -44,11 +39,24 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         return extend({}, self.dialogCfg, {
             preset: self.dialogPreset,
             render: {
-                el: self.dialogNode || self.node,
+                el: self.getRefEl("main"),
                 keepInDOM: true
             }
         }, true, true);
     },
+
+    _onRenderingFinished: function() {
+        var self = this, i, l, items = self.items
+        self.$super();
+        // insert all placeholders, but
+        // attach only resolved items
+        for (i = -1, l = items.length; ++i < l;){
+            self._putItemInPlace(items[i]);
+        }
+
+        this._createDialog();  
+    },
+
 
     _createDialog: function() {
 
@@ -59,38 +67,37 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
         self.dialog.on("before-show", self.onBeforeDialogShow, self);
         self.dialog.on("before-hide", self.onBeforeDialogHide, self);
         self.dialog.on("destroy", self.onDialogDestroy, self);
+
+        if (!self._hidden) {
+            self.show();
+        }
     },
 
     getDialog: function() {
         return this.dialog;
     },
 
-    // skips the append part
-    _onRenderingFinished: function() {
-        var self = this;
-        self._rendered   = true;
-        self.afterRender();
-        self.trigger('after-render', self);
-        if (self.directives) {
-            self._initDirectives();
-        }
-    },
 
     show: function(e) {
         if (e && !(e instanceof MetaphorJs.lib.DomEvent)) {
             e = null;
         }
 
-        this.dialog.show(e);
+        if (this.dialog) {
+            this.dialog.show(e);
+        }
+        else this._hidden = false;
     },
 
     hide: function(e) {
-
         if (e && !(e instanceof MetaphorJs.lib.DomEvent)) {
             e = null;
         }
 
-        this.dialog.hide(e);
+        if (this.dialog) {
+            this.dialog.hide(e);
+        }
+        else this._hidden = true;
     },
 
     onBeforeDialogShow: function() {
@@ -100,7 +107,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
             self.render();
         }
 
-        self.hidden = false;
+        self._hidden = false;
     },
 
     onDialogShow: function() {
@@ -113,7 +120,7 @@ module.exports = MetaphorJs.dialog.Component = MetaphorJs.app.Component.$extend(
     onDialogHide: function() {
         var self = this;
         if (!self.$destroyed) {
-            self.hidden = true;
+            self._hidden = true;
             self.trigger("hide", self);
         }
     },

@@ -161,7 +161,7 @@ Directive.registerAttribute("dropdown", 1100,
                     hide: {
                         animate: animate,
                         events: {
-                            body: "click"
+                            _html: "click"
                         }
                     },
                     show: {
