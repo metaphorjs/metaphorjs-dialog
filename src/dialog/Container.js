@@ -12,9 +12,9 @@ module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend(
     dialog: null,
     dialogPreset: null,
     dialogCfg: null,
-    
-    _attached: true,
+
     _hidden: true,
+    autoRender: true,
 
     target: null,
     isTooltip: false,
