@@ -40,7 +40,9 @@ module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend(
             preset: self.dialogPreset,
             render: {
                 el: self.getRefEl("main"),
-                keepInDOM: true
+                keepInDOM: true,
+                appendTo: false,
+                lazy: false
             }
         }, true, true);
     },
@@ -57,7 +59,6 @@ module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend(
         this._createDialog();  
     },
 
-
     _createDialog: function() {
 
         var self    = this;
@@ -67,6 +68,7 @@ module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend(
         self.dialog.on("before-show", self.onBeforeDialogShow, self);
         self.dialog.on("before-hide", self.onBeforeDialogHide, self);
         self.dialog.on("destroy", self.onDialogDestroy, self);
+        self.dialog.on("attached", self.onDialogAttached, self);
 
         if (!self._hidden) {
             self.show();
@@ -100,11 +102,19 @@ module.exports = MetaphorJs.dialog.Container = MetaphorJs.app.Container.$extend(
         else this._hidden = true;
     },
 
-    onBeforeDialogShow: function() {
+    onDialogAttached: function() {
+        if (!this._attached) {
+            this.render(this.node.parentNode);
+        }
+    },
 
+    onBeforeDialogShow: function() {
         var self = this;
         if (!self._rendered) {
             self.render();
+        }
+        else if (!self._attached && self.renderTo) {
+            self.attach(self.renderTo, self.renderBefore);
         }
 
         self._hidden = false;

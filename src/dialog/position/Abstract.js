@@ -11,6 +11,7 @@ require("metaphorjs/src/func/dom/getOuterWidth.js");
 require("metaphorjs/src/func/dom/getOuterHeight.js");
 require("metaphorjs/src/func/dom/getWidth.js");
 require("metaphorjs/src/func/dom/getHeight.js");
+require("metaphorjs/src/func/dom/isAttached.js");
 
 var cls = require("metaphorjs-class/src/cls.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),
@@ -245,6 +246,11 @@ module.exports = MetaphorJs.dialog.position.Abstract = cls({
 
         var self    = this,
             coords;
+
+        // cannot calculate and apply position
+        if (!dlg.node || !MetaphorJs.dom.isAttached(dlg.node)) {
+            return;
+        }
 
         if (self.screenX !== false || self.screenY !== false) {
             coords  = self.correctPosition(e);

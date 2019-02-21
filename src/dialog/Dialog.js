@@ -29,6 +29,8 @@ require("metaphorjs/src/func/dom/addListener.js");
 require("metaphorjs/src/func/dom/removeListener.js");
 require("metaphorjs/src/func/dom/normalizeEvent.js");
 require("metaphorjs/src/func/dom/isVisible.js");
+require("metaphorjs/src/func/dom/isAttached.js");
+require("metaphorjs/src/func/dom/whenAttached.js");
 require("metaphorjs/src/func/dom/select.js");
 require("metaphorjs/src/func/dom/is.js");
 require("metaphorjs/src/func/dom/getOuterWidth.js");
@@ -1742,7 +1744,6 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
             self.reposition(e);
 
-
             if (cfg.show.preventScroll) {
                 var ps = cfg.show.preventScroll,
                     i, l;
@@ -2224,6 +2225,13 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             var self = this;
 
             if (self.repositioning) {
+                return;
+            }
+
+            if (self.node && !MetaphorJs.dom.isAttached(self.node)) {
+                MetaphorJs.dom.whenAttached(self.node).done(function(){
+                    self.reposition(e);
+                });
                 return;
             }
 
@@ -2730,6 +2738,10 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
             if (self.node && cfg.render.appendTo !== false) {
                 to.appendChild(self.node);
+                self.trigger("attached", self, to);
+            }
+            else if (self.node && MetaphorJs.dom.isAttached(self.node)) {
+                self.trigger("attached", self, self.node.parentNode);
             }
         },
 
