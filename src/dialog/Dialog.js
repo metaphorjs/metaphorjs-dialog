@@ -50,6 +50,7 @@ require("./position/Target.js");
 require("./position/Mouse.js");
 require("./position/Window.js");
 require("./position/Custom.js");
+require("./position/Draggable.js");
 require("./pointer/Abstract.js");
 require("./pointer/Html.js");
 require("./Overlay.js");
@@ -2196,6 +2197,9 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
             if (isFunction(type) || type === "custom") {
                 return "MetaphorJs.dialog.position.Custom";
+            }
+            else if (type === "draggable") {
+                return "MetaphorJs.dialog.position.Draggable";
             }
 
             var fc = type.substr(0, 1);

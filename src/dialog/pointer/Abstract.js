@@ -140,7 +140,7 @@ module.exports = MetaphorJs.dialog.pointer.Abstract = cls({
 
         pri = self.dialog.getPosition().getPrimaryPosition(dialogPosition);
         sec = self.dialog.getPosition().getSecondaryPosition(dialogPosition);
-        thr = sec.substr(1, 1);
+        thr = sec ? sec.substr(1, 1) : null;
 
         if (!pri) {
             return null;
@@ -150,7 +150,7 @@ module.exports = MetaphorJs.dialog.pointer.Abstract = cls({
 
         if (sec) {
             sec = sec.substr(0, 1);
-            if (thr == "c") {
+            if (thr === "c") {
                 position += self.opposite[sec];
             }
             else {
