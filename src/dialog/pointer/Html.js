@@ -226,7 +226,7 @@ module.exports = MetaphorJs.dialog.pointer.Html = (function(){
 
             self.node.appendChild(cmt);
 
-            setStyle(self.node, defaultProps);
+            MetaphorJs.dom.setStyle(self.node, defaultProps);
             MetaphorJs.dom.addClass(self.node, self.borderCls || self.cls);
 
             if (self.sub) {
