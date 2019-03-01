@@ -146,7 +146,7 @@ module.exports = MetaphorJs.dialog.Overlay = cls({
             cfg = self.dialog.getCfg(),
             to = cfg.render.appendTo || window.document.body;
 
-        if (!self.enabled) {
+        if (!self.enabled || self.$destroyed) {
             return;
         }
 
@@ -207,9 +207,7 @@ module.exports = MetaphorJs.dialog.Overlay = cls({
     },
 
     onDestroy: function() {
-
         var self = this;
         self.remove();
-
     }
 });

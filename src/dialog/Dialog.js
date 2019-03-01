@@ -2782,7 +2782,6 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             self.trigger("destroy", self);
             self.destroyElem();
 
-
             self.overlay && self.overlay.$destroy();
             self.pointer && self.pointer.$destroy();
             self.position && self.position.$destroy();
