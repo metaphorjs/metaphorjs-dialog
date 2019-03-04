@@ -31,18 +31,27 @@ module.exports = MetaphorJs.dialog.position.Abstract = cls({
         self.onWindowResizeDelegate = bind(self.onWindowResize, self);
         self.onWindowScrollDelegate = bind(self.onWindowScroll, self);
 
+        if (self.type === "auto") {
+            self.type = null;
+        }
+
         var pt = self.preferredType || self.type;
-        if (typeof pt == "string") {
+        if (typeof pt === "string") {
             var pts = self.getAllPositions(),
                 inx;
-            if ((inx = pts.indexOf(pt)) != -1) {
+            if ((inx = pts.indexOf(pt)) !== -1) {
                 pts.splice(inx, 1);
                 pts.unshift(pt);
             }
             self.preferredType = pts;
+            !self.type && (self.type = pts[0]);
         }
         else if (!pt) {
             self.preferredType = self.getAllPositions();
+            !self.type && (self.type = self.preferredType[0]);
+        }
+        else {
+            !self.type && (self.type = self.preferredType[0]);
         }
 
         dialog.on("reposition", self.onReposition, self);
@@ -66,7 +75,7 @@ module.exports = MetaphorJs.dialog.position.Abstract = cls({
         }
         var b;
         if (b = dlg.getCfg().position.base) {
-            if (typeof b == "string") {
+            if (typeof b === "string") {
                 self.positionBase = MetaphorJs.dom.select(b).shift();
             }
             else {

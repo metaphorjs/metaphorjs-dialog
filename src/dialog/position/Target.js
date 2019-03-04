@@ -106,11 +106,11 @@ module.exports = MetaphorJs.dialog.position.Target =
     },
 
     getPrimaryPosition: function(pos) {
-        return (pos || this.type).substr(0, 1);
+        return (pos || this.type || "").substr(0, 1);
     },
 
     getSecondaryPosition: function(pos) {
-        return (pos || this.type).substr(1);
+        return (pos || this.type || "").substr(1);
     },
 
     getAllPositions: function() {

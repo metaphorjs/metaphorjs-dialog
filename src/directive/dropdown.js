@@ -1,6 +1,7 @@
 
 require("metaphorjs/src/lib/Config.js");
 require("../dialog/Dialog.js");
+require("metaphorjs/src/func/dom/getParentDocument.js");
 
 var Directive = require("metaphorjs/src/app/Directive.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
@@ -48,6 +49,7 @@ Directive.registerAttribute("dropdown", 1100,
                 ref = config.get("ref"),
                 cmpid = config.get("cmp"),
                 selector = config.get("selector"),
+                doc = MetaphorJs.dom.getParentDocument(self.node),
                 cmp;
 
             if (self.component) {
@@ -67,7 +69,7 @@ Directive.registerAttribute("dropdown", 1100,
                     }
                 }
                 else if (selector) {
-                    self._contentNode = document.querySelector(selector);    
+                    self._contentNode = doc.querySelector(selector);    
                 }
 
                 if (cmp) {
@@ -86,7 +88,7 @@ Directive.registerAttribute("dropdown", 1100,
                 }
             }
             else {
-                self._contentNode = document.getElementById(ref);
+                self._contentNode = doc.getElementById(ref);
                 self._initDialog();
             }
 
@@ -122,7 +124,7 @@ Directive.registerAttribute("dropdown", 1100,
                 };
 
             if (appendTo && typeof appendTo === "string") {
-                appendTo = document.querySelector(appendTo);
+                appendTo = window.document.querySelector(appendTo);
             }
 
             var defCfg = {
