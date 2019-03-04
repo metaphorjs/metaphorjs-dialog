@@ -1893,7 +1893,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             // and change the state
             self.visible = false;
 
-            self.toggleTitleAttribute(true);
+            //self.toggleTitleAttribute(true);
 
             if (self.dynamicTarget) {
                 self.resetDynamicTarget();
@@ -2500,7 +2500,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
                 content;
 
             if (el) {
-                if (cfg.content.attr) {
+                if (typeof cfg.content.attr === "string") {
                     content = MetaphorJs.dom.getAttr(el, cfg.content.attr);
                 }
                 else {
@@ -2567,10 +2567,12 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
             if (trg) {
                 if (state === false) {
-                    MetaphorJs.dom.data(trg, "tmp-title", MetaphorJs.dom.getAttr(trg, "title"));
-                    MetaphorJs.dom.removeAttr(trg, 'title');
+                    if (trg.hasAttribute("title")) {
+                        MetaphorJs.dom.setAttr(trg, "tooltip", MetaphorJs.dom.getAttr(trg, "title"));
+                        MetaphorJs.dom.removeAttr(trg, 'title');
+                    }
                 }
-                else if (title = MetaphorJs.dom.data(trg, "tmp-title")) {
+                else if (title = MetaphorJs.dom.getAttr(trg, "tooltip")) {
                     MetaphorJs.dom.setAttr(trg, "title", title);
                 }
             }
