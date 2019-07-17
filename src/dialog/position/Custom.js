@@ -9,7 +9,7 @@ module.exports = MetaphorJs.dialog.position.Custom =
 
     getCoords: function(e) {
         var dlg = this.dialog;
-        return this.get.call(dlg.$$callbackContext, dlg, e);
+        return this.get.call(dlg.$$callbackContext || this, dlg, e);
     }
 });
 

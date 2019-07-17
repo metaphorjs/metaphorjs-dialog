@@ -154,21 +154,23 @@ module.exports = MetaphorJs.dialog.position.Abstract = cls({
             pt          = pts[0],
             i, l;
 
-        if (strategy && strategy != "solid") {
-            if (self.type != pt && self.checkIfFits(e, pt, boundary, size, false)) {
-                self.changeType(pt);
-                return self.fitToBoundary(self.getCoords(e), boundary, size);
-            }
+        if (strategy && strategy !== "none") {
+            if (strategy && strategy != "solid") {
+                if (self.type != pt && self.checkIfFits(e, pt, boundary, size, false)) {
+                    self.changeType(pt);
+                    return self.fitToBoundary(self.getCoords(e), boundary, size);
+                }
 
-            if (self.checkIfFits(e, self.type, boundary, size, false)) {
-                return self.fitToBoundary(self.getCoords(e), boundary, size);
+                if (self.checkIfFits(e, self.type, boundary, size, false)) {
+                    return self.fitToBoundary(self.getCoords(e), boundary, size);
+                }
             }
-        }
-        if (strategy && strategy != "position-only") {
-            for (i = 0, l = pts.length; i < l; i++) {
-                if (self.checkIfFits(e, pts[i], boundary, size, true)) {
-                    self.changeType(pts[i]);
-                    return self.getCoords(e);
+            if (strategy && strategy != "position-only") {
+                for (i = 0, l = pts.length; i < l; i++) {
+                    if (self.checkIfFits(e, pts[i], boundary, size, true)) {
+                        self.changeType(pts[i]);
+                        return self.getCoords(e);
+                    }
                 }
             }
         }
