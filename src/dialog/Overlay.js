@@ -102,19 +102,24 @@ module.exports = MetaphorJs.dialog.Overlay = cls({
         }
 
         var node = window.document.createElement("div"),
-            cfg = self.dialog.getCfg();
+            cfg = self.dialog.getCfg(),
+            style = {
+                display:            "none",
+                position: 			"fixed",
+                left:				0,
+                top:				0,
+                right:              0,
+                bottom:             0
+            };
 
-        MetaphorJs.dom.setStyle(node, {
-            display:            "none",
-            position: 			"fixed",
-            left:				0,
-            top:				0,
-            right:              0,
-            bottom:             0,
-            opacity:			self.opacity,
-            backgroundColor: 	self.color
-        });
+        if (self.opacity !== false) {
+            style.opacity = self.opacity;
+        }
+        if (self.color !== false) {
+            style.backgroundColor = self.color;
+        }
 
+        MetaphorJs.dom.setStyle(node, style);
         MetaphorJs.dom.addListener(node, "click", self.onClickDelegate);
 
         if (cfg.render.zIndex) {
