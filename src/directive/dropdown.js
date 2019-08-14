@@ -24,21 +24,7 @@ Directive.registerAttribute("dropdown", 1100,
 
         initConfig: function() {
             this.$super();
-            var s = MetaphorJs.lib.Config.MODE_STATIC,
-                config = this.config;
-            config.disableProperty("value");
-            config.setDefaultMode("ref", s);
-            config.setDefaultMode("selector", s);
-            config.setDefaultMode("cmp", s);
-            config.setDefaultMode("dialog", s);
-            config.setDefaultMode("on", s);
-            config.setDefaultMode("un", s);
-            config.setDefaultMode("appendTo", s);
-            config.setDefaultMode("position", s);
-            config.setDefaultMode("preset", s);
-            config.setType("animate", "bool", s);
-            config.setDefaultValue("dialog", "MetaphorJs.dialog.Dialog");
-            config.setDefaultValue("on", "click");
+            MetaphorJs.app.Directive.attr.Dropdown.initConfig(this.config);
         },
 
         initDirective: function() {
@@ -100,10 +86,13 @@ Directive.registerAttribute("dropdown", 1100,
         },
 
         _initDialog: function() {
-            if (!this._dialog) {
-                var cls = ns.get(this.config.get("dialog")),
-                    cfg = this._getDialogConfig();
-                this._dialog = new cls(cfg);
+            var self = this;
+            if (!self._dialog) {
+                var cls = ns.get(self.config.get("dialog")),
+                    cfg = self._getDialogConfig();
+                self._dialog = new cls(cfg);
+                self.$$observable.relayEvent(self._dialog, "*");
+                self._dialog.on("*", self.scope.$check, self.scope);
             }
 
             return this._dialog;
@@ -198,6 +187,25 @@ Directive.registerAttribute("dropdown", 1100,
                 this._dialog.$destroy();
             }
             this.$super();
+        }
+    },
+    
+    {
+        initConfig: function(config) {
+            var s = MetaphorJs.lib.Config.MODE_STATIC;
+            config.disableProperty("value");
+            config.setDefaultMode("ref", s);
+            config.setDefaultMode("selector", s);
+            config.setDefaultMode("cmp", s);
+            config.setDefaultMode("dialog", s);
+            config.setDefaultMode("on", s);
+            config.setDefaultMode("un", s);
+            config.setDefaultMode("appendTo", s);
+            config.setDefaultMode("position", s);
+            config.setDefaultMode("preset", s);
+            config.setType("animate", "bool", s);
+            config.setDefaultValue("dialog", "MetaphorJs.dialog.Dialog");
+            config.setDefaultValue("on", "click");
         }
     })
 
