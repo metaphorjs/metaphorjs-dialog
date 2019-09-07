@@ -1,119 +1,37 @@
 (function(){
+/* BUNDLE START 003 */
 "use strict";
 
-
-var MetaphorJs = {
-
-
-};
-
-
-function isFunction(value) {
-    return typeof value == 'function';
-};
-
-var toString = Object.prototype.toString;
+var strUndef = "undefined";
 
 var undf = undefined;
 
 
-
-
-var varType = function(){
-
-    var types = {
-        '[object String]': 0,
-        '[object Number]': 1,
-        '[object Boolean]': 2,
-        '[object Object]': 3,
-        '[object Function]': 4,
-        '[object Array]': 5,
-        '[object RegExp]': 9,
-        '[object Date]': 10
-    };
-
-
-    /**
-     * 'string': 0,
-     * 'number': 1,
-     * 'boolean': 2,
-     * 'object': 3,
-     * 'function': 4,
-     * 'array': 5,
-     * 'null': 6,
-     * 'undefined': 7,
-     * 'NaN': 8,
-     * 'regexp': 9,
-     * 'date': 10,
-     * unknown: -1
-     * @param {*} value
-     * @returns {number}
-     */
-    return function varType(val) {
-
-        if (!val) {
-            if (val === null) {
-                return 6;
-            }
-            if (val === undf) {
-                return 7;
-            }
-        }
-
-        var num = types[toString.call(val)];
-
-        if (num === undf) {
-            return -1;
-        }
-
-        if (num == 1 && isNaN(val)) {
-            return 8;
-        }
-
-        return num;
-    };
-
-}();
-
-
-
-function isString(value) {
-    return typeof value == "string" || value === ""+value;
-    //return typeof value == "string" || varType(value) === 0;
+var MetaphorJs = {
+    plugin: {},
+    mixin: {},
+    lib: {},
+    dom: {},
+    regexp: {},
+    browser: {}
 };
 
 
 
-/**
- * @param {*} value
- * @returns {boolean}
- */
-function isArray(value) {
-    return typeof value == "object" && varType(value) === 5;
-};
-
-var strUndef = "undefined";
 
 
-
-function isObject(value) {
-    if (value === null || typeof value != "object") {
-        return false;
-    }
-    var vt = varType(value);
-    return vt > 2 || vt == -1;
-};
-
-
-
-var Cache = function(){
+var lib_Cache = MetaphorJs.lib.Cache = (function(){
 
     var globalCache;
 
     /**
-     * @class Cache
-     * @param {bool} cacheRewritable
+     * @class MetaphorJs.lib.Cache
+     */
+
+    /**
+     * @method
      * @constructor
+     * @param {bool} cacheRewritable
      */
     var Cache = function(cacheRewritable) {
 
@@ -128,15 +46,26 @@ var Cache = function(){
         return {
 
             /**
-             * @param {function} fn
+             * Add finder function. If cache doesn't have an entry
+             * with given name, it calls finder functions with this
+             * name as a parameter. If one of the functions
+             * returns anything else except undefined, it will
+             * store this value and return every time given name
+             * is requested.
+             * @param {function} fn {
+             *  @param {string} name
+             *  @param {Cache} cache
+             *  @returns {* | undefined}
+             * }
              * @param {object} context
-             * @param {bool} prepend
+             * @param {bool} prepend Put in front of other finders
              */
             addFinder: function(fn, context, prepend) {
                 finders[prepend? "unshift" : "push"]({fn: fn, context: context});
             },
 
             /**
+             * Add cache entry
              * @method
              * @param {string} name
              * @param {*} value
@@ -158,11 +87,15 @@ var Cache = function(){
             },
 
             /**
+             * Get cache entry
              * @method
              * @param {string} name
-             * @returns {*}
+             * @param {*} defaultValue {
+             *  If value is not found, put this default value it its place
+             * }
+             * @returns {* | undefined}
              */
-            get: function(name) {
+            get: function(name, defaultValue) {
 
                 if (!storage[name]) {
                     if (finders.length) {
@@ -180,13 +113,18 @@ var Cache = function(){
                         }
                     }
 
-                    return undf;
+                    if (defaultValue !== undf) {
+                        return this.add(name, defaultValue);
+                    }
+
+                    return undf; 
                 }
 
                 return storage[name].value;
             },
 
             /**
+             * Remove cache entry
              * @method
              * @param {string} name
              * @returns {*}
@@ -200,6 +138,7 @@ var Cache = function(){
             },
 
             /**
+             * Check if cache entry exists
              * @method
              * @param {string} name
              * @returns {boolean}
@@ -209,7 +148,12 @@ var Cache = function(){
             },
 
             /**
-             * @param {function} fn
+             * Walk cache entries
+             * @method
+             * @param {function} fn {
+             *  @param {*} value
+             *  @param {string} key
+             * }
              * @param {object} context
              */
             eachEntry: function(fn, context) {
@@ -220,9 +164,18 @@ var Cache = function(){
             },
 
             /**
+             * Clear cache
              * @method
              */
-            destroy: function() {
+            clear: function() {
+                storage = {};
+            },
+
+            /**
+             * Clear and destroy cache
+             * @method
+             */
+            $destroy: function() {
 
                 var self = this;
 
@@ -243,6 +196,7 @@ var Cache = function(){
     };
 
     /**
+     * Get global cache
      * @method
      * @static
      * @returns {Cache}
@@ -257,368 +211,462 @@ var Cache = function(){
     };
 
     return Cache;
+    
+}());
+
+
+
+/**
+ * Convert anything to string
+ * @function toString
+ * @param {*} value
+ * @returns {string}
+ */
+var toString = Object.prototype.toString;
+
+
+
+
+var _varType = function(){
+
+    var types = {
+        '[object String]': 0,
+        '[object Number]': 1,
+        '[object Boolean]': 2,
+        '[object Object]': 3,
+        '[object Function]': 4,
+        '[object Array]': 5,
+        '[object RegExp]': 9,
+        '[object Date]': 10
+    };
+
+
+    /*
+     * 'string': 0,
+     * 'number': 1,
+     * 'boolean': 2,
+     * 'object': 3,
+     * 'function': 4,
+     * 'array': 5,
+     * 'null': 6,
+     * 'undefined': 7,
+     * 'NaN': 8,
+     * 'regexp': 9,
+     * 'date': 10,
+     * unknown: -1
+     * @param {*} value
+     * @returns {number}
+     */
+
+
+
+    return function _varType(val) {
+
+        if (!val) {
+            if (val === null) {
+                return 6;
+            }
+            if (val === undf) {
+                return 7;
+            }
+        }
+
+        var num = types[toString.call(val)];
+
+        if (num === undf) {
+            return -1;
+        }
+
+        if (num === 1 && isNaN(val)) {
+            return 8;
+        }
+
+        return num;
+    };
 
 }();
 
+
+
+/**
+ * Check if given value is an object (non-scalar)
+ * @function isObject
+ * @param {*} value 
+ * @returns {boolean}
+ */
+function isObject(value) {
+    if (value === null || typeof value != "object") {
+        return false;
+    }
+    var vt = _varType(value);
+    return vt > 2 || vt == -1;
+};
 
 
 
 
 /**
- * @class Namespace
- * @code ../examples/main.js
+ * @class MetaphorJs.lib.Namespace
+ * @code src-docs/examples/main.js
  */
-var Namespace = function(){
 
+/**
+ * Construct namespace
+ * @constructor
+ * @param {object} root {
+ *  Namespace root object. Everything you register
+ *  will be assigned as property of root object at some level.
+ *  The parameter is optional. Pass your own object or window or global
+ *  to have direct access to its properties. 
+ *  @optional
+ * }
+ */
+var lib_Namespace = MetaphorJs.lib.Namespace = function(root) {
 
-    /**
-     * @param {Object} root optional; usually window or global
-     * @param {String} rootName optional. If you want custom object to be root and
-     * this object itself is the first level of namespace
-     * @param {Cache} cache optional
-     * @constructor
-     */
-    var Namespace   = function(root, rootName, cache) {
+    root        = root || {};
 
-        cache       = cache || new Cache(false);
-        var self    = this,
-            rootL   = rootName ? rootName.length : null;
+    var self    = this,
+        cache   = new lib_Cache(false);
 
-        if (!root) {
-            if (typeof global != strUndef) {
-                root    = global;
-            }
-            else {
-                root    = window;
-            }
+    var parseNs     = function(ns) {
+
+        var tmp     = ns.split("."),
+            i,
+            last    = tmp.pop(),
+            parent  = tmp.join("."),
+            len     = tmp.length,
+            name,
+            current = root;
+
+        if (cache[parent]) {
+            return [cache[parent], last, ns];
         }
 
-        var normalize   = function(ns) {
-            if (ns && rootName && ns.substr(0, rootL) != rootName) {
-                return rootName + "." + ns;
-            }
-            return ns;
-        };
-
-        var parseNs     = function(ns) {
-
-            ns = normalize(ns);
-
-            var tmp     = ns.split("."),
-                i,
-                last    = tmp.pop(),
-                parent  = tmp.join("."),
-                len     = tmp.length,
-                name,
-                current = root;
-
-
-            if (cache[parent]) {
-                return [cache[parent], last, ns];
-            }
-
-            if (len > 0) {
-                for (i = 0; i < len; i++) {
-
-                    name    = tmp[i];
-
-                    if (rootName && i == 0 && name == rootName) {
-                        current = root;
-                        continue;
-                    }
-
-                    if (current[name] === undf) {
-                        current[name]   = {};
-                    }
-
-                    current = current[name];
-                }
-            }
-
-            return [current, last, ns];
-        };
-
-        /**
-         * Get namespace/cache object
-         * @method
-         * @param {string} ns
-         * @param {bool} cacheOnly
-         * @returns {*}
-         */
-        var get       = function(ns, cacheOnly) {
-
-            ns = normalize(ns);
-
-            if (cache.exists(ns)) {
-                return cache.get(ns);
-            }
-
-            if (cacheOnly) {
-                return undf;
-            }
-
-            var tmp     = ns.split("."),
-                i,
-                len     = tmp.length,
-                name,
-                current = root;
-
+        if (len > 0) {
             for (i = 0; i < len; i++) {
 
                 name    = tmp[i];
 
-                if (rootName && i == 0 && name == rootName) {
-                    current = root;
-                    continue;
-                }
-
                 if (current[name] === undf) {
-                    return undf;
+                    current[name]   = {};
                 }
 
                 current = current[name];
             }
+        }
 
-            if (current) {
-                cache.add(ns, current);
-            }
-
-            return current;
-        };
-
-        /**
-         * Register item
-         * @method
-         * @param {string} ns
-         * @param {*} value
-         */
-        var register    = function(ns, value) {
-
-            var parse   = parseNs(ns),
-                parent  = parse[0],
-                name    = parse[1];
-
-            if (isObject(parent) && parent[name] === undf) {
-
-                parent[name]        = value;
-                cache.add(parse[2], value);
-            }
-
-            return value;
-        };
-
-        /**
-         * Item exists
-         * @method
-         * @param {string} ns
-         * @returns boolean
-         */
-        var exists      = function(ns) {
-            return get(ns, true) !== undf;
-        };
-
-        /**
-         * Add item only to the cache
-         * @function add
-         * @param {string} ns
-         * @param {*} value
-         */
-        var add = function(ns, value) {
-
-            ns = normalize(ns);
-            cache.add(ns, value);
-            return value;
-        };
-
-        /**
-         * Remove item from cache
-         * @method
-         * @param {string} ns
-         */
-        var remove = function(ns) {
-            ns = normalize(ns);
-            cache.remove(ns);
-        };
-
-        /**
-         * Make alias in the cache
-         * @method
-         * @param {string} from
-         * @param {string} to
-         */
-        var makeAlias = function(from, to) {
-
-            from = normalize(from);
-            to = normalize(to);
-
-            var value = cache.get(from);
-
-            if (value !== undf) {
-                cache.add(to, value);
-            }
-        };
-
-        /**
-         * Destroy namespace and all classes in it
-         * @method
-         */
-        var destroy     = function() {
-
-            var self = this,
-                k;
-
-            if (self === globalNs) {
-                globalNs = null;
-            }
-
-            cache.eachEntry(function(entry){
-                if (entry && entry.$destroy) {
-                    entry.$destroy();
-                }
-            });
-
-            cache.destroy();
-            cache = null;
-
-            for (k in self) {
-                self[k] = null;
-            }
-        };
-
-        self.register   = register;
-        self.exists     = exists;
-        self.get        = get;
-        self.add        = add;
-        self.remove     = remove;
-        self.normalize  = normalize;
-        self.makeAlias  = makeAlias;
-        self.destroy    = destroy;
+        return [current, last, ns];
     };
-
-    Namespace.prototype.register = null;
-    Namespace.prototype.exists = null;
-    Namespace.prototype.get = null;
-    Namespace.prototype.add = null;
-    Namespace.prototype.remove = null;
-    Namespace.prototype.normalize = null;
-    Namespace.prototype.makeAlias = null;
-    Namespace.prototype.destroy = null;
-
-    var globalNs;
 
     /**
-     * Get global namespace
+     * Get namespace/cache object. 
      * @method
-     * @static
-     * @returns {Namespace}
+     * @param {string} objName Object name to get link to. Use the same name
+     * as you used then registered or added the object.
+     * @param {bool} cacheOnly Only get cached value. 
+     * Return undefined if there is no cached value.
+     * @returns {*}
      */
-    Namespace.global = function() {
-        if (!globalNs) {
-            globalNs = new Namespace;
+    var get       = function(objName, cacheOnly) {
+
+        var ex = cache.get(objName);
+        if (ex !== undf || cacheOnly) {
+            return ex;
         }
-        return globalNs;
+
+        var tmp     = objName.split("."),
+            i,
+            len     = tmp.length,
+            name,
+            current = root;
+
+        for (i = 0; i < len; i++) {
+
+            name    = tmp[i];
+
+            if (current[name] === undf) {
+                return undf;
+            }
+
+            current = current[name];
+        }
+
+        if (current) {
+            cache.add(objName, current);
+        }
+
+        return current;
     };
 
-    return Namespace;
+    /**
+     * Register item in namespace and cache. Given <code>root</code> is your
+     * root object, registering <code>register("My.Value", 1)</code> will 
+     * result in <code>root.My.Value === 1</code>.
+     * @method
+     * @param {string} objName Object name to register
+     * @param {*} value
+     * @returns {*} value
+     */
+    var register    = function(objName, value) {
 
-}();
+        var parse   = parseNs(objName),
+            parent  = parse[0],
+            name    = parse[1];
+
+        if (isObject(parent) && parent[name] === undf) {
+            parent[name]        = value;
+            cache.add(parse[2], value);
+        }
+
+        return value;
+    };
+
+    /**
+     * Check if given object name exists in namespace.
+     * @method
+     * @param {string} objName
+     * @returns {boolean}
+     */
+    var exists      = function(objName) {
+        return get(ns, true) !== undf;
+    };
+
+    /**
+     * Add item only to cache. This method will not add anything
+     * to the root object. The <code>get</code> method will still return
+     * value of this object.
+     * @method
+     * @param {string} objName
+     * @param {*} value
+     * @returns {*} value
+     */
+    var add = function(objName, value) {
+        return cache.add(objName, value);
+    };
+
+    /**
+     * Remove item from cache. Leaves namespace object unchanged.
+     * @method
+     * @param {string} objName
+     * @returns {*} removed value
+     */
+    var remove = function(objName) {
+        return cache.remove(objName);
+    };
+
+    /**
+     * Make alias in the cache.
+     * @method
+     * @param {string} from
+     * @param {string} to
+     * @returns {*} value
+     */
+    var makeAlias = function(from, to) {
+
+        var value = cache.get(from);
+
+        if (value !== undf) {
+            cache.add(to, value);
+        }
+
+        return value;
+    };
+
+    /**
+     * Destroy namespace and all classes in it
+     * @method $destroy
+     */
+    var destroy     = function() {
+
+        var self = this,
+            k;
+
+        cache.eachEntry(function(entry){
+            if (entry && entry.$destroy) {
+                entry.$destroy();
+            }
+        });
+
+        cache.$destroy();
+        cache = null;
+
+        for (k in self) {
+            self[k] = null;
+        }
+    };
+
+    self.register   = register;
+    self.exists     = exists;
+    self.get        = get;
+    self.add        = add;
+    self.remove     = remove;
+    self.makeAlias  = makeAlias;
+    self.$destroy    = destroy;
+};
+
+
+/**
+ * Check if given value is a function
+ * @function isFunction
+ * @param {*} value 
+ * @returns {boolean}
+ */
+function isFunction(value) {
+    return typeof value == 'function';
+};
+
+/**
+ * Check if given value is a string
+ * @function isString
+ * @param {*} value 
+ * @returns {boolean}
+ */
+function isString(value) {
+    return typeof value === "string" || value === ""+value;
+};
 
 
 
-var slice = Array.prototype.slice;
+/**
+ * Check if given value is array (not just array-like)
+ * @function isArray
+ * @param {*} value
+ * @returns {boolean}
+ */
+function isArray(value) {
+    return typeof value === "object" && _varType(value) === 5;
+};
 
 
 
+/**
+ * Transform anything into array
+ * @function toArray
+ * @param {*} list
+ * @returns {array}
+ */
+function toArray(list) {
+    if (list && !list.length != undf && list !== ""+list) {
+        for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
+        return a;
+    }
+    else if (list) {
+        return [list];
+    }
+    else {
+        return [];
+    }
+};
+
+
+
+/**
+ * Check if given value is plain object
+ * @function isPlainObject
+ * @param {*} value 
+ * @returns {boolean}
+ */
 function isPlainObject(value) {
     // IE < 9 returns [object Object] from toString(htmlElement)
     return typeof value == "object" &&
-           varType(value) === 3 &&
+           _varType(value) === 3 &&
             !value.nodeType &&
             value.constructor === Object;
-
 };
 
+/**
+ * Check if given value is a boolean value
+ * @function isBool
+ * @param {*} value 
+ * @returns {boolean}
+ */
 function isBool(value) {
     return value === true || value === false;
 };
 
 
+/**
+ * Copy properties from one object to another
+ * @function extend
+ * @param {Object} dst
+ * @param {Object} src
+ * @param {Object} src2 ... srcN
+ * @param {boolean} override {
+ *  Override already existing keys 
+ *  @default false
+ * }
+ * @param {boolean} deep {
+ *  Do not copy objects by link, deep copy by value
+ *  @default false
+ * }
+ * @returns {object}
+ */
+function extend() {
 
+    var override    = false,
+        deep        = false,
+        args        = toArray(arguments),
+        dst         = args.shift(),
+        src,
+        k,
+        value;
 
-var extend = function(){
+    if (isBool(args[args.length - 1])) {
+        override    = args.pop();
+    }
+    if (isBool(args[args.length - 1])) {
+        deep        = override;
+        override    = args.pop();
+    }
 
-    /**
-     * @param {Object} dst
-     * @param {Object} src
-     * @param {Object} src2 ... srcN
-     * @param {boolean} override = false
-     * @param {boolean} deep = false
-     * @returns {object}
-     */
-    var extend = function extend() {
+    while (src = args.shift()) {
+        for (k in src) {
 
+            if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
 
-        var override    = false,
-            deep        = false,
-            args        = slice.call(arguments),
-            dst         = args.shift(),
-            src,
-            k,
-            value;
-
-        if (isBool(args[args.length - 1])) {
-            override    = args.pop();
-        }
-        if (isBool(args[args.length - 1])) {
-            deep        = override;
-            override    = args.pop();
-        }
-
-        while (args.length) {
-            // IE < 9 fix: check for hasOwnProperty presence
-            if ((src = args.shift()) && src.hasOwnProperty) {
-                for (k in src) {
-
-                    if (src.hasOwnProperty(k) && (value = src[k]) !== undf) {
-
-                        if (deep) {
-                            if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
-                                extend(dst[k], value, override, deep);
+                if (deep) {
+                    if (dst[k] && isPlainObject(dst[k]) && isPlainObject(value)) {
+                        extend(dst[k], value, override, deep);
+                    }
+                    else {
+                        if (override === true || dst[k] == undf) { // == checks for null and undefined
+                            if (isPlainObject(value)) {
+                                dst[k] = {};
+                                extend(dst[k], value, override, true);
                             }
                             else {
-                                if (override === true || dst[k] == undf) { // == checks for null and undefined
-                                    if (isPlainObject(value)) {
-                                        dst[k] = {};
-                                        extend(dst[k], value, override, true);
-                                    }
-                                    else {
-                                        dst[k] = value;
-                                    }
-                                }
-                            }
-                        }
-                        else {
-                            if (override === true || dst[k] == undf) {
                                 dst[k] = value;
                             }
                         }
                     }
                 }
+                else {
+                    if (override === true || dst[k] == undf) {
+                        dst[k] = value;
+                    }
+                }
             }
         }
+    }
 
-        return dst;
-    };
+    return dst;
+};
 
-    return extend;
-}();
 
 
 function emptyFn(){};
 
 
 
-var instantiate = function(fn, args) {
+/**
+ * Instantite class when you have a list of arguments
+ * and you can't just use .apply()
+ * @function instantiate
+ * @param {function} fn Class constructor
+ * @param {array} args Constructor arguments
+ * @returns {object}
+ */
+function instantiate(fn, args) {
 
     var Temp = function(){},
         inst, ret;
@@ -631,16 +679,21 @@ var instantiate = function(fn, args) {
     // return the original instance.
     // (consistent with behaviour of the new operator)
     return isObject(ret) || ret === false ? ret : inst;
-
 };
+
 /**
  * Function interceptor
- * @param {function} origFn
- * @param {function} interceptor
- * @param {object|null} context
- * @param {object|null} origContext
- * @param {string} when
- * @param {bool} replaceValue
+ * @function intercept
+ * @param {function} origFn Original function
+ * @param {function} interceptor Function that should execute instead(ish)
+ * @param {object|null} context Function's context
+ * @param {object|null} origContext Original function's context
+ * @param {string} when {
+ *  before | after | instead
+ *  @default before
+ * }
+ * @param {bool} replaceValue true to return interceptor's return value
+ * instead of original
  * @returns {Function}
  */
 function intercept(origFn, interceptor, context, origContext, when, replaceValue) {
@@ -670,11 +723,11 @@ function intercept(origFn, interceptor, context, origContext, when, replaceValue
 
 
 
-var Class = function(){
+
+var classManagerFactory = function(){
 
 
     var proto   = "prototype",
-
         constr  = "$constructor",
 
         $constr = function $constr() {
@@ -686,7 +739,9 @@ var Class = function(){
 
         wrapPrototypeMethod = function wrapPrototypeMethod(parent, k, fn) {
 
-            var $super = parent[proto][k] || (k == constr ? parent : emptyFn) || emptyFn;
+            var $super = parent[proto][k] ||
+                        (k === constr ? parent : emptyFn) ||
+                        emptyFn;
 
             return function() {
                 var ret,
@@ -747,16 +802,16 @@ var Class = function(){
             var k;
             for (k in mixin) {
                 if (mixin.hasOwnProperty(k)) {
-                    if (k == "$beforeInit") {
+                    if (k === "$beforeInit") {
                         prototype.$beforeInit.push(mixin[k]);
                     }
-                    else if (k == "$afterInit") {
+                    else if (k === "$afterInit") {
                         prototype.$afterInit.push(mixin[k]);
                     }
-                    else if (k == "$beforeDestroy") {
+                    else if (k === "$beforeDestroy") {
                         prototype.$beforeDestroy.push(mixin[k]);
                     }
-                    else if (k == "$afterDestroy") {
+                    else if (k === "$afterDestroy") {
                         prototype.$afterDestroy.push(mixin[k]);
                     }
                     else if (!prototype[k]) {
@@ -767,10 +822,21 @@ var Class = function(){
         };
 
 
-    var Class = function(ns){
+    /**
+     * Instantiate class system with namespace.
+     * @group api
+     * @function
+     * @param {lib_Namespace} ns {
+     *  Provide your own namespace or a new private ns will be 
+     *  constructed automatically. 
+     *  @optional
+     * }
+     * @returns {object} Returns cls() function/object. 
+     */
+    var classManagerFactory = function(ns) {
 
         if (!ns) {
-            ns = new Namespace;
+            ns = new lib_Namespace;
         }
 
         var createConstructor = function(className) {
@@ -788,7 +854,7 @@ var Class = function(){
                     plCls;
 
                 if (!self) {
-                    throw "Must instantiate via new: " + className;
+                    throw new Error("Must instantiate via new: " + className);
                 }
 
                 self.$plugins   = [];
@@ -816,14 +882,13 @@ var Class = function(){
 
                         if (isString(plugin)) {
                             plCls = plugin;
-                            plugin = ns.get(plugin, true);
+                            plugin = ns ? ns.get(plugin, true) : null;
                             if (!plugin) {
                                 throw plCls + " not found";
                             }
                         }
-
+ 
                         plugin = new plugin(self, args);
-
                         pmap[plugin.$class] = plugin;
 
                         if (plugin.$beforeHostInit) {
@@ -852,11 +917,11 @@ var Class = function(){
 
 
         /**
-         * @class BaseClass
-         * @description All classes defined with MetaphorJs.Class extend this class.
-         * You can access it via <code>cs.BaseClass</code>. Basically,
-         * <code>cs.define({});</code> is the same as <code>cs.BaseClass.$extend({})</code>.
-         * @constructor
+         * All classes defined with <code>cls</code> extend this class.
+         * Basically,<code>cls({});</code> is the same as 
+         * <code>BaseClass.$extend({})</code>.
+         * @group api
+         * @class MetaphorJs.cls.BaseClass
          */
         var BaseClass = function() {
 
@@ -864,8 +929,18 @@ var Class = function(){
 
         extend(BaseClass.prototype, {
 
+            /**
+             * Class name
+             * @property {string} 
+             */
             $class: null,
             $extends: null,
+
+            /**
+             * List of plugin names or constructors before class 
+             * is initialised, list of plugin instances after initialisation
+             * @property {array} 
+             */
             $plugins: null,
             $pluginMap: null,
             $mixins: null,
@@ -881,7 +956,7 @@ var Class = function(){
             $afterDestroy: [],
 
             /**
-             * Get class name
+             * Get this instance's class name
              * @method
              * @returns {string}
              */
@@ -890,6 +965,7 @@ var Class = function(){
             },
 
             /**
+             * Is this object instance of <code>cls</code>
              * @param {string} cls
              * @returns {boolean}
              */
@@ -912,19 +988,23 @@ var Class = function(){
              * @param {string} method Intercepted method name
              * @param {function} fn function to call before or after intercepted method
              * @param {object} newContext optional interceptor's "this" object
-             * @param {string} when optional, when to call interceptor before | after | instead; default "before"
-             * @param {bool} replaceValue optional, return interceptor's return value or original method's; default false
+             * @param {string} when optional, when to call interceptor 
+             *                         before | after | instead; default "before"
+             * @param {bool} replaceValue optional, return interceptor's return value 
+             *                  or original method's; default false
              * @returns {function} original method
              */
             $intercept: function(method, fn, newContext, when, replaceValue) {
                 var self = this,
                     orig = self[method];
-                self[method] = intercept(orig || emptyFn, fn, newContext || self, self, when, replaceValue);
+                self[method] = intercept(orig || emptyFn, fn, newContext || self, 
+                                            self, when, replaceValue);
                 return orig || emptyFn;
             },
 
             /**
              * Implement new methods or properties on instance
+             * @method
              * @param {object} methods
              */
             $implement: function(methods) {
@@ -936,44 +1016,53 @@ var Class = function(){
 
             /**
              * Does this instance have a plugin
+             * @method
              * @param cls
-             * @returns {bool}
+             * @returns {boolean}
              */
             $hasPlugin: function(cls) {
-                return !!this.$pluginMap[ns.normalize(cls)];
+                return cls ? !!this.$pluginMap[cls] : false;
             },
 
             /**
-             * @param {string} cls
+             * Get plugin instance
+             * @method
+             * @param {string} cls Plugin class name
              * @returns {object|null}
              */
             $getPlugin: function(cls) {
-                return this.$pluginMap[ns.normalize(cls)] || null;
+                return cls ? this.$pluginMap[cls] || null : null;
             },
 
             /**
+             * Get a bound to this object function
+             * @method
              * @param {function} fn
              * @returns {Function}
              */
             $bind: function(fn) {
                 var self = this;
                 return function() {
-                    if (self.$isDestroyed()) {
-                        return;
+                    if (!self.$isDestroyed()) {
+                        return fn.apply(self, arguments);
                     }
-                    return fn.apply(self, arguments);
                 };
             },
 
             /**
-             * @return bool
+             * Is this object destroyed
+             * @method
+             * @return {boolean}
              */
             $isDestroyed: function() {
                 return self.$destroying || self.$destroyed;
             },
 
             /**
-             * Destroy instance
+             * Destroy this instance. Also destroys plugins and
+             * calls all beforeDestroy and afterDestroy handlers.
+             * Also calls onDestroy.<br>
+             * Safe to call multiple times.
              * @method
              */
             $destroy: function() {
@@ -999,9 +1088,9 @@ var Class = function(){
                     }
                 }
 
-                res = self.destroy.apply(self, arguments);
+                res = self.onDestroy.apply(self, arguments);
 
-                for (i = -1, l = before.length; ++i < l;
+                for (i = -1, l = after.length; ++i < l;
                      after[i].apply(self, arguments)){}
 
                 for (i = 0, l = plugins.length; i < l; i++) {
@@ -1020,13 +1109,17 @@ var Class = function(){
                 self.$destroyed = true;
             },
 
-            destroy: function(){}
+            /**
+             * Overridable method. Put your destructor here
+             * @method
+             */
+            onDestroy: function(){}
         });
 
         BaseClass.$self = BaseClass;
 
         /**
-         * Create an instance of current class. Same as cs.factory(name)
+         * Create an instance of current class. Same as <code>cls.factory(name)</code>
          * @method
          * @static
          * @code var myObj = My.Class.$instantiate(arg1, arg2, ...);
@@ -1073,18 +1166,21 @@ var Class = function(){
         };
 
         /**
-         * Create new class based on current one
+         * Create new class extending current one
+         * @static
+         * @method
          * @param {object} definition
          * @param {object} statics
          * @returns {function}
          */
         BaseClass.$extend = function(definition, statics) {
-            return define(definition, statics, this);
+            return defineClass(definition, statics, this);
         };
 
         /**
-         * Destroy class
+         * Destroy class (not the instance)
          * @method
+         * @static
          */
         BaseClass.$destroy = function() {
             var self = this,
@@ -1094,47 +1190,42 @@ var Class = function(){
                 self[k] = null;
             }
         };
+        /**
+         * @end-class
+         */
+
 
         /**
-         * @class Class
+         * Constructed class system. Also this is a function, same as 
+         * <code>cls.define</code>
+         * @group api
+         * @object cls
          */
 
         /**
-         * @method Class
-         * @constructor
-         * @param {Namespace} ns optional namespace. See metaphorjs-namespace repository
-         */
-
-        /**
-         * @method
-         * @param {object} definition {
-         *  @type {string} $class optional
-         *  @type {string} $extends optional
-         *  @type {array} $mixins optional
-         *  @type {function} $constructor optional
-         *  @type {function} $init optional
-         *  @type {function} $beforeInit if this is a mixin
-         *  @type {function} $afterInit if this is a mixin
-         *  @type {function} $beforeHostInit if this is a plugin
-         *  @type {function} $afterHostInit if this is a plugin
-         *  @type {function} $beforeDestroy if this is a mixin
-         *  @type {function} $afterDestroy if this is a mixin
-         *  @type {function} $beforeHostDestroy if this is a plugin
-         *  @type {function} destroy your own destroy function
+         * @property {function} define {
+         *  @param {object} definition {
+         *      @type {string} $class optional class name
+         *      @type {string} $extends optional parent class
+         *      @type {array} $mixins optional list of mixins
+         *      @type {function} $constructor optional low-level constructor
+         *      @type {function} $init optional constructor
+         *      @type {function} onDestroy your own destroy function
+         *  }
+         *  @param {object} statics any statis properties or methods
          * }
-         * @param {object} statics any statis properties or methods
-         * @param {string|function} $extends this is a private parameter; use definition.$extends
-         * @code var cls = cs.define({$class: "Name"});
+         * @code var Name = cls({$class: "Name"});
          */
-        var define = function(definition, statics, $extends) {
+        var defineClass = function defineClass(definition, statics, $extends) {
 
             definition          = definition || {};
             
             var name            = definition.$class,
                 parentClass     = $extends || definition.$extends,
                 mixins          = definition.$mixins,
+                alias           = definition.$alias,
                 pConstructor,
-                i, l, k, noop, prototype, c, mixin;
+                i, l, k, prototype, c, mixin;
 
             if (parentClass) {
                 if (isString(parentClass)) {
@@ -1154,19 +1245,11 @@ var Class = function(){
                 throw parentClass + " not found";
             }
 
-            if (name) {
-                name = ns.normalize(name);
-            }
-
             definition.$class   = name;
             definition.$extends = parentClass;
             definition.$mixins  = null;
 
-
-            noop                = function(){};
-            noop[proto]         = pConstructor[proto];
-            prototype           = new noop;
-            noop                = null;
+            prototype           = Object.create(pConstructor[proto]);
             definition[constr]  = definition[constr] || $constr;
 
             preparePrototype(prototype, definition, pConstructor);
@@ -1175,6 +1258,9 @@ var Class = function(){
                 for (i = 0, l = mixins.length; i < l; i++) {
                     mixin = mixins[i];
                     if (isString(mixin)) {
+                        if (!ns) {
+                            throw new Error("Mixin " + mixin + " not found");
+                        }
                         mixin = ns.get(mixin, true);
                     }
                     mixinToPrototype(prototype, mixin);
@@ -1183,23 +1269,24 @@ var Class = function(){
 
             c = createConstructor(name);
             prototype.constructor = c;
+            prototype.$self = c;
             c[proto] = prototype;
 
             for (k in BaseClass) {
-                if (k != proto && BaseClass.hasOwnProperty(k)) {
+                if (k !== proto && BaseClass.hasOwnProperty(k)) {
                     c[k] = BaseClass[k];
                 }
             }
 
             for (k in pConstructor) {
-                if (k != proto && pConstructor.hasOwnProperty(k)) {
+                if (k !== proto && pConstructor.hasOwnProperty(k)) {
                     c[k] = pConstructor[k];
                 }
             }
 
             if (statics) {
                 for (k in statics) {
-                    if (k != proto && statics.hasOwnProperty(k)) {
+                    if (k !== proto && statics.hasOwnProperty(k)) {
                         c[k] = statics[k];
                     }
                 }
@@ -1208,8 +1295,13 @@ var Class = function(){
             c.$parent   = pConstructor;
             c.$self     = c;
 
-            if (name) {
-                ns.register(name, c);
+            if (ns) {
+                if (name) {
+                    ns.register(name, c);
+                }
+                if (alias) {
+                    ns.register(alias, c);
+                }
             }
 
             return c;
@@ -1220,15 +1312,16 @@ var Class = function(){
 
         /**
          * Instantiate class. Pass constructor parameters after "name"
-         * @method
-         * @code cs.factory("My.Class.Name", arg1, arg2, ...);
+         * @property {function} factory {
+         * @code cls.factory("My.Class.Name", arg1, arg2, ...);
          * @param {string} name Full name of the class
          * @returns {object} class instance
+         * }
          */
         var factory = function(name) {
 
-            var cls     = ns.get(name),
-                args    = slice.call(arguments, 1);
+            var cls     = ns ? ns.get(name) : null,
+                args    = toArray(arguments).slice(1);
 
             if (!cls) {
                 throw name + " not found";
@@ -1240,16 +1333,17 @@ var Class = function(){
 
 
         /**
-         * Is cmp instance of cls
-         * @method
-         * @code cs.instanceOf(myObj, "My.Class");
-         * @code cs.instanceOf(myObj, My.Class);
+         * Is given object instance of class
+         * @property {function} isInstanceOf {
+         * @code cls.instanceOf(myObj, "My.Class");
+         * @code cls.instanceOf(myObj, My.Class);
          * @param {object} cmp
-         * @param {string|object} cls
+         * @param {string|object} name
          * @returns {boolean}
+         * }
          */
-        var isInstanceOf = function(cmp, cls) {
-            var _cls    = isString(cls) ? ns.get(cls) : cls;
+        var isInstanceOf = function(cmp, name) {
+            var _cls    = isString(name) && ns ? ns.get(name) : name;
             return _cls ? cmp instanceof _cls : false;
         };
 
@@ -1257,33 +1351,32 @@ var Class = function(){
 
         /**
          * Is one class subclass of another class
-         * @method
-         * @code cs.isSubclassOf("My.Subclass", "My.Class");
-         * @code cs.isSubclassOf(myObj, "My.Class");
-         * @code cs.isSubclassOf("My.Subclass", My.Class);
-         * @code cs.isSubclassOf(myObj, My.Class);
+         * @property {function} isSubclassOf {
+         * @code cls.isSubclassOf("My.Subclass", "My.Class");
+         * @code cls.isSubclassOf(myObj, "My.Class");
+         * @code cls.isSubclassOf("My.Subclass", My.Class);
+         * @code cls.isSubclassOf(myObj, My.Class);
          * @param {string|object} childClass
          * @param {string|object} parentClass
-         * @return {bool}
+         * @return {boolean}
+         * }
          */
         var isSubclassOf = function(childClass, parentClass) {
 
             var p   = childClass,
-                g   = ns.get;
+                g   = ns ? ns.get : function(){};
 
             if (!isString(parentClass)) {
                 parentClass  = parentClass.prototype.$class;
             }
-            else {
-                parentClass = ns.normalize(parentClass);
-            }
+
             if (isString(childClass)) {
-                p   = g(ns.normalize(childClass));
+                p   = g(childClass);
             }
 
             while (p && p.prototype) {
 
-                if (p.prototype.$class == parentClass) {
+                if (p.prototype.$class === parentClass) {
                     return true;
                 }
 
@@ -1293,268 +1386,3090 @@ var Class = function(){
             return false;
         };
 
-        var self    = this;
-
-        self.factory = factory;
-        self.isSubclassOf = isSubclassOf;
-        self.isInstanceOf = isInstanceOf;
-        self.define = define;
-
-        self.destroy = function(){
-
-            if (self === globalCs) {
-                globalCs = null;
-            }
-
-            BaseClass.$destroy();
-            BaseClass = null;
-
-            ns.destroy();
-            ns = null;
-
-            Class = null;
-
-        };
 
         /**
-         * @type {BaseClass} BaseClass reference to the BaseClass class
+         * Reference to the managerFactory
+         * @property {function} classManagerFactory
          */
-        self.BaseClass = BaseClass;
+        defineClass.classManagerFactory = classManagerFactory;
+        defineClass.factory = factory;
+        defineClass.isSubclassOf = isSubclassOf;
+        defineClass.isInstanceOf = isInstanceOf;
+        defineClass.define = defineClass;
 
+        /**
+         * @property {function} Namespace Namespace constructor
+         */
+        defineClass.Namespace = lib_Namespace;
+
+        /**
+         * @property {class} BaseClass
+         */
+        defineClass.BaseClass = BaseClass;
+
+        /**
+         * @property {object} ns Namespace instance
+         */
+        defineClass.ns = ns;
+
+        /**
+         * @property {function} $destroy Destroy class system and namespace
+         */
+        defineClass.$destroy = function() {
+            BaseClass.$destroy();
+            BaseClass = null;
+            if (ns) {
+                ns.$destroy();
+                ns = null;
+            }
+        };
+
+        return defineClass;
     };
 
-    Class.prototype = {
-
-        factory: null,
-        isSubclassOf: null,
-        isInstanceOf: null,
-        define: null,
-        destroy: null
-    };
-
-    var globalCs;
-
-    /**
-     * Get default global class manager
-     * @method
-     * @static
-     * @returns {Class}
-     */
-    Class.global = function() {
-        if (!globalCs) {
-            globalCs = new Class(Namespace.global());
-        }
-        return globalCs;
-    };
-
-    return Class;
-
+    return classManagerFactory;
 }();
 
 
-
-
-var ns  = new Namespace(MetaphorJs, "MetaphorJs");
-
-
-
-var cs = new Class(ns);
-
-
-
-
-
-var defineClass = cs.define;
-
-
-
-var factory = cs.factory;
-
-
-var nextUid = function(){
-    var uid = ['0', '0', '0'];
-
-    // from AngularJs
-    /**
-     * @returns {String}
-     */
-    return function nextUid() {
-        var index = uid.length;
-        var digit;
-
-        while(index) {
-            index--;
-            digit = uid[index].charCodeAt(0);
-            if (digit == 57 /*'9'*/) {
-                uid[index] = 'A';
-                return uid.join('');
-            }
-            if (digit == 90  /*'Z'*/) {
-                uid[index] = '0';
-            } else {
-                uid[index] = String.fromCharCode(digit + 1);
-                return uid.join('');
-            }
-        }
-        uid.unshift('0');
-        return uid.join('');
-    };
-}();
 
 
 /**
+ * Already constructed private namespace 
+ * with <code>MetaphorJs</code> object and its alias <code>mjs</code> 
+ * registered at top level.
+ * @var ns 
+ */
+var ns = (function(){
+    var ns = new lib_Namespace;
+    ns.register("MetaphorJs", MetaphorJs);
+    ns.register("mjs", MetaphorJs);
+    return ns;
+}());
+
+
+
+
+var cls = classManagerFactory(ns);
+
+var nextUid = (function(){
+
+var uid = ['0', '0', '0'];
+
+// from AngularJs
+/**
+ * Generates new alphanumeric id with starting 
+ * length of 3 characters. IDs are consequential.
+ * @function nextUid
+ * @returns {string}
+ */
+function nextUid() {
+    var index = uid.length;
+    var digit;
+
+    while(index) {
+        index--;
+        digit = uid[index].charCodeAt(0);
+        if (digit == 57 /*'9'*/) {
+            uid[index] = 'A';
+            return uid.join('');
+        }
+        if (digit == 90  /*'Z'*/) {
+            uid[index] = '0';
+        } else {
+            uid[index] = String.fromCharCode(digit + 1);
+            return uid.join('');
+        }
+    }
+    uid.unshift('0');
+    return uid.join('');
+};
+
+return nextUid;
+}());
+
+/**
+ * Bind function to context (Function.bind wrapper)
+ * @function bind
  * @param {Function} fn
  * @param {*} context
  */
-var bind = Function.prototype.bind ?
-              function(fn, context){
-                  return fn.bind(context);
-              } :
-              function(fn, context) {
-                  return function() {
-                      return fn.apply(context, arguments);
-                  };
-              };
+function bind(fn, context){
+    return fn.bind(context);
+};
 
 
 
-var getRegExp = function(){
+MetaphorJs.dom = MetaphorJs.dom || {};
 
-    var cache = {};
-
-    /**
-     * @param {String} expr
-     * @returns RegExp
-     */
-    return function getRegExp(expr) {
-        return cache[expr] || (cache[expr] = new RegExp(expr));
-    };
-}();
 
 
 
 /**
- * @param {String} cls
- * @returns {RegExp}
+ * Get node attribute value
+ * @function MetaphorJs.dom.getAttr
+ * @param {DomNode} node
+ * @returns {string}
  */
-function getClsReg(cls) {
-    return getRegExp('(?:^|\\s)'+cls+'(?!\\S)');
-};
-
-
-
-/**
- * @param {Element} el
- * @param {String} cls
- * @returns {boolean}
- */
-function hasClass(el, cls) {
-    return cls ? getClsReg(cls).test(el.className) : false;
-};
-
-
-
-/**
- * @param {Element} el
- * @param {String} cls
- */
-function addClass(el, cls) {
-    if (cls && !hasClass(el, cls)) {
-        el.className += " " + cls;
-    }
-};
-
-
-
-/**
- * @param {Element} el
- * @param {String} cls
- */
-function removeClass(el, cls) {
-    if (cls) {
-        el.className = el.className.replace(getClsReg(cls), '');
-    }
-};
-
-
-function setStyle(el, name, value) {
-
-    if (!el || !el.style) {
-        return;
-    }
-
-    var props,
-        style = el.style,
-        k;
-
-    if (typeof name == "string") {
-        props = {};
-        props[name] = value;
-    }
-    else {
-        props = name;
-    }
-
-    for (k in props) {
-        style[k] = props[k];
-    }
-};
-
-
-
-
-var data = function(){
-
-    var dataCache   = {},
-
-        getNodeId   = function(el) {
-            return el._mjsid || (el._mjsid = nextUid());
-        };
-
-    /**
-     * @param {Element} el
-     * @param {String} key
-     * @param {*} value optional
-     */
-    return function data(el, key, value) {
-        var id  = getNodeId(el),
-            obj = dataCache[id];
-
-        if (value !== undf) {
-            if (!obj) {
-                obj = dataCache[id] = {};
-            }
-            obj[key] = value;
-            return value;
-        }
-        else {
-            return obj ? obj[key] : undf;
-        }
-    };
-
-}();
-
-function getAttr(el, name) {
+var dom_getAttr = MetaphorJs.dom.getAttr = function dom_getAttr(el, name) {
     return el.getAttribute ? el.getAttribute(name) : null;
 };
+/**
+ * Execute <code>fn</code> asynchronously
+ * @function async
+ * @param {Function} fn Function to execute
+ * @param {Object} context Function's context (this)
+ * @param {[]} args Arguments to pass to fn
+ * @param {number} timeout Execute after timeout (number of ms)
+ */
+function async(fn, context, args, timeout) {
+    return setTimeout(function(){
+        fn.apply(context, args || []);
+    }, timeout || 0);
+};
 
-function setAttr(el, name, value) {
+
+
+/**
+ * Log thrown error to console (in debug mode) and 
+ * call all error listeners
+ * @function error
+ * @param {Error} e 
+ */
+var error = (function(){
+
+    var listeners = [];
+
+    var error = function error(e) {
+
+        var i, l;
+
+        for (i = 0, l = listeners.length; i < l; i++) {
+            listeners[i][0].call(listeners[i][1], e)
+        }
+
+        /*DEBUG-START*/
+        if (typeof console != strUndef && console.error) {
+            console.error(e);
+        }
+        /*DEBUG-END*/
+    };
+
+    /**
+     * Subscribe to all errors
+     * @method on
+     * @param {function} fn 
+     * @param {object} context 
+     */
+    error.on = function(fn, context) {
+        error.un(fn, context);
+        listeners.push([fn, context]);
+    };
+
+    /**
+     * Unsubscribe from all errors
+     * @method un
+     * @param {function} fn 
+     * @param {object} context 
+     */
+    error.un = function(fn, context) {
+        var i, l;
+        for (i = 0, l = listeners.length; i < l; i++) {
+            if (listeners[i][0] === fn && listeners[i][1] === context) {
+                listeners.splice(i, 1);
+                break;
+            }
+        }
+    };
+
+    return error;
+}());
+
+
+
+
+
+/**
+ * Transform xml into a document
+ * @function parseXML
+ * @param {string} data 
+ * @param {string} type 
+ * @returns {Document}
+ */
+function parseXML(data, type) {
+
+    var xml, tmp;
+
+    if (!data || !isString(data)) {
+        return null;
+    }
+
+    // Support: IE9
+    try {
+        tmp = new DOMParser();
+        xml = tmp.parseFromString(data, type || "text/xml");
+    } 
+    catch (thrownError) {
+        error(thrownError);
+        xml = undf;
+    }
+
+    if (!xml || xml.getElementsByTagName("parsererror").length) {
+        throw new Error("Invalid XML: " + data);
+    }
+
+    return xml;
+};
+
+
+
+
+
+
+/**
+ * Modified version of YASS (http://yass.webo.in)
+ */
+
+/**
+ * Returns array of nodes or an empty array
+ * @function MetaphorJs.dom.select
+ * @param {string} selector
+ * @param {Element} root to look into
+ */
+var dom_select = MetaphorJs.dom.select = function() {
+
+    var rGeneric    = /^[\w[:#.][\w\]*^|=!]*$/,
+        rQuote      = /=([^\]]+)/,
+        rGrpSplit   = / *, */,
+        rRepPlus    = /(\([^)]*)\+/,
+        rRepTild    = /(\[[^\]]+)~/,
+        rRepAll     = /(~|>|\+)/,
+        rSplitPlus  = / +/,
+        rSingleMatch= /([^[:.#]+)?(?:#([^[:.#]+))?(?:\.([^[:.]+))?(?:\[([^!&^*|$[:=]+)([!$^*|&]?=)?([^:\]]+)?\])?(?::([^(]+)(?:\(([^)]+)\))?)?/,
+        rNthNum     = /(?:(-?\d*)n)?(?:(%|-)(\d*))?/,
+        rNonDig     = /\D/,
+        rRepPrnth   = /[^(]*\(([^)]*)\)/,
+        rRepAftPrn  = /\(.*/,
+        rGetSquare  = /\[([^!~^*|$ [:=]+)([$^*|]?=)?([^ :\]]+)?\]/,
+
+        doc         = window.document,
+        bcn         = !!doc.getElementsByClassName,
+        qsa         = !!doc.querySelectorAll,
+
+        /*
+         function calls for CSS2/3 modificatos. Specification taken from
+         http://www.w3.org/TR/2005/WD-css3-selectors-20051215/
+         on success return negative result.
+         */
+        mods        = {
+            /* W3C: "an E element, first child of its parent" */
+            'first-child': function (child) {
+                /* implementation was taken from jQuery.1.2.6, line 1394 */
+                return child.parentNode.getElementsByTagName('*')[0] !== child;
+            },
+            /* W3C: "an E element, last child of its parent" */
+            'last-child': function (child) {
+                var brother = child;
+                /* loop in lastChilds while nodeType isn't element */
+                while ((brother = brother.nextSibling) && brother.nodeType !== 1) {}
+                /* Check for node's existence */
+                return !!brother;
+            },
+            /* W3C: "an E element, root of the document" */
+            root: function (child) {
+                return child.nodeName.toLowerCase() !== 'html';
+            },
+            /* W3C: "an E element, the n-th child of its parent" */
+            'nth-child': function (child, ind) {
+                var i = child.nodeIndex || 0,
+                    a = ind[3] = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
+                    b = ind[1];
+                /* check if we have already looked into siblings, using exando - very bad */
+                if (i) {
+                    return !( (i + a) % b);
+                } else {
+                    /* in the other case just reverse logic for n and loop siblings */
+                    var brother = child.parentNode.firstChild;
+                    i++;
+                    /* looping in child to find if nth expression is correct */
+                    do {
+                        /* nodeIndex expando used from Peppy / Sizzle/ jQuery */
+                        if (brother.nodeType === 1 && (brother.nodeIndex = ++i) && child === brother && ((i + a) % b)) {
+                            return 0;
+                        }
+                    } while (brother = brother.nextSibling);
+                    return 1;
+                }
+            },
+            /*
+             W3C: "an E element, the n-th child of its parent,
+             counting from the last one"
+             */
+            'nth-last-child': function (child, ind) {
+                /* almost the same as the previous one */
+                var i = child.nodeIndexLast || 0,
+                    a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
+                    b = ind[1];
+                if (i) {
+                    return !( (i + a) % b);
+                } else {
+                    var brother = child.parentNode.lastChild;
+                    i++;
+                    do {
+                        if (brother.nodeType === 1 && (brother.nodeLastIndex = i++) && child === brother && ((i + a) % b)) {
+                            return 0;
+                        }
+                    } while (brother = brother.previousSibling);
+                    return 1;
+                }
+            },
+            /*
+             Rrom w3.org: "an E element that has no children (including text nodes)".
+             Thx to John, from Sizzle, 2008-12-05, line 416
+             */
+            empty: function (child) {
+                return !!child.firstChild;
+            },
+            /* thx to John, stolen from Sizzle, 2008-12-05, line 413 */
+            parent: function (child) {
+                return !child.firstChild;
+            },
+            /* W3C: "an E element, only child of its parent" */
+            'only-child': function (child) {
+                return child.parentNode.getElementsByTagName('*').length !== 1;
+            },
+            /*
+             W3C: "a user interface element E which is checked
+             (for instance a radio-button or checkbox)"
+             */
+            checked: function (child) {
+                return !child.checked;
+            },
+            /*
+             W3C: "an element of type E in language "fr"
+             (the document language specifies how language is determined)"
+             */
+            lang: function (child, ind) {
+                return child.lang !== ind && doc.documentElement.lang !== ind;
+            },
+            /* thx to John, from Sizzle, 2008-12-05, line 398 */
+            enabled: function (child) {
+                return child.disabled || child.type === 'hidden';
+            },
+            /* thx to John, from Sizzle, 2008-12-05, line 401 */
+            disabled: function (child) {
+                return !child.disabled;
+            },
+            /* thx to John, from Sizzle, 2008-12-05, line 407 */
+            selected: function(elem){
+                /*
+                 Accessing this property makes selected-by-default
+                 options in Safari work properly.
+                 */
+                var tmp = elem.parentNode.selectedIndex;
+                return !elem.selected;
+            }
+        },
+
+        attrRegCache = {},
+
+        getAttrReg  = function(value) {
+            return attrRegCache[value] || (attrRegCache[value] = new RegExp('(^| +)' + value + '($| +)'));
+        },
+
+        attrMods    = {
+            /* W3C "an E element with a "attr" attribute" */
+            '': function (child, name) {
+                return dom_getAttr(child, name) !== null;
+            },
+            /*
+             W3C "an E element whose "attr" attribute value is
+             exactly equal to "value"
+             */
+            '=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name)) && attrValue === value;
+            },
+            /*
+             from w3.prg "an E element whose "attr" attribute value is
+             a list of space-separated values, one of which is exactly
+             equal to "value"
+             */
+            '&=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name)) && getAttrReg(value).test(attrValue);
+            },
+            /*
+             from w3.prg "an E element whose "attr" attribute value
+             begins exactly with the string "value"
+             */
+            '^=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name) + '') && !attrValue.indexOf(value);
+            },
+            /*
+             W3C "an E element whose "attr" attribute value
+             ends exactly with the string "value"
+             */
+            '$=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name) + '') &&
+                       attrValue.indexOf(value) === attrValue.length - value.length;
+            },
+            /*
+             W3C "an E element whose "attr" attribute value
+             contains the substring "value"
+             */
+            '*=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name) + '') && attrValue.indexOf(value) !== -1;
+            },
+            /*
+             W3C "an E element whose "attr" attribute has
+             a hyphen-separated list of values beginning (from the
+             left) with "value"
+             */
+            '|=': function (child, name, value) {
+                var attrValue;
+                return (attrValue = dom_getAttr(child, name) + '') &&
+                       (attrValue === value || !!attrValue.indexOf(value + '-'));
+            },
+            /* attr doesn't contain given value */
+            '!=': function (child, name, value) {
+                var attrValue;
+                return !(attrValue = dom_getAttr(child, name)) || !getAttrReg(value).test(attrValue);
+            }
+        };
+
+
+    return function(selector, root) {
+
+        /* clean root with document */
+        root = root || doc;
+
+        /* sets of nodes, to handle comma-separated selectors */
+        var sets    = [],
+            qsaErr  = null,
+            idx, cls, nodes,
+            i, node, ind, mod,
+            attrs, attrName, eql, value;
+
+        if (qsa && root.querySelectorAll) {
+            /* replace not quoted args with quoted one -- Safari doesn't understand either */
+            try {
+                sets = toArray(root.querySelectorAll(selector.replace(rQuote, '="$1"')));
+            }
+            catch (thrownError) {
+                error(thrownError);
+                qsaErr = true;
+            }
+        }
+
+        if (!qsa || qsaErr) {
+
+            /* quick return or generic call, missed ~ in attributes selector */
+            if (rGeneric.test(selector)) {
+
+                /*
+                 some simple cases - only ID or only CLASS for the very first occurence
+                 - don't need additional checks. Switch works as a hash.
+                 */
+                idx = 0;
+
+                /* the only call -- no cache, thx to GreLI */
+                switch (selector.charAt(0)) {
+
+                    case '#':
+                        idx = selector.slice(1);
+                        sets = doc.getElementById(idx);
+
+                        /*
+                         workaround with IE bug about returning element by name not by ID.
+                         Solution completely changed, thx to deerua.
+                         Get all matching elements with this id
+                         */
+                        if (sets.id !== idx) {
+                            sets = doc.all[idx];
+                        }
+
+                        sets = sets ? [sets] : [];
+                        break;
+
+                    case '.':
+
+                        cls = selector.slice(1);
+
+                        if (bcn) {
+
+                            sets = toArray((idx = (sets = root.getElementsByClassName(cls)).length) ? sets : []);
+
+                        } else {
+
+                            /* no RegExp, thx to DenVdmj */
+                            cls = ' ' + cls + ' ';
+
+                            nodes = root.getElementsByTagName('*');
+                            i = 0;
+
+                            while (node = nodes[i++]) {
+                                if ((' ' + node.className + ' ').indexOf(cls) !== -1) {
+                                    sets[idx++] = node;
+                                }
+
+                            }
+                            sets = idx ? sets : [];
+                        }
+                        break;
+
+                    case ':':
+
+                        nodes   = root.getElementsByTagName('*');
+                        i       = 0;
+                        ind     = selector.replace(rRepPrnth,"$1");
+                        mod     = selector.replace(rRepAftPrn,'');
+
+                        while (node = nodes[i++]) {
+                            if (mods[mod] && !mods[mod](node, ind)) {
+                                sets[idx++] = node;
+                            }
+                        }
+                        sets = idx ? sets : [];
+                        break;
+
+                    case '[':
+
+                        nodes   = root.getElementsByTagName('*');
+                        i       = 0;
+                        attrs   = rGetSquare.exec(selector);
+                        attrName    = attrs[1];
+                        eql     = attrs[2] || '';
+                        value   = attrs[3];
+
+                        while (node = nodes[i++]) {
+                            /* check either attr is defined for given node or it's equal to given value */
+                            if (attrMods[eql] && (attrMods[eql](node, attrName, value) ||
+                                                  (attrName === 'class' && attrMods[eql](node, 'className', value)))) {
+                                sets[idx++] = node;
+                            }
+                        }
+                        sets = idx ? sets : [];
+                        break;
+
+                    default:
+                        sets = toArray((idx = (sets = root.getElementsByTagName(selector)).length) ? sets : []);
+                        break;
+                }
+
+            } else {
+
+                /* number of groups to merge or not result arrays */
+                /*
+                 groups of selectors separated by commas.
+                 Split by RegExp, thx to tenshi.
+                 */
+                var groups  = selector.split(rGrpSplit),
+                    gl      = groups.length - 1, /* group counter */
+                    concat  = !!gl, /* if we need to concat several groups */
+                    group,
+                    singles,
+                    singles_length,
+                    single, /* to handle RegExp for single selector */
+                    ancestor, /* to remember ancestor call for next childs, default is " " */
+                /* for inner looping */
+                    tag, id, klass, newNodes, J, child, last, childs, item, h;
+
+                /* loop in groups, maybe the fastest way */
+                while (group = groups[gl--]) {
+
+                    /*
+                     Split selectors by space - to form single group tag-id-class,
+                     or to get heredity operator. Replace + in child modificators
+                     to % to avoid collisions. Additional replace is required for IE.
+                     Replace ~ in attributes to & to avoid collisions.
+                     */
+                    singles_length = (singles = group
+                        .replace(rRepPlus,"$1%")
+                        .replace(rRepTild,"$1&")
+                        .replace(rRepAll," $1 ").split(rSplitPlus)).length;
+
+                    i = 0;
+                    ancestor = ' ';
+                    /* is cleanded up with DOM root */
+                    if (root instanceof DocumentFragment) {
+                        nodes = root.children;
+                    }
+                    else {
+                        nodes = [root];
+                    }
+
+                    /*
+                     John's Resig fast replace works a bit slower than
+                     simple exec. Thx to GreLI for 'greed' RegExp
+                     */
+                    while (single = singles[i++]) {
+
+                        /* simple comparison is faster than hash */
+                        if (single !== ' ' && single !== '>' &&
+                            single !== '~' && single !== '+' && nodes) {
+
+                            single = single.match(rSingleMatch);
+
+                            /*
+                             Get all required matches from exec:
+                             tag, id, class, attribute, value, modificator, index.
+                             */
+                            tag     = single[1] || '*';
+                            id      = single[2];
+                            klass   = single[3] ? ' ' + single[3] + ' ' : '';
+                            attrName    = single[4];
+                            eql     = single[5] || '';
+                            mod     = single[7];
+
+                            /*
+                             for nth-childs modificator already transformed into array.
+                             Example used from Sizzle, rev. 2008-12-05, line 362.
+                             */
+                            ind = mod === 'nth-child' ||
+                                    mod === 'nth-last-child' ?
+                                  rNthNum.exec(
+                                      single[8] === 'even' && '2n' ||
+                                      single[8] === 'odd' && '2n%1' ||
+                                      !rNonDig.test(single[8]) && '0n%' + single[8] ||
+                                      single[8]
+                                  ) :
+                                  single[8];
+
+                            /* new nodes array */
+                            newNodes = [];
+
+                            /*
+                             cached length of new nodes array
+                             and length of root nodes
+                             */
+                            idx = J = 0;
+
+                            /* if we need to mark node with expando yeasss */
+                            last = i === singles_length;
+
+                            /* loop in all root nodes */
+                            while (child = nodes[J++]) {
+                                /*
+                                 find all TAGs or just return all possible neibours.
+                                 Find correct 'children' for given node. They can be
+                                 direct childs, neighbours or something else.
+                                 */
+                                switch (ancestor) {
+                                    case ' ':
+                                        if (child.getElementsByTagName) {
+                                            childs = child.getElementsByTagName(tag);
+                                            h = 0;
+                                            while (item = childs[h++]) {
+                                                /*
+                                                check them for ID or Class. Also check for expando 'yeasss'
+                                                to filter non-selected elements. Typeof 'string' not added -
+                                                if we get element with name="id" it won't be equal to given ID string.
+                                                Also check for given attributes selector.
+                                                Modificator is either not set in the selector, or just has been nulled
+                                                by modificator functions hash.
+                                                */
+                                                if ((!id || item.id === id) &&
+                                                    (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
+                                                    (!attrName || (attrMods[eql] &&
+                                                            (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
+                                                                attrMods[eql](item, 'className', single[6]))))) &&
+                                                    !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
+
+                                                    /*
+                                                    Need to define expando property to true for the last step.
+                                                    Then mark selected element with expando
+                                                    */
+                                                    if (last) {
+                                                        item.yeasss = 1;
+                                                    }
+                                                    newNodes[idx++] = item;
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    /* W3C: "an F element preceded by an E element" */
+                                    case '~':
+
+                                        tag = tag.toLowerCase();
+
+                                        /* don't touch already selected elements */
+                                        while ((child = child.nextSibling) && !child.yeasss) {
+                                            if (child.nodeType === 1 &&
+                                                (tag === '*' || child.nodeName.toLowerCase() === tag) &&
+                                                (!id || child.id === id) &&
+                                                (!klass || (' ' + child.className + ' ').indexOf(klass) !== -1) &&
+                                                (!attrName || (attrMods[eql] &&
+                                                           (attrMods[eql](item, attrName, single[6]) ||
+                                                            (attrName === 'class' &&
+                                                             attrMods[eql](item, 'className', single[6]))))) &&
+                                                !child.yeasss &&
+                                                !(mods[mod] ? mods[mod](child, ind) : mod)) {
+
+                                                if (last) {
+                                                    child.yeasss = 1;
+                                                }
+                                                newNodes[idx++] = child;
+                                            }
+                                        }
+                                        break;
+
+                                    /* W3C: "an F element immediately preceded by an E element" */
+                                    case '+':
+                                        while ((child = child.nextSibling) && child.nodeType !== 1) {}
+                                        if (child &&
+                                            (child.nodeName.toLowerCase() === tag.toLowerCase() || tag === '*') &&
+                                            (!id || child.id === id) &&
+                                            (!klass || (' ' + item.className + ' ').indexOf(klass) !== -1) &&
+                                            (!attrName ||
+                                             (attrMods[eql] && (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
+                                                                 attrMods[eql](item, 'className', single[6]))))) &&
+                                            !child.yeasss && !(mods[mod] ? mods[mod](child, ind) : mod)) {
+
+                                            if (last) {
+                                                child.yeasss = 1;
+                                            }
+                                            newNodes[idx++] = child;
+                                        }
+                                        break;
+
+                                    /* W3C: "an F element child of an E element" */
+                                    case '>':
+                                        if (child.getElementsByTagName) {
+                                            childs = child.getElementsByTagName(tag);
+                                            i = 0;
+                                            while (item = childs[i++]) {
+                                                if (item.parentNode === child &&
+                                                    (!id || item.id === id) &&
+                                                    (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
+                                                    (!attrName || (attrMods[eql] &&
+                                                            (attrMods[eql](item, attrName, single[6]) ||
+                                                                (attrName === 'class' &&
+                                                                attrMods[eql](item, 'className', single[6]))))) &&
+                                                    !item.yeasss &&
+                                                    !(mods[mod] ? mods[mod](item, ind) : mod)) {
+
+                                                    if (last) {
+                                                        item.yeasss = 1;
+                                                    }
+                                                    newNodes[idx++] = item;
+                                                }
+                                            }
+                                        }
+                                        break;
+                                }
+                            }
+
+                            /* put selected nodes in local nodes' set */
+                            nodes = newNodes;
+
+                        } else {
+
+                            /* switch ancestor ( , > , ~ , +) */
+                            ancestor = single;
+                        }
+                    }
+
+                    if (concat) {
+                        /* if sets isn't an array - create new one */
+                        if (!nodes.concat) {
+                            newNodes = [];
+                            h = 0;
+                            while (item = nodes[h]) {
+                                newNodes[h++] = item;
+                            }
+                            nodes = newNodes;
+                            /* concat is faster than simple looping */
+                        }
+                        sets = nodes.concat(sets.length === 1 ? sets[0] : sets);
+
+                    } else {
+
+                        /* inialize sets with nodes */
+                        sets = nodes;
+                    }
+                }
+
+                /* define sets length to clean up expando */
+                idx = sets.length;
+
+                /*
+                 Need this looping as far as we also have expando 'yeasss'
+                 that must be nulled. Need this only to generic case
+                 */
+                while (idx--) {
+                    sets[idx].yeasss = sets[idx].nodeIndex = sets[idx].nodeIndexLast = null;
+                }
+            }
+        }
+
+        /* return and cache results */
+        return sets;
+    };
+}();
+
+
+
+/**
+ * Checks if given value is a thenable (a Promise)
+ * @function isThenable
+ * @param {*} any
+ * @returns {boolean|function}
+ */
+function isThenable(any) {
+
+    // any.then must only be accessed once
+    // this is a promise/a+ requirement
+
+    if (!any) { //  || !any.then
+        return false;
+    }
+    
+    var t;
+
+    //if (!any || (!isObject(any) && !isFunction(any))) {
+    if (((t = typeof any) != "object" && t != "function")) {
+        return false;
+    }
+
+    var then = any.then;
+
+    return isFunction(then) ? then : false;
+};
+
+
+
+
+var lib_Promise = MetaphorJs.lib.Promise = function(){
+
+    var PENDING     = 0,
+        FULFILLED   = 1,
+        REJECTED    = 2,
+
+        queue       = [],
+        qRunning    = false,
+
+        nextTick    = typeof process !== strUndef ?
+                        process.nextTick :
+                        function(fn) {
+                            setTimeout(fn, 0);
+                        },
+
+        // synchronous queue of asynchronous functions:
+        // callbacks must be called in "platform stack"
+        // which means setTimeout/nextTick;
+        // also, they must be called in a strict order.
+        nextInQueue = function() {
+            qRunning    = true;
+            var next    = queue.shift();
+            nextTick(function(){
+                next[0].apply(next[1], next[2]);
+                if (queue.length) {
+                    nextInQueue();
+                }
+                else {
+                    qRunning = false;
+                }
+            }, 0);
+        },
+
+        /**
+         * add to execution queue
+         * @function
+         * @param {Function} fn
+         * @param {Object} scope
+         * @param {[]} args
+         * @ignore
+         */
+        next        = function(fn, scope, args) {
+            args = args || [];
+            queue.push([fn, scope, args]);
+            if (!qRunning) {
+                nextInQueue();
+            }
+        },
+
+        /**
+         * returns function which receives value from previous promise
+         * and tries to resolve next promise with new value returned from given function(prev value)
+         * or reject on error.
+         * promise1.then(success, failure) -> promise2
+         * wrapper(success, promise2) -> fn
+         * fn(promise1 resolve value) -> new value
+         * promise2.resolve(new value)
+         *
+         * @function
+         * @param {Function} fn
+         * @param {Promise} promise
+         * @returns {Function}
+         * @ignore
+         */
+        resolveWrapper     = function(fn, promise) {
+            return function(value) {
+                try {
+                    promise.resolve(fn(value));
+                }
+                catch (thrownError) {
+                    promise.reject(thrownError);
+                }
+            };
+        };
+
+
+    /**
+     * @class MetaphorJs.lib.Promise
+     */
+
+    /**
+     * @constructor 
+     * @method Promise
+     * @param {Function} fn {
+     *  @description Constructor accepts two parameters: resolve and reject functions.
+     *  @param {function} resolve {
+     *      @param {*} value
+     *  }
+     *  @param {function} reject {
+     *      @param {*} reason
+     *  }
+     * }
+     * @param {Object} context
+     * @returns {Promise}
+     */
+
+    /**
+     * @constructor 
+     * @method Promise 
+     * @param {Thenable} thenable
+     * @returns {Promise}
+     */
+
+    /**
+     * @constructor 
+     * @method Promise 
+     * @param {*} value Value to resolve promise with
+     * @returns {Promise}
+     */
+
+    /**
+     * @constructor 
+     * @method Promise 
+     * @returns {Promise}
+     */
+    var Promise = function(fn, context) {
+
+        if (fn instanceof Promise) {
+            return fn;
+        }
+
+        if (!(this instanceof Promise)) {
+            return new Promise(fn, context);
+        }
+
+        var self = this,
+            then;
+
+        self._fulfills   = [];
+        self._rejects    = [];
+        self._dones      = [];
+        self._fails      = [];
+
+        if (arguments.length > 0) {
+
+            if (then = isThenable(fn)) {
+                if (fn instanceof Promise) {
+                    fn.then(
+                        bind(self.resolve, self),
+                        bind(self.reject, self));
+                }
+                else {
+                    (new Promise(then, fn)).then(
+                        bind(self.resolve, self),
+                        bind(self.reject, self));
+                }
+            }
+            else if (isFunction(fn)) {
+                try {
+                    fn.call(context,
+                            bind(self.resolve, self),
+                            bind(self.reject, self));
+                }
+                catch (thrownError) {
+                    self.reject(thrownError);
+                }
+            }
+            else {
+                self.resolve(fn);
+            }
+        }
+    };
+
+    extend(Promise.prototype, {
+
+        _state: PENDING,
+
+        _fulfills: null,
+        _rejects: null,
+        _dones: null,
+        _fails: null,
+
+        _wait: 0,
+
+        _value: null,
+        _reason: null,
+
+        _triggered: false,
+
+        /**
+         * Is promise still pending (as opposed to resolved or rejected)
+         * @method
+         * @returns {boolean}
+         */
+        isPending: function() {
+            return this._state === PENDING;
+        },
+
+        /**
+         * Is the promise fulfilled. Same as isResolved()
+         * @method
+         * @returns {boolean}
+         */
+        isFulfilled: function() {
+            return this._state === FULFILLED;
+        },
+
+        /**
+         * Is the promise resolved. Same as isFulfilled()
+         * @method
+         * @returns {boolean}
+         */
+        isResolved: function() {
+            return this._state === FULFILLED;
+        },
+
+        /**
+         * Is the promise rejected
+         * @method
+         * @returns {boolean}
+         */
+        isRejected: function() {
+            return this._state === REJECTED;
+        },
+
+        /**
+         * Did someone subscribed to this promise
+         * @method
+         * @returns {boolean}
+         */
+        hasListeners: function() {
+            var self = this,
+                ls  = [self._fulfills, self._rejects, self._dones, self._fails],
+                i, l;
+
+            for (i = 0, l = ls.length; i < l; i++) {
+                if (ls[i] && ls[i].length) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+
+        _cleanup: function() {
+            var self    = this;
+
+            self._fulfills = null;
+            self._rejects = null;
+            self._dones = null;
+            self._fails = null;
+        },
+
+        _processValue: function(value, cb, allowThenanle) {
+
+            var self    = this,
+                then;
+
+            if (self._state !== PENDING) {
+                return;
+            }
+
+            if (value === self) {
+                self._doReject(new TypeError("cannot resolve promise with itself"));
+                return;
+            }
+
+            if (allowThenanle) {
+                try {
+                    if (then = isThenable(value)) {
+                        if (value instanceof Promise) {
+                            value.then(
+                                bind(self._processResolveValue, self),
+                                bind(self._processRejectReason, self)
+                            );
+                        }
+                        else {
+                            (new Promise(then, value)).then(
+                                bind(self._processResolveValue, self),
+                                bind(self._processRejectReason, self)
+                            );
+                        }
+                        return;
+                    }
+                }
+                catch (thrownError) {
+                    if (self._state === PENDING) {
+                        self._doReject(thrownError);
+                    }
+                    return;
+                }
+            }
+
+            cb.call(self, value);
+        },
+
+
+        _callResolveHandlers: function() {
+
+            var self    = this;
+
+            self._done();
+
+            var cbs  = self._fulfills,
+                cb;
+
+            while (cb = cbs.shift()) {
+                next(cb[0], cb[1], [self._value]);
+            }
+
+            self._cleanup();
+        },
+
+
+        _doResolve: function(value) {
+            var self    = this;
+
+            self._value = value;
+            self._state = FULFILLED;
+
+            if (self._wait === 0) {
+                self._callResolveHandlers();
+            }
+        },
+
+        _processResolveValue: function(value) {
+            this._processValue(value, this._doResolve, true);
+        },
+
+        /**
+         * Resolve the promise
+         * @method
+         * @param {*} value
+         */
+        resolve: function(value) {
+
+            var self    = this;
+
+            if (self._triggered) {
+                return self;
+            }
+
+            self._triggered = true;
+            self._processResolveValue(value);
+
+            return self;
+        },
+
+
+        _callRejectHandlers: function() {
+
+            var self    = this;
+
+            self._fail();
+
+            var cbs  = self._rejects,
+                cb;
+
+            while (cb = cbs.shift()) {
+                next(cb[0], cb[1], [self._reason]);
+            }
+
+            self._cleanup();
+        },
+
+        _doReject: function(reason) {
+
+            var self        = this;
+
+            self._state     = REJECTED;
+            self._reason    = reason;
+
+            if (self._wait === 0) {
+                self._callRejectHandlers();
+            }
+        },
+
+
+        _processRejectReason: function(reason) {
+            this._processValue(reason, this._doReject, false);
+        },
+
+        /**
+         * Reject the promise
+         * @method
+         * @param {*} reason
+         */
+        reject: function(reason) {
+
+            var self    = this;
+
+            if (self._triggered) {
+                return self;
+            }
+
+            self._triggered = true;
+
+            self._processRejectReason(reason);
+
+            return self;
+        },
+
+        /**
+         * @method
+         * @async
+         * @param {Function} resolve -- called when this promise is resolved; 
+         *  returns new resolve value or promise
+         * @param {Function} reject -- called when this promise is rejected; 
+         *  returns new reject reason
+         * @param {object} context -- resolve's and reject's functions "this" object
+         * @returns {Promise} new promise
+         */
+        then: function(resolve, reject, context) {
+
+            var self            = this,
+                promise         = new Promise,
+                state           = self._state;
+
+            if (context) {
+                if (resolve) {
+                    resolve = bind(resolve, context);
+                }
+                if (reject) {
+                    reject = bind(reject, context);
+                }
+            }
+
+            if (state === PENDING || self._wait !== 0) {
+
+                if (resolve && isFunction(resolve)) {
+                    self._fulfills.push([resolveWrapper(resolve, promise), null]);
+                }
+                else {
+                    self._fulfills.push([promise.resolve, promise])
+                }
+
+                if (reject && isFunction(reject)) {
+                    self._rejects.push([resolveWrapper(reject, promise), null]);
+                }
+                else {
+                    self._rejects.push([promise.reject, promise]);
+                }
+            }
+            else if (state === FULFILLED) {
+
+                if (resolve && isFunction(resolve)) {
+                    next(resolveWrapper(resolve, promise), null, [self._value]);
+                }
+                else {
+                    promise.resolve(self._value);
+                }
+            }
+            else if (state === REJECTED) {
+                if (reject && isFunction(reject)) {
+                    next(resolveWrapper(reject, promise), null, [self._reason]);
+                }
+                else {
+                    promise.reject(self._reason);
+                }
+            }
+
+            return promise;
+        },
+
+        /**
+         * Add reject listener.
+         * @method
+         * @async
+         * @param {Function} reject -- same as then(null, reject)
+         * @returns {Promise} new promise
+         */
+        "catch": function(reject) {
+            return this.then(null, reject);
+        },
+
+        _done: function() {
+
+            var self    = this,
+                cbs     = self._dones,
+                cb;
+
+            while (cb = cbs.shift()) {
+                try {
+                    cb[0].call(cb[1] || null, self._value);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
+            }
+        },
+
+        /**
+         * Add resolve listener
+         * @method
+         * @sync
+         * @param {Function} fn -- function to call when promise is resolved
+         * @param {Object} context -- function's "this" object
+         * @returns {Promise} same promise
+         */
+        done: function(fn, context) {
+            var self    = this,
+                state   = self._state;
+
+            if (state === FULFILLED && self._wait === 0) {
+                try {
+                    fn.call(context || null, self._value);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
+            }
+            else if (state === PENDING) {
+                self._dones.push([fn, context]);
+            }
+
+            return self;
+        },
+
+        _fail: function() {
+
+            var self    = this,
+                cbs     = self._fails,
+                cb;
+
+            while (cb = cbs.shift()) {
+                try {
+                    cb[0].call(cb[1] || null, self._reason);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
+            }
+        },
+
+        /**
+         * Add reject listener
+         * @method
+         * @sync
+         * @param {Function} fn -- function to call when promise is rejected.
+         * @param {Object} context -- function's "this" object
+         * @returns {Promise} same promise
+         */
+        fail: function(fn, context) {
+
+            var self    = this,
+                state   = self._state;
+
+            if (state === REJECTED && self._wait === 0) {
+                try {
+                    fn.call(context || null, self._reason);
+                }
+                catch (thrown) {
+                    error(thrown);
+                }
+            }
+            else if (state === PENDING) {
+                self._fails.push([fn, context]);
+            }
+
+            return self;
+        },
+
+        /**
+         * Add both resolve and reject listener
+         * @method
+         * @sync
+         * @param {Function} fn -- function to call when promise resolved or rejected
+         * @param {Object} context -- function's "this" object
+         * @return {Promise} same promise
+         */
+        always: function(fn, context) {
+            this.done(fn, context);
+            this.fail(fn, context);
+            return this;
+        },
+
+        /**
+         * Get a thenable object
+         * @method
+         * @returns {object} then: function, done: function, fail: function, always: function
+         */
+        promise: function() {
+            var self = this;
+            return {
+                then: bind(self.then, self),
+                done: bind(self.done, self),
+                fail: bind(self.fail, self),
+                always: bind(self.always, self),
+                "catch": bind(self['catch'], self)
+            };
+        },
+
+        /**
+         * Resolve this promise after <code>value</code> promise is resolved.
+         * @method
+         * @param {*|Promise} value
+         * @returns {Promise} self
+         */
+        after: function(value) {
+
+            var self = this;
+
+            if (isThenable(value)) {
+
+                self._wait++;
+
+                var done = function() {
+                    self._wait--;
+                    if (self._wait === 0 && self._state !== PENDING) {
+                        self._state === FULFILLED ?
+                            self._callResolveHandlers() :
+                            self._callRejectHandlers();
+                    }
+                };
+
+                if (isFunction(value.done)) {
+                    value.done(done);
+                }
+                else {
+                    value.then(done);
+                }
+            }
+
+            return self;
+        }
+    }, true, false);
+
+
+    /**
+     * Call function <code>fn</code> with given args in given context
+     * and use its return value as resolve value for a new promise.
+     * Then return this promise.
+     * @static
+     * @method
+     * @param {function} fn
+     * @param {object} context
+     * @param {[]} args
+     * @returns {Promise}
+     */
+    Promise.fcall = function(fn, context, args) {
+        return Promise.resolve(fn.apply(context, args || []));
+    };
+
+    /**
+     * Create new promise and resolve it with given value
+     * @static
+     * @method
+     * @param {*} value
+     * @returns {Promise}
+     */
+    Promise.resolve = function(value) {
+        var p = new Promise;
+        p.resolve(value);
+        return p;
+    };
+
+
+    /**
+     * Create new promise and reject it with given reason
+     * @static
+     * @method
+     * @param {*} reason
+     * @returns {Promise}
+     */
+    Promise.reject = function(reason) {
+        var p = new Promise;
+        p.reject(reason);
+        return p;
+    };
+
+
+    /**
+     * Take a list of promises or values and once all promises are resolved,
+     * create a new promise and resolve it with a list of final values.<br>
+     * If one of the promises is rejected, it will reject the returned promise.
+     * @static
+     * @method
+     * @param {[]} promises -- array of promises or resolve values
+     * @returns {Promise}
+     */
+    Promise.all = function(promises) {
+
+        if (!promises.length) {
+            return Promise.resolve(null);
+        }
+
+        var p       = new Promise,
+            len     = promises.length,
+            values  = new Array(len),
+            cnt     = len,
+            i,
+            item,
+            done    = function(value, inx) {
+                values[inx] = value;
+                cnt--;
+
+                if (cnt === 0) {
+                    p.resolve(values);
+                }
+            };
+
+        for (i = 0; i < len; i++) {
+
+            (function(inx){
+                item = promises[i];
+
+                if (item instanceof Promise) {
+                    item.done(function(value){
+                        done(value, inx);
+                    })
+                        .fail(p.reject, p);
+                }
+                else if (isThenable(item) || isFunction(item)) {
+                    (new Promise(item))
+                        .done(function(value){
+                            done(value, inx);
+                        })
+                        .fail(p.reject, p);
+                }
+                else {
+                    done(item, inx);
+                }
+            })(i);
+        }
+
+        return p;
+    };
+
+    /**
+     * Same as <code>all()</code> but it treats arguments as list of values.
+     * @static
+     * @method
+     * @param {Promise|*} promise1
+     * @param {Promise|*} promise2
+     * @param {Promise|*} promiseN
+     * @returns {Promise}
+     */
+    Promise.when = function() {
+        return Promise.all(arguments);
+    };
+
+    /**
+     * Same as <code>all()</code> but the resulting promise
+     * will not be rejected if ones of the passed promises is rejected.
+     * @static
+     * @method
+     * @param {[]} promises -- array of promises or resolve values
+     * @returns {Promise}
+     */
+    Promise.allResolved = function(promises) {
+
+        if (!promises.length) {
+            return Promise.resolve(null);
+        }
+
+        var p       = new Promise,
+            len     = promises.length,
+            values  = [],
+            cnt     = len,
+            i,
+            item,
+            settle  = function(value) {
+                values.push(value);
+                proceed();
+            },
+            proceed = function() {
+                cnt--;
+                if (cnt === 0) {
+                    p.resolve(values);
+                }
+            };
+
+        for (i = 0; i < len; i++) {
+            item = promises[i];
+
+            if (item instanceof Promise) {
+                item.done(settle).fail(proceed);
+            }
+            else if (isThenable(item) || isFunction(item)) {
+                (new Promise(item)).done(settle).fail(proceed);
+            }
+            else {
+                settle(item);
+            }
+        }
+
+        return p;
+    };
+
+    /**
+     * Given the list of promises or values it will return a new promise
+     * and resolve it with the first resolved value.
+     * @static
+     * @method
+     * @param {[]} promises -- array of promises or resolve values
+     * @returns {Promise}
+     */
+    Promise.race = function(promises) {
+
+        if (!promises.length) {
+            return Promise.resolve(null);
+        }
+
+        var p   = new Promise,
+            len = promises.length,
+            i,
+            item;
+
+        for (i = 0; i < len; i++) {
+            item = promises[i];
+
+            if (item instanceof Promise) {
+                item.done(p.resolve, p).fail(p.reject, p);
+            }
+            else if (isThenable(item) || isFunction(item)) {
+                (new Promise(item)).done(p.resolve, p).fail(p.reject, p);
+            }
+            else {
+                p.resolve(item);
+            }
+
+            if (!p.isPending()) {
+                break;
+            }
+        }
+
+        return p;
+    };
+
+    /**
+     * Takes a list of async functions and executes 
+     * them in given order consequentially
+     * @static
+     * @method
+     * @param {[]} functions -- array of promises or resolve values or functions
+     * @returns {Promise}
+     */
+    Promise.waterfall = function(functions) {
+
+        if (!functions.length) {
+            return Promise.resolve(null);
+        }
+
+        var first   = functions.shift(),
+            promise = isFunction(first) ? Promise.fcall(first) : Promise.resolve(fn),
+            fn;
+
+        while (fn = functions.shift()) {
+            if (isThenable(fn)) {
+                promise = promise.then(function(fn){
+                    return function(){
+                        return fn;
+                    };
+                }(fn));
+            }
+            else if (isFunction(fn)) {
+                promise = promise.then(fn);
+            }
+            else {
+                promise.resolve(fn);
+            }
+        }
+
+        return promise;
+    };
+
+    /**
+     * Works like Array.forEach but it expects passed function to 
+     * return a Promise.
+     * @static
+     * @method 
+     * @param {array} items 
+     * @param {function} fn {
+     *  @param {*} value
+     *  @param {int} index
+     *  @returns {Promise|*}
+     * }
+     * @param {object} context 
+     * @param {boolean} allResolved if true, the resulting promise
+     * will fail if one of the returned promises fails.
+     */
+    Promise.forEach = function(items, fn, context, allResolved) {
+
+        var left = items.slice(),
+            p = new Promise,
+            values = [],
+            i = 0;
+
+        var next = function() {
+
+            if (!left.length) {
+                p.resolve(values);
+                return;
+            }
+
+            var item = left.shift(),
+                index = i;
+
+            i++;
+
+            Promise.fcall(fn, context, [item, index])
+                .done(function(result){
+                    values.push(result);
+                    next();
+                })
+                .fail(function(reason){
+                    if (allResolved) {
+                        p.reject(reason);
+                    }
+                    else {
+                        values.push(null);
+                        next();
+                    }
+                });
+        };
+
+        next();
+
+        return p;
+    };
+
+    /**
+     * Returns a promise with additional <code>countdown</code>
+     * method. Call this method <code>cnt</code> times and
+     * the promise will get resolved.
+     * @static
+     * @method
+     * @param {int} cnt 
+     * @returns {Promise}
+     */
+    Promise.counter = function(cnt) {
+
+        var promise     = new Promise;
+
+        promise.countdown = function() {
+            cnt--;
+            if (cnt === 0) {
+                promise.resolve();
+            }
+        };
+
+        return promise;
+    };
+
+    return Promise;
+}();
+
+
+
+
+
+
+/**
+ * @mixin MetaphorJs.mixin.Promise
+ */
+var mixin_Promise = MetaphorJs.mixin.Promise = {
+
+    $$promise: null,
+
+    $beforeInit: function() {
+        this.$$promise = new lib_Promise;
+    },
+
+    /**
+     * @method
+     * @async
+     * @param {Function} resolve -- called when this promise is resolved; 
+     *  returns new resolve value or promise
+     * @param {Function} reject -- called when this promise is rejected; 
+     *  returns new reject reason
+     * @param {object} context -- resolve's and reject's functions "this" object
+     * @returns {Promise} new promise
+     */
+    then: function() {
+        return this.$$promise.then.apply(this.$$promise, arguments);
+    },
+
+    /**
+     * Add resolve listener
+     * @method
+     * @sync
+     * @param {Function} fn -- function to call when promise is resolved
+     * @param {Object} context -- function's "this" object
+     * @returns {Promise} same promise
+     */
+    done: function() {
+        this.$$promise.done.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    /**
+     * Add both resolve and reject listener
+     * @method
+     * @sync
+     * @param {Function} fn -- function to call when promise resolved or rejected
+     * @param {Object} context -- function's "this" object
+     * @return {Promise} same promise
+     */
+    always: function() {
+        this.$$promise.always.apply(this.$$promise, arguments);
+        return this;
+    },
+
+    /**
+     * Add reject listener
+     * @method
+     * @sync
+     * @param {Function} fn -- function to call when promise is rejected.
+     * @param {Object} context -- function's "this" object
+     * @returns {Promise} same promise
+     */
+    fail: function() {
+        this.$$promise.fail.apply(this.$$promise, arguments);
+        return this;
+    }
+
+};
+
+
+
+
+var lib_ObservableEvent = MetaphorJs.lib.ObservableEvent = (function(){
+
+/**
+ * This class is private - you can't create an event other than via Observable.
+ * See {@link class:Observable} reference.
+ * @class MetaphorJs.lib.ObservableEvent
+ * @private
+ */
+var ObservableEvent = function(name, options) {
+
+    var self    = this;
+
+    self.name           = name;
+    self.listeners      = [];
+    self.map            = {};
+    self.hash           = nextUid();
+    self.uni            = '$$' + name + '_' + self.hash;
+    self.suspended      = false;
+    self.lid            = 0;
+
+    if (typeof options === "object" && options !== null) {
+        extend(self, options, true, false);
+    }
+    else {
+        self.returnResult = options;
+    }
+};
+
+
+extend(ObservableEvent.prototype, {
+
+    name: null,
+    listeners: null,
+    map: null,
+    hash: null,
+    uni: null,
+    suspended: false,
+    lid: null,
+    returnResult: null,
+    autoTrigger: null,
+    lastTrigger: null,
+    triggerFilter: null,
+    filterContext: null,
+    expectPromises: false,
+    resolvePromises: false,
+
+    /**
+     * Get event name
+     * @method
+     * @returns {string}
+     */
+    getName: function() {
+        return this.name;
+    },
+
+    /**
+     * @method
+     */
+    $destroy: function() {
+        var self        = this,
+            k;
+
+        for (k in self) {
+            self[k] = null;
+        }
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    on: function(fn, context, options) {
+
+        if (!fn) {
+            return null;
+        }
+
+        context     = context || null;
+        options     = options || {};
+
+        var self    = this,
+            uni     = self.uni,
+            id      = fn[uni] || ++self.lid,
+            ctxUni  = uni + "_" + id,
+            first   = options.first || false;
+
+        if (fn[uni] && (!context || context[ctxUni]) && !options.allowDupes) {
+            return null;
+        }
+        if (!fn[uni]) {
+            fn[uni]  = id;
+        }
+        if (context && !context[ctxUni]) {
+            context[ctxUni] = true;
+        }
+
+        var e = {
+            fn:         fn,
+            context:    context,
+            id:         id,
+            async:      false,
+            called:     0, // how many times the function was triggered
+            limit:      0, // how many times the function is allowed to trigger
+            start:      1, // from which attempt it is allowed to trigger the function
+            count:      0, // how many attempts to trigger the function was made
+            append:     null, // append parameters
+            prepend:    null // prepend parameters
+        };
+
+        extend(e, options, true, false);
+
+        if (e.async === true) {
+            e.async = 1;
+        }
+
+        if (first) {
+            self.listeners.unshift(e);
+        }
+        else {
+            self.listeners.push(e);
+        }
+
+        self.map[id] = e;
+
+        if (self.autoTrigger && self.lastTrigger && !self.suspended) {
+            var prevFilter = self.triggerFilter;
+            self.triggerFilter = function(l){
+                if (l.id === id) {
+                    return prevFilter ? prevFilter(l) !== false : true;
+                }
+                return false;
+            };
+            self.trigger.apply(self, self.lastTrigger);
+            self.triggerFilter = prevFilter;
+        }
+
+        return id;
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Function's "this" object
+     * @param {object} options See {@link class:Observable.on}
+     */
+    once: function(fn, context, options) {
+
+        options = options || {};
+        options.limit = 1;
+
+        return this.on(fn, context, options);
+    },
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     */
+    un: function(fn, context) {
+
+        var self        = this,
+            inx         = -1,
+            uni         = self.uni,
+            listeners   = self.listeners,
+            id;
+
+        if (fn == parseInt(fn)) {
+            id      = parseInt(fn);
+        }
+        else {
+            id      = fn[uni];
+        }
+
+        if (!id) {
+            return false;
+        }
+
+        var ctxUni  = uni + "_" + id;
+        context     = context || null;
+
+        for (var i = 0, len = listeners.length; i < len; i++) {
+            if (listeners[i].id === id && 
+                listeners[i].context === context) {
+                inx = i;
+                delete fn[uni];
+                if (context) {
+                    delete context[ctxUni];
+                }
+                break;
+            }
+        }
+
+        if (inx === -1) {
+            return false;
+        }
+
+        listeners.splice(inx, 1);
+        delete self.map[id];
+        return true;
+    },
+
+    /**
+     * @method hasListener
+     * @return bool
+     */
+
+    /**
+     * @method
+     * @param {function} fn Callback function { @required }
+     * @param {object} context Callback context
+     * @return boolean
+     */
+    hasListener: function(fn, context) {
+
+        var self    = this,
+            listeners   = self.listeners,
+            id;
+
+        if (fn) {
+
+            if (!isFunction(fn)) {
+                id  = parseInt(fn);
+            }
+            else {
+                id  = fn[self.uni];
+            }
+
+            if (!id) {
+                return false;
+            }
+
+            var ctxUni  = self.uni + "_" + id;
+
+            for (var i = 0, len = listeners.length; i < len; i++) {
+                if (listeners[i].id === id) {
+                    if (!context || context[ctxUni]) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        else {
+            return listeners.length > 0;
+        }
+    },
+
+
+    /**
+     * @method
+     */
+    removeAllListeners: function() {
+        var self    = this,
+            listeners = self.listeners,
+            uni     = self.uni,
+            i, len, ctxUni;
+
+        for (i = 0, len = listeners.length; i < len; i++) {
+            ctxUni = uni +"_"+ listeners[i].fn[uni];
+            delete listeners[i].fn[uni];
+            if (listeners[i].context) {
+                delete listeners[i].context[ctxUni];
+            }
+        }
+        self.listeners   = [];
+        self.map         = {};
+    },
+
+    /**
+     * @method
+     */
+    suspend: function() {
+        this.suspended = true;
+    },
+
+    /**
+     * @method
+     */
+    resume: function() {
+        this.suspended = false;
+    },
+
+
+    _prepareArgs: function(l, triggerArgs) {
+        var args;
+
+        if (l.append || l.prepend) {
+            args    = triggerArgs.slice();
+            if (l.prepend) {
+                args    = l.prepend.concat(args);
+            }
+            if (l.append) {
+                args    = args.concat(l.append);
+            }
+        }
+        else {
+            args = triggerArgs;
+        }
+
+        return args;
+    },
+
+    /**
+     * @method
+     * @return {*}
+     */
+    trigger: function() {
+
+        var self            = this,
+            listeners       = self.listeners,
+            rr              = self.returnResult,
+            filter          = self.triggerFilter,
+            filterContext   = self.filterContext,
+            expectPromises  = self.expectPromises,
+            keepPromiseOrder= self.keepPromiseOrder,
+            results         = [],
+            origArgs        = toArray(arguments),
+            prevPromise,
+            resPromise,
+            args, 
+            resolver;
+
+        if (self.suspended) {
+            return null;
+        }
+
+        if (self.autoTrigger) {
+            self.lastTrigger = origArgs.slice();
+        }
+
+        if (listeners.length === 0) {
+            return null;
+        }
+
+        var ret     = rr === "all" || rr === "concat" ?
+                        [] : 
+                        (rr === "merge" ? {} : null),
+            q, l,
+            res;
+
+        if (rr === "first") {
+            q = [listeners[0]];
+        }
+        else {
+            // create a snapshot of listeners list
+            q = listeners.slice();
+        }
+
+        if (expectPromises && rr === "last") {
+            keepPromiseOrder = true;
+        }
+
+        // now if during triggering someone unsubscribes
+        // we won't skip any listener due to shifted
+        // index
+        while (l = q.shift()) {
+
+            // listener may already have unsubscribed
+            if (!l || !self.map[l.id]) {
+                continue;
+            }
+
+            args = self._prepareArgs(l, origArgs);
+
+            if (filter && filter.call(filterContext, l, args, self) === false) {
+                continue;
+            }
+
+            if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
+                continue;
+            }
+
+            l.count++;
+
+            if (l.count < l.start) {
+                continue;
+            }
+
+            if (l.async && !expectPromises) {
+                res = null;
+                async(l.fn, l.context, args, l.async);
+            }
+            else {
+                if (expectPromises) {
+                    resolver = function(l, rr, args){
+                        return function(value) {
+
+                            if (rr === "pipe") {
+                                args[0] = value;
+                                args = self._prepareArgs(l, args);
+                            }
+                            
+                            return l.fn.apply(l.context, args);
+                        }
+                    }(l, rr, origArgs.slice());
+
+                    if (prevPromise) {
+                        res = prevPromise.then(resolver);
+                    }
+                    else {
+                        res = l.fn.apply(l.context, args);
+                    }
+
+                    res.catch(error);
+                }
+                else {
+                    res = l.fn.apply(l.context, args);
+                }
+            }
+
+            l.called++;
+
+            if (l.called === l.limit) {
+                self.un(l.id);
+            }
+
+            // This rule is valid in all cases sync and async.
+            // It either returns first value or first promise.
+            if (rr === "first") {
+                return res;
+            }
+        
+            // Promise branch
+            if (expectPromises) {
+            
+                // we collect all results for further processing/resolving
+                results.push(res);
+
+                if ((rr === "pipe" || keepPromiseOrder) && res) {
+                    prevPromise = res;
+                }
+            }
+            else {
+                if (rr !== null) {
+                    if (rr === "all") {
+                        ret.push(res);
+                    }
+                    else if (rr === "concat" && res) {
+                        ret = ret.concat(res);
+                    }
+                    else if (rr === "merge") {
+                        extend(ret, res, true, false);
+                    }
+                    else if (rr === "nonempty" && res) {
+                        return res;
+                    }
+                    else if (rr === "pipe") {
+                        ret = res;
+                        origArgs[0] = res;
+                    }
+                    else if (rr === "last") {
+                        ret = res;
+                    }
+                    else if (rr === false && res === false) {
+                        return false;
+                    }
+                    else if (rr === true && res === true) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        if (expectPromises) {
+            if (rr === "pipe") {
+                return prevPromise;
+            }
+            resPromise = Promise.all(results);
+            if (self.resolvePromises && rr !== null && rr !== "all") {
+                resPromise = resPromise.then(function(values){
+                    var i, l = values.length, res;
+                    for(i = 0; i < l; i++) {
+                        res = values[i];
+                        if (rr === "concat" && res) {
+                            ret = ret.concat(res);
+                        }
+                        else if (rr === "merge") {
+                            extend(ret, res, true, false);
+                        }
+                        else if (rr === "nonempty" && res) {
+                            return res;
+                        }
+                        else if (rr === "last") {
+                            ret = res;
+                        }
+                        else if (rr === false && res === false) {
+                            return false;
+                        }
+                        else if (rr === true && res === true) {
+                            return true;
+                        }
+                    }
+                    return ret;
+                });
+            }
+            return resPromise;
+        }
+        else return ret;
+    }
+}, true, false);
+
+return ObservableEvent;
+}());
+
+
+    
+
+
+var lib_Observable = MetaphorJs.lib.Observable = (function(){
+
+/**
+ * @description A javascript event system implementing multiple patterns: 
+ * observable, collector and pipe.
+ * @description Observable:
+ * @code src-docs/examples/observable.js
+ *
+ * @description Collector:
+ * @code src-docs/examples/collector.js
+ * 
+ * @description Pipe:
+ * @code src-docs/examples/pipe.js
+ *
+ * @class MetaphorJs.lib.Observable
+ * @author Ivan Kuindzhi
+ */
+var Observable = function() {
+
+    this.events = {};
+
+};
+
+
+extend(Observable.prototype, {
+
+
+    /**
+     * @method createEvent
+     * @param {string} name {
+     *      Event name
+     *      @required
+     * }
+     * @param {object|string|bool} options {
+     *  Options object or returnResult value. All options are optional.
+     * 
+     *  @type {string|bool} returnResult {
+     *   false -- return first 'false' result and stop calling listeners after that<br>
+     *   true -- return first 'true' result and stop calling listeners after that<br>
+     *   "all" -- return all results as array<br>
+     *   "concat" -- merge all results into one array (each result must be array)<br>
+     *   "merge" -- merge all results into one object (each result much be object)<br>
+     *   "pipe" -- pass return value of previous listener to the next listener.
+     *             Only first trigger parameter is being replaced with return value,
+     *             others stay as is.<br>
+     *   "first" -- return result of the first handler (next listener will not be called)<br>
+     *   "nonempty" -- return first nonempty result<br>
+     *   "last" -- return result of the last handler (all listeners will be called)<br>
+     *  }
+     *  @type {bool} autoTrigger {
+     *      once triggered, all future subscribers will be automatically called
+     *      with last trigger params
+     *      @code src-docs/examples/autoTrigger.js
+     * }
+     *  @type {function} triggerFilter {
+     *      This function will be called each time event is triggered. 
+     *      Return false to skip listener.
+     *       @code src-docs/examples/triggerFilter.js
+     *       @param {object} listener This object contains all information about the listener, including
+     *           all data you provided in options while subscribing to the event.
+     *       @param {[]} arguments
+     *       @return {bool}
+     *  }
+     *  @type {object} filterContext triggerFilter's context
+     *  @type {bool} expectPromises {   
+     *      Expect listeners to return Promises. If <code>returnResult</code> is set,
+     *      promises will be treated as return values unless <code>resolvePromises</code>
+     *      is set.
+     *  }
+     *  @type {bool} resolvePromises {
+     *      In pair with <code>expectPromises</code> and <code>returnResult</code>
+     *      this option makes trigger function wait for promises to resolve.
+     *      All or just one depends on returnResult mode. "pipe" mode 
+     *      makes promises resolve consequentially passing resolved value
+     *      to the next promise.
+     *  }
+     * }
+     * @returns {lib_ObservableEvent}
+     */
+    createEvent: function(name, options) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            events[name] = new lib_ObservableEvent(name, options);
+        }
+        return events[name];
+    },
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name
+    * @return {lib_ObservableEvent|undefined}
+    */
+    getEvent: function(name) {
+        name = name.toLowerCase();
+        return this.events[name];
+    },
+
+    /**
+    * Subscribe to an event or register collector function.
+    * @method
+    * @access public
+    * @param {string} name {
+    *       Event name. Use '*' to subscribe to all events.
+    *       @required
+    * }
+    * @param {function} fn {
+    *       Callback function
+    *       @required
+    * }
+    * @param {object} context "this" object for the callback function
+    * @param {object} options {
+    *       You can pass any key-value pairs in this object. All of them will be passed 
+    *       to triggerFilter (if you're using one).
+    *       @type {bool} first {
+    *           True to prepend to the list of handlers
+    *           @default false
+    *       }
+    *       @type {number} limit {
+    *           Call handler this number of times; 0 for unlimited
+    *           @default 0
+    *       }
+    *       @type {number} start {
+    *           Start calling handler after this number of calls. Starts from 1
+    *           @default 1
+    *       }
+        *      @type {[]} append Append parameters
+        *      @type {[]} prepend Prepend parameters
+        *      @type {bool} allowDupes allow the same handler twice
+        *      @type {bool|int} async run event asynchronously. If event was
+        *                      created with <code>expectPromises: true</code>, 
+        *                      this option is ignored.
+    * }
+    */
+    on: function(name, fn, context, options) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            events[name] = new lib_ObservableEvent(name);
+        }
+        return events[name].on(fn, context, options);
+    },
+
+    /**
+    * Same as {@link class:Observable.on}, but options.limit is forcefully set to 1.
+    * @method
+    * @access public
+    */
+    once: function(name, fn, context, options) {
+        options     = options || {};
+        options.limit = 1;
+        return this.on(name, fn, context, options);
+    },
+
+    /**
+    * Unsubscribe from an event
+    * @method
+    * @access public
+    * @param {string} name Event name
+    * @param {function} fn Event handler
+    * @param {object} context If you called on() with context you must 
+    *                         call un() with the same context
+    */
+    un: function(name, fn, context) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].un(fn, context);
+    },
+
+    /**
+     * Relay all events of <code>eventSource</code> through this observable.
+     * @method
+     * @access public
+     * @code src-docs/examples/relay.js
+     * @param {object} eventSource
+     * @param {string} eventName
+     */
+    relayEvent: function(eventSource, eventName) {
+        eventSource.on(eventName, this.trigger, this, {
+            prepend: eventName === "*" ? null : [eventName]
+        });
+    },
+
+    /**
+     * Stop relaying events of <code>eventSource</code>
+     * @method
+     * @access public
+     * @param {object} eventSource
+     * @param {string} eventName
+     */
+    unrelayEvent: function(eventSource, eventName) {
+        eventSource.un(eventName, this.trigger, this);
+    },
+
+    /**
+     * @method hasListener
+     * @access public
+     * @return bool
+     */
+
+    /**
+    * @method hasListener
+    * @access public
+    * @param {string} name Event name { @required }
+    * @return bool
+    */
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @param {function} fn Callback function { @required }
+    * @param {object} context Function's "this" object
+    * @return bool
+    */
+    hasListener: function(name, fn, context) {
+        var events = this.events;
+
+        if (name) {
+            name = name.toLowerCase();
+            if (!events[name]) {
+                return false;
+            }
+            return events[name].hasListener(fn, context);
+        }
+        else {
+            for (name in events) {
+                if (events[name].hasListener()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    },
+
+    /**
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @return bool
+    */
+    hasEvent: function(name) {
+        return !!this.events[name];
+    },
+
+
+    /**
+    * Remove all listeners from all events
+    * @method removeAllListeners
+    * @access public
+    */
+
+    /**
+    * Remove all listeners from specific event
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    */
+    removeAllListeners: function(name) {
+        var events  = this.events;
+        if (name) {
+            if (!events[name]) {
+                return;
+            }
+            events[name].removeAllListeners();
+        }
+        else {
+            for (name in events) {
+                events[name].removeAllListeners();
+            }
+        }
+    },
+
+    /**
+    * Trigger an event -- call all listeners. Also triggers '*' event.
+    * @method
+    * @access public
+    * @param {string} name Event name { @required }
+    * @param {*} ... As many other params as needed
+    * @return mixed
+    */
+    trigger: function() {
+
+        var name = arguments[0],
+            events  = this.events,
+            e,
+            res = null;
+
+        name = name.toLowerCase();
+
+        if (events[name]) {
+            e = events[name];
+            res = e.trigger.apply(e, toArray(arguments).slice(1));
+        }
+
+        // trigger * event with current event name
+        // as first argument
+        if (e = events["*"]) {
+            e.trigger.apply(e, arguments);
+        }
+        
+        return res;
+    },
+
+    /**
+    * Suspend an event. Suspended event will not call any listeners on trigger().
+    * @method
+    * @access public
+    * @param {string} name Event name
+    */
+    suspendEvent: function(name) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].suspend();
+    },
+
+    /**
+    * @method
+    * @access public
+    */
+    suspendAllEvents: function() {
+        var events  = this.events;
+        for (var name in events) {
+            events[name].suspend();
+        }
+    },
+
+    /**
+    * Resume suspended event.
+    * @method
+    * @access public
+    * @param {string} name Event name
+    */
+    resumeEvent: function(name) {
+        name = name.toLowerCase();
+        var events  = this.events;
+        if (!events[name]) {
+            return;
+        }
+        events[name].resume();
+    },
+
+    /**
+    * @method
+    * @access public
+    */
+    resumeAllEvents: function() {
+        var events  = this.events;
+        for (var name in events) {
+            events[name].resume();
+        }
+    },
+
+    /**
+     * @method
+     * @access public
+     * @param {string} name Event name
+     */
+    destroyEvent: function(name) {
+        var events  = this.events;
+        if (events[name]) {
+            events[name].removeAllListeners();
+            events[name].$destroy();
+            delete events[name];
+        }
+    },
+
+
+    /**
+    * Destroy observable
+    * @method
+    * @md-not-inheritable
+    * @access public
+    */
+    $destroy: function() {
+        var self    = this,
+            events  = self.events;
+
+        for (var i in events) {
+            self.destroyEvent(i);
+        }
+
+        for (i in self) {
+            self[i] = null;
+        }
+    },
+
+    /**
+    * Although all methods are public there is getApi() method that allows you
+    * extending your own objects without overriding "destroy" (which you probably have)
+    * @code src-docs/examples/api.js
+    * @method
+    * @md-not-inheritable
+    * @returns object
+    */
+    getApi: function() {
+
+        var self    = this;
+
+        if (!self.api) {
+
+            var methods = [
+                    "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
+                    "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
+                    "resumeAllEvents", "destroyEvent",
+                    "relayEvent", "unrelayEvent"
+                ],
+                api = {},
+                name;
+
+            for(var i =- 1, l = methods.length;
+                    ++i < l;
+                    name = methods[i],
+                    api[name] = bind(self[name], self)){}
+
+            self.api = api;
+        }
+
+        return self.api;
+
+    }
+}, true, false);
+
+return Observable;
+}());
+
+
+
+
+
+var dom_setAttr = MetaphorJs.dom.setAttr = function(el, name, value) {
     return el.setAttribute(name, value);
 };
 
-function removeAttr(el, name) {
-    return el.removeAttribute(name);
-};
 
+
+MetaphorJs.ajax = MetaphorJs.ajax || {transport: {}};
+
+
+
+
+
+// partly from jQuery serialize.js
+
+var ajax_serializeParam = MetaphorJs.ajax.serializeParam = function(){
+
+    var r20 = /%20/g,
+        rbracket = /\[\]$/;
+
+    function buildParams(prefix, obj, add) {
+        var name,
+            i, l, v;
+
+        if (isArray(obj)) {
+            // Serialize array item.
+
+            for (i = 0, l = obj.length; i < l; i++) {
+                v = obj[i];
+
+                if (rbracket.test(prefix)) {
+                    // Treat each array item as a scalar.
+                    add(prefix, v);
+
+                } else {
+                    // Item is non-scalar (array or object), encode its numeric index.
+                    buildParams(
+                        prefix + "[" + ( typeof v === "object" ? i : "" ) + "]",
+                        v,
+                        add
+                    );
+                }
+            }
+        } else if (isPlainObject(obj)) {
+            // Serialize object item.
+            for (name in obj) {
+                buildParams(prefix + "[" + name + "]", obj[ name ], add);
+            }
+
+        } else {
+            // Serialize scalar item.
+            add(prefix, obj);
+        }
+    }
+
+    return function(obj) {
+
+        var prefix,
+            s = [],
+            add = function( key, value ) {
+                // If value is a function, invoke it and return its value
+                value = isFunction(value) ? value() : (value == null ? "" : value);
+                s[s.length] = encodeURIComponent( key ) + "=" + encodeURIComponent( value );
+            };
+
+        for ( prefix in obj ) {
+            buildParams(prefix, obj[prefix], add);
+        }
+
+        // Return the resulting serialization
+        return s.join( "&" ).replace( r20, "+" );
+    };
+
+
+}();
+
+
+
+
+var ajax_transport_XHR = MetaphorJs.ajax.transport.XHR = (function(){
+
+    var accepts     = {
+            xml:        "application/xml, text/xml",
+            html:       "text/html",
+            script:     "text/javascript, application/javascript",
+            json:       "application/json, text/javascript",
+            text:       "text/plain",
+            _default:   "*/*"
+        },
+
+        createXHR       = function() {
+
+            var xhr;
+
+            if (!window.XMLHttpRequest || !(xhr = new XMLHttpRequest())) {
+                if (!(xhr = new ActiveXObject("Msxml2.XMLHTTP"))) {
+                    if (!(xhr = new ActiveXObject("Microsoft.XMLHTTP"))) {
+                        throw new Error("Unable to create XHR object");
+                    }
+                }
+            }
+
+            return xhr;
+        },
+
+        httpSuccess     = function(r) {
+            try {
+                return (!r.status && location && location.protocol === "file:")
+                       || (r.status >= 200 && r.status < 300)
+                       || r.status === 304 || r.status === 1223; // || r.status === 0;
+            } 
+            catch (thrownError) {
+                error(thrownError);
+            }
+            return false;
+        };
+
+    return cls({
+
+        type: "xhr",
+        _xhr: null,
+        _deferred: null,
+        _ajax: null,
+
+        $init: function(opt, deferred, ajax) {
+
+            var self    = this,
+                xhr;
+
+            self._xhr = xhr     = createXHR();
+            self._deferred      = deferred;
+            self._opt           = opt;
+            self._ajax          = ajax;
+
+            if (opt.progress) {
+                xhr.onprogress = bind(opt.progress, opt.context);
+            }
+            if (opt.uploadProgress && xhr.upload) {
+                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
+            }
+
+            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
+        },
+
+        setHeaders: function() {
+
+            var self = this,
+                opt = self._opt,
+                xhr = self._xhr,
+                i;
+
+            if (opt.xhrFields) {
+                for (i in opt.xhrFields) {
+                    xhr[i] = opt.xhrFields[i];
+                }
+            }
+            if (opt.data && opt.contentType) {
+                xhr.setRequestHeader("Content-Type", 
+                    opt.contentTypeHeader || opt.contentType
+                );
+            }
+            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
+            xhr.setRequestHeader("Accept",
+                opt.dataType && accepts[opt.dataType] ?
+                accepts[opt.dataType] + ", */*; q=0.01" :
+                accepts._default
+            );
+            for (i in opt.headers) {
+                xhr.setRequestHeader(i, opt.headers[i]);
+            }
+
+        },
+
+        onReadyStateChange: function() {
+
+            var self        = this,
+                xhr         = self._xhr,
+                deferred    = self._deferred;
+
+            if (xhr.readyState === 0) {
+                xhr.onreadystatechange = emptyFn;
+                deferred.resolve(xhr);
+                return;
+            }
+
+            if (xhr.readyState === 4) {
+                xhr.onreadystatechange = emptyFn;
+
+                if (httpSuccess(xhr)) {
+
+                    self._ajax.processResponse(
+                        isString(xhr.responseText) ? xhr.responseText : undf,
+                        xhr.getResponseHeader("content-type") || ''
+                    );
+                }
+                else {
+
+                    xhr.responseData = null;
+
+                    try {
+                        xhr.responseData = self._ajax.returnResponse(
+                            isString(xhr.responseText) ? xhr.responseText : undf,
+                            xhr.getResponseHeader("content-type") || ''
+                        );
+                    }
+                    catch (thrownErr) {
+                        error(thrownError);
+                    }
+
+                    deferred.reject(xhr);
+                }
+            }
+        },
+
+        abort: function() {
+            var self    = this;
+            self._xhr.onreadystatechange = emptyFn;
+            self._xhr.abort();
+        },
+
+        send: function() {
+
+            var self    = this,
+                opt     = self._opt;
+
+            try {
+                self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
+                self.setHeaders();
+                self._xhr.send(opt.data);
+            }
+            catch (thrownError) {
+                error(thrownError);
+                if (self._deferred) {
+                    self._deferred.reject(thrownError);
+                }
+            }
+        }
+    });
+
+}());
+
+
+
+
+/**
+ * Function that returns false
+ * @function returnFalse
+ * @returns {boolean}
+ */
 function returnFalse() {
     return false;
 };
 
-
+/**
+ * Function that returns true
+ * @function returnTrue
+ * @returns {boolean}
+ */
 function returnTrue() {
     return true;
 };
 
+/**
+ * Check if given value is a null value
+ * @function isNull
+ * @param {*} value 
+ * @returns {boolean}
+ */
 function isNull(value) {
     return value === null;
 };
@@ -1563,7 +4478,19 @@ function isNull(value) {
 
 // from jQuery
 
-var DomEvent = function(src) {
+/**
+ * Dom event wrapper.
+ * @class MetaphorJs.lib.DomEvent
+ */
+
+/**
+ * @method DomEvent
+ * @constructor
+ * @param {Event} src Native event
+ */
+var lib_DomEvent = MetaphorJs.lib.DomEvent = function(){
+
+var DomEvent = function DomEvent(src) {
 
     if (src instanceof DomEvent) {
         return src;
@@ -1637,10 +4564,27 @@ var DomEvent = function(src) {
 // http://www.w3.org/TR/2003/WD-DOM-Level-3-Events-20030331/ecma-script-binding.html
 extend(DomEvent.prototype, {
 
+    /**
+     * @method isDefaultPrevented
+     * @returns {boolean}
+     */
     isDefaultPrevented: returnFalse,
+
+    /**
+     * @method isPropagationStopped
+     * @returns {boolean}
+     */
     isPropagationStopped: returnFalse,
+
+    /**
+     * @method isImmediatePropagationStopped
+     * @returns {boolean}
+     */
     isImmediatePropagationStopped: returnFalse,
 
+    /**
+     * @method
+     */
     preventDefault: function() {
         var e = this.originalEvent;
 
@@ -1651,6 +4595,10 @@ extend(DomEvent.prototype, {
             e.preventDefault();
         }
     },
+
+    /**
+     * @method
+     */
     stopPropagation: function() {
         var e = this.originalEvent;
 
@@ -1661,6 +4609,10 @@ extend(DomEvent.prototype, {
             e.stopPropagation();
         }
     },
+
+    /**
+     * @method
+     */
     stopImmediatePropagation: function() {
         var e = this.originalEvent;
 
@@ -1674,11 +4626,16 @@ extend(DomEvent.prototype, {
     }
 }, true, false);
 
+return DomEvent;
+
+}();
 
 
 
-function normalizeEvent(originalEvent) {
-    return new DomEvent(originalEvent);
+
+
+var dom_normalizeEvent = MetaphorJs.dom.normalizeEvent = function(originalEvent) {
+    return new lib_DomEvent(originalEvent);
 };
 
 
@@ -1686,7 +4643,9 @@ function normalizeEvent(originalEvent) {
 
 
 
-var mousewheelHandler = function(e) {
+
+
+var _mousewheelHandler = function(e) {
 
     function shouldAdjustOldDeltas(orgEvent, absDelta) {
         // If this is an older event and the delta is divisable by 120,
@@ -1703,15 +4662,13 @@ var mousewheelHandler = function(e) {
         lowestDelta = null;
     }
 
-    var toBind = ( 'onwheel' in window.document || window.document.documentMode >= 9 ) ?
-                 ['wheel'] : ['mousewheel', 'DomMouseScroll', 'MozMousePixelScroll'],
-        nullLowestDeltaTimeout, lowestDelta;
+    var nullLowestDeltaTimeout, lowestDelta;
 
     var mousewheelHandler = function(fn) {
 
-        return function(e) {
+        return function mousewheelHandler(e) {
 
-            var event = normalizeEvent(e || window.event),
+            var event = dom_normalizeEvent(e || window.event),
                 args = slice.call(arguments, 1),
                 delta = 0,
                 deltaX = 0,
@@ -1822,12 +4779,21 @@ var mousewheelHandler = function(e) {
 
 
 
-var addListener = function(){
+
+/**
+ * @function MetaphorJs.dom.addListener
+ * @param {Element} el
+ * @param {string} eventName
+ * @param {function} func {
+ *  @param {object} event
+ * }
+ */
+var dom_addListener = MetaphorJs.dom.addListener = function(){
 
     var fn = null,
         prefix = null;
 
-    return function addListener(el, event, func) {
+    return function dom_addListener(el, event, func) {
 
         if (fn === null) {
             if (el.addEventListener) {
@@ -1844,8 +4810,8 @@ var addListener = function(){
 
 
         if (event == "mousewheel") {
-            func = mousewheelHandler(func);
-            var events = mousewheelHandler.events(),
+            func = _mousewheelHandler(func);
+            var events = _mousewheelHandler.events(),
                 i, l;
             for (i = 0, l = events.length; i < l; i++) {
                 el[fn](prefix + events[i], func, false);
@@ -1861,3224 +4827,12 @@ var addListener = function(){
 }();
 
 
-var removeListener = function(){
 
-    var fn = null,
-        prefix = null;
 
-    return function removeListener(el, event, func) {
 
-        if (fn === null) {
-            if (el.removeEventListener) {
-                fn = "removeEventListener";
-                prefix = "";
-            }
-            else {
-                fn = "detachEvent";
-                prefix = "on";
-            }
-            //fn = el.detachEvent ? "detachEvent" : "removeEventListener";
-            //prefix = el.detachEvent ? "on" : "";
-        }
 
-        el[fn](prefix + event, func);
-    }
-}();
-/**
- * @param {Element} el
- * @returns {boolean}
- */
-function isVisible(el) {
-    return el && !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
-};
-
-
-
-/**
- * @param {*} list
- * @returns {[]}
- */
-function toArray(list) {
-    if (list && !list.length != undf && list !== ""+list) {
-        for(var a = [], i =- 1, l = list.length>>>0; ++i !== l; a[i] = list[i]){}
-        return a;
-    }
-    else if (list) {
-        return [list];
-    }
-    else {
-        return [];
-    }
-};
-
-
-
-/**
- * Modified version of YASS (http://yass.webo.in)
- */
-
-/**
- * Returns array of nodes or an empty array
- * @function select
- * @param {String} selector
- * @param {Element} root to look into
- */
-var select = function() {
-
-    var rGeneric    = /^[\w[:#.][\w\]*^|=!]*$/,
-        rQuote      = /=([^\]]+)/,
-        rGrpSplit   = / *, */,
-        rRepPlus    = /(\([^)]*)\+/,
-        rRepTild    = /(\[[^\]]+)~/,
-        rRepAll     = /(~|>|\+)/,
-        rSplitPlus  = / +/,
-        rSingleMatch= /([^[:.#]+)?(?:#([^[:.#]+))?(?:\.([^[:.]+))?(?:\[([^!&^*|$[:=]+)([!$^*|&]?=)?([^:\]]+)?\])?(?::([^(]+)(?:\(([^)]+)\))?)?/,
-        rNthNum     = /(?:(-?\d*)n)?(?:(%|-)(\d*))?/,
-        rNonDig     = /\D/,
-        rRepPrnth   = /[^(]*\(([^)]*)\)/,
-        rRepAftPrn  = /\(.*/,
-        rGetSquare  = /\[([^!~^*|$ [:=]+)([$^*|]?=)?([^ :\]]+)?\]/,
-
-        doc         = window.document,
-        bcn         = !!doc.getElementsByClassName,
-        qsa         = !!doc.querySelectorAll,
-
-        /*
-         function calls for CSS2/3 modificatos. Specification taken from
-         http://www.w3.org/TR/2005/WD-css3-selectors-20051215/
-         on success return negative result.
-         */
-        mods        = {
-            /* W3C: "an E element, first child of its parent" */
-            'first-child': function (child) {
-                /* implementation was taken from jQuery.1.2.6, line 1394 */
-                return child.parentNode.getElementsByTagName('*')[0] !== child;
-            },
-            /* W3C: "an E element, last child of its parent" */
-            'last-child': function (child) {
-                var brother = child;
-                /* loop in lastChilds while nodeType isn't element */
-                while ((brother = brother.nextSibling) && brother.nodeType != 1) {}
-                /* Check for node's existence */
-                return !!brother;
-            },
-            /* W3C: "an E element, root of the document" */
-            root: function (child) {
-                return child.nodeName.toLowerCase() !== 'html';
-            },
-            /* W3C: "an E element, the n-th child of its parent" */
-            'nth-child': function (child, ind) {
-                var i = child.nodeIndex || 0,
-                    a = ind[3] = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
-                    b = ind[1];
-                /* check if we have already looked into siblings, using exando - very bad */
-                if (i) {
-                    return !( (i + a) % b);
-                } else {
-                    /* in the other case just reverse logic for n and loop siblings */
-                    var brother = child.parentNode.firstChild;
-                    i++;
-                    /* looping in child to find if nth expression is correct */
-                    do {
-                        /* nodeIndex expando used from Peppy / Sizzle/ jQuery */
-                        if (brother.nodeType == 1 && (brother.nodeIndex = ++i) && child === brother && ((i + a) % b)) {
-                            return 0;
-                        }
-                    } while (brother = brother.nextSibling);
-                    return 1;
-                }
-            },
-            /*
-             W3C: "an E element, the n-th child of its parent,
-             counting from the last one"
-             */
-            'nth-last-child': function (child, ind) {
-                /* almost the same as the previous one */
-                var i = child.nodeIndexLast || 0,
-                    a = ind[3] ? (ind[2] === '%' ? -1 : 1) * ind[3] : 0,
-                    b = ind[1];
-                if (i) {
-                    return !( (i + a) % b);
-                } else {
-                    var brother = child.parentNode.lastChild;
-                    i++;
-                    do {
-                        if (brother.nodeType == 1 && (brother.nodeLastIndex = i++) && child === brother && ((i + a) % b)) {
-                            return 0;
-                        }
-                    } while (brother = brother.previousSibling);
-                    return 1;
-                }
-            },
-            /*
-             Rrom w3.org: "an E element that has no children (including text nodes)".
-             Thx to John, from Sizzle, 2008-12-05, line 416
-             */
-            empty: function (child) {
-                return !!child.firstChild;
-            },
-            /* thx to John, stolen from Sizzle, 2008-12-05, line 413 */
-            parent: function (child) {
-                return !child.firstChild;
-            },
-            /* W3C: "an E element, only child of its parent" */
-            'only-child': function (child) {
-                return child.parentNode.getElementsByTagName('*').length != 1;
-            },
-            /*
-             W3C: "a user interface element E which is checked
-             (for instance a radio-button or checkbox)"
-             */
-            checked: function (child) {
-                return !child.checked;
-            },
-            /*
-             W3C: "an element of type E in language "fr"
-             (the document language specifies how language is determined)"
-             */
-            lang: function (child, ind) {
-                return child.lang !== ind && doc.documentElement.lang !== ind;
-            },
-            /* thx to John, from Sizzle, 2008-12-05, line 398 */
-            enabled: function (child) {
-                return child.disabled || child.type === 'hidden';
-            },
-            /* thx to John, from Sizzle, 2008-12-05, line 401 */
-            disabled: function (child) {
-                return !child.disabled;
-            },
-            /* thx to John, from Sizzle, 2008-12-05, line 407 */
-            selected: function(elem){
-                /*
-                 Accessing this property makes selected-by-default
-                 options in Safari work properly.
-                 */
-                var tmp = elem.parentNode.selectedIndex;
-                return !elem.selected;
-            }
-        },
-
-        attrRegCache = {},
-
-        getAttrReg  = function(value) {
-            return attrRegCache[value] || (attrRegCache[value] = new RegExp('(^| +)' + value + '($| +)'));
-        },
-
-        attrMods    = {
-            /* W3C "an E element with a "attr" attribute" */
-            '': function (child, name) {
-                return getAttr(child, name) !== null;
-            },
-            /*
-             W3C "an E element whose "attr" attribute value is
-             exactly equal to "value"
-             */
-            '=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name)) && attrValue === value;
-            },
-            /*
-             from w3.prg "an E element whose "attr" attribute value is
-             a list of space-separated values, one of which is exactly
-             equal to "value"
-             */
-            '&=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name)) && getAttrReg(value).test(attrValue);
-            },
-            /*
-             from w3.prg "an E element whose "attr" attribute value
-             begins exactly with the string "value"
-             */
-            '^=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name) + '') && !attrValue.indexOf(value);
-            },
-            /*
-             W3C "an E element whose "attr" attribute value
-             ends exactly with the string "value"
-             */
-            '$=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name) + '') &&
-                       attrValue.indexOf(value) == attrValue.length - value.length;
-            },
-            /*
-             W3C "an E element whose "attr" attribute value
-             contains the substring "value"
-             */
-            '*=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name) + '') && attrValue.indexOf(value) != -1;
-            },
-            /*
-             W3C "an E element whose "attr" attribute has
-             a hyphen-separated list of values beginning (from the
-             left) with "value"
-             */
-            '|=': function (child, name, value) {
-                var attrValue;
-                return (attrValue = getAttr(child, name) + '') &&
-                       (attrValue === value || !!attrValue.indexOf(value + '-'));
-            },
-            /* attr doesn't contain given value */
-            '!=': function (child, name, value) {
-                var attrValue;
-                return !(attrValue = getAttr(child, name)) || !getAttrReg(value).test(attrValue);
-            }
-        };
-
-
-    var select = function (selector, root) {
-
-        /* clean root with document */
-        root = root || doc;
-
-        /* sets of nodes, to handle comma-separated selectors */
-        var sets    = [],
-            qsaErr  = null,
-            idx, cls, nodes,
-            i, node, ind, mod,
-            attrs, attrName, eql, value;
-
-        if (qsa) {
-            /* replace not quoted args with quoted one -- Safari doesn't understand either */
-            try {
-                sets = toArray(root.querySelectorAll(selector.replace(rQuote, '="$1"')));
-            }
-            catch (thrownError) {
-                qsaErr = true;
-            }
-        }
-
-        if (!qsa || qsaErr) {
-
-            /* quick return or generic call, missed ~ in attributes selector */
-            if (rGeneric.test(selector)) {
-
-                /*
-                 some simple cases - only ID or only CLASS for the very first occurence
-                 - don't need additional checks. Switch works as a hash.
-                 */
-                idx = 0;
-
-                /* the only call -- no cache, thx to GreLI */
-                switch (selector.charAt(0)) {
-
-                    case '#':
-                        idx = selector.slice(1);
-                        sets = doc.getElementById(idx);
-
-                        /*
-                         workaround with IE bug about returning element by name not by ID.
-                         Solution completely changed, thx to deerua.
-                         Get all matching elements with this id
-                         */
-                        if (sets.id !== idx) {
-                            sets = doc.all[idx];
-                        }
-
-                        sets = sets ? [sets] : [];
-                        break;
-
-                    case '.':
-
-                        cls = selector.slice(1);
-
-                        if (bcn) {
-
-                            sets = toArray((idx = (sets = root.getElementsByClassName(cls)).length) ? sets : []);
-
-                        } else {
-
-                            /* no RegExp, thx to DenVdmj */
-                            cls = ' ' + cls + ' ';
-
-                            nodes = root.getElementsByTagName('*');
-                            i = 0;
-
-                            while (node = nodes[i++]) {
-                                if ((' ' + node.className + ' ').indexOf(cls) != -1) {
-                                    sets[idx++] = node;
-                                }
-
-                            }
-                            sets = idx ? sets : [];
-                        }
-                        break;
-
-                    case ':':
-
-                        nodes   = root.getElementsByTagName('*');
-                        i       = 0;
-                        ind     = selector.replace(rRepPrnth,"$1");
-                        mod     = selector.replace(rRepAftPrn,'');
-
-                        while (node = nodes[i++]) {
-                            if (mods[mod] && !mods[mod](node, ind)) {
-                                sets[idx++] = node;
-                            }
-                        }
-                        sets = idx ? sets : [];
-                        break;
-
-                    case '[':
-
-                        nodes   = root.getElementsByTagName('*');
-                        i       = 0;
-                        attrs   = rGetSquare.exec(selector);
-                        attrName    = attrs[1];
-                        eql     = attrs[2] || '';
-                        value   = attrs[3];
-
-                        while (node = nodes[i++]) {
-                            /* check either attr is defined for given node or it's equal to given value */
-                            if (attrMods[eql] && (attrMods[eql](node, attrName, value) ||
-                                                  (attrName === 'class' && attrMods[eql](node, 'className', value)))) {
-                                sets[idx++] = node;
-                            }
-                        }
-                        sets = idx ? sets : [];
-                        break;
-
-                    default:
-                        sets = toArray((idx = (sets = root.getElementsByTagName(selector)).length) ? sets : []);
-                        break;
-                }
-
-            } else {
-
-                /* number of groups to merge or not result arrays */
-                /*
-                 groups of selectors separated by commas.
-                 Split by RegExp, thx to tenshi.
-                 */
-                var groups  = selector.split(rGrpSplit),
-                    gl      = groups.length - 1, /* group counter */
-                    concat  = !!gl, /* if we need to concat several groups */
-                    group,
-                    singles,
-                    singles_length,
-                    single, /* to handle RegExp for single selector */
-                    ancestor, /* to remember ancestor call for next childs, default is " " */
-                /* for inner looping */
-                    tag, id, klass, newNodes, J, child, last, childs, item, h;
-
-                /* loop in groups, maybe the fastest way */
-                while (group = groups[gl--]) {
-
-                    /*
-                     Split selectors by space - to form single group tag-id-class,
-                     or to get heredity operator. Replace + in child modificators
-                     to % to avoid collisions. Additional replace is required for IE.
-                     Replace ~ in attributes to & to avoid collisions.
-                     */
-                    singles_length = (singles = group
-                        .replace(rRepPlus,"$1%")
-                        .replace(rRepTild,"$1&")
-                        .replace(rRepAll," $1 ").split(rSplitPlus)).length;
-
-                    i = 0;
-                    ancestor = ' ';
-                    /* is cleanded up with DOM root */
-                    nodes = [root];
-
-                    /*
-                     John's Resig fast replace works a bit slower than
-                     simple exec. Thx to GreLI for 'greed' RegExp
-                     */
-                    while (single = singles[i++]) {
-
-                        /* simple comparison is faster than hash */
-                        if (single !== ' ' && single !== '>' && single !== '~' && single !== '+' && nodes) {
-
-                            single = single.match(rSingleMatch);
-
-                            /*
-                             Get all required matches from exec:
-                             tag, id, class, attribute, value, modificator, index.
-                             */
-                            tag     = single[1] || '*';
-                            id      = single[2];
-                            klass   = single[3] ? ' ' + single[3] + ' ' : '';
-                            attrName    = single[4];
-                            eql     = single[5] || '';
-                            mod     = single[7];
-
-                            /*
-                             for nth-childs modificator already transformed into array.
-                             Example used from Sizzle, rev. 2008-12-05, line 362.
-                             */
-                            ind = mod === 'nth-child' || mod === 'nth-last-child' ?
-                                  rNthNum.exec(
-                                      single[8] === 'even' && '2n' ||
-                                      single[8] === 'odd' && '2n%1' ||
-                                      !rNonDig.test(single[8]) && '0n%' + single[8] ||
-                                      single[8]
-                                  ) :
-                                  single[8];
-
-                            /* new nodes array */
-                            newNodes = [];
-
-                            /*
-                             cached length of new nodes array
-                             and length of root nodes
-                             */
-                            idx = J = 0;
-
-                            /* if we need to mark node with expando yeasss */
-                            last = i == singles_length;
-
-                            /* loop in all root nodes */
-                            while (child = nodes[J++]) {
-                                /*
-                                 find all TAGs or just return all possible neibours.
-                                 Find correct 'children' for given node. They can be
-                                 direct childs, neighbours or something else.
-                                 */
-                                switch (ancestor) {
-                                    case ' ':
-                                        childs = child.getElementsByTagName(tag);
-                                        h = 0;
-                                        while (item = childs[h++]) {
-                                            /*
-                                             check them for ID or Class. Also check for expando 'yeasss'
-                                             to filter non-selected elements. Typeof 'string' not added -
-                                             if we get element with name="id" it won't be equal to given ID string.
-                                             Also check for given attributes selector.
-                                             Modificator is either not set in the selector, or just has been nulled
-                                             by modificator functions hash.
-                                             */
-                                            if ((!id || item.id === id) &&
-                                                (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attrName || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attrName, single[6]) ||
-                                                            (attrName === 'class' &&
-                                                             attrMods[eql](item, 'className', single[6]))))) &&
-                                                !item.yeasss && !(mods[mod] ? mods[mod](item, ind) : mod)) {
-
-                                                /*
-                                                 Need to define expando property to true for the last step.
-                                                 Then mark selected element with expando
-                                                 */
-                                                if (last) {
-                                                    item.yeasss = 1;
-                                                }
-                                                newNodes[idx++] = item;
-                                            }
-                                        }
-                                        break;
-                                    /* W3C: "an F element preceded by an E element" */
-                                    case '~':
-
-                                        tag = tag.toLowerCase();
-
-                                        /* don't touch already selected elements */
-                                        while ((child = child.nextSibling) && !child.yeasss) {
-                                            if (child.nodeType == 1 &&
-                                                (tag === '*' || child.nodeName.toLowerCase() === tag) &&
-                                                (!id || child.id === id) &&
-                                                (!klass || (' ' + child.className + ' ').indexOf(klass) != -1) &&
-                                                (!attrName || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attrName, single[6]) ||
-                                                            (attrName === 'class' &&
-                                                             attrMods[eql](item, 'className', single[6]))))) &&
-                                                !child.yeasss &&
-                                                !(mods[mod] ? mods[mod](child, ind) : mod)) {
-
-                                                if (last) {
-                                                    child.yeasss = 1;
-                                                }
-                                                newNodes[idx++] = child;
-                                            }
-                                        }
-                                        break;
-
-                                    /* W3C: "an F element immediately preceded by an E element" */
-                                    case '+':
-                                        while ((child = child.nextSibling) && child.nodeType != 1) {}
-                                        if (child &&
-                                            (child.nodeName.toLowerCase() === tag.toLowerCase() || tag === '*') &&
-                                            (!id || child.id === id) &&
-                                            (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                            (!attrName ||
-                                             (attrMods[eql] && (attrMods[eql](item, attrName, single[6]) ||
-                                                                (attrName === 'class' &&
-                                                                 attrMods[eql](item, 'className', single[6]))))) &&
-                                            !child.yeasss && !(mods[mod] ? mods[mod](child, ind) : mod)) {
-
-                                            if (last) {
-                                                child.yeasss = 1;
-                                            }
-                                            newNodes[idx++] = child;
-                                        }
-                                        break;
-
-                                    /* W3C: "an F element child of an E element" */
-                                    case '>':
-                                        childs = child.getElementsByTagName(tag);
-                                        i = 0;
-                                        while (item = childs[i++]) {
-                                            if (item.parentNode === child &&
-                                                (!id || item.id === id) &&
-                                                (!klass || (' ' + item.className + ' ').indexOf(klass) != -1) &&
-                                                (!attrName || (attrMods[eql] &&
-                                                           (attrMods[eql](item, attrName, single[6]) ||
-                                                            (attrName === 'class' &&
-                                                             attrMods[eql](item, 'className', single[6]))))) &&
-                                                !item.yeasss &&
-                                                !(mods[mod] ? mods[mod](item, ind) : mod)) {
-
-                                                if (last) {
-                                                    item.yeasss = 1;
-                                                }
-                                                newNodes[idx++] = item;
-                                            }
-                                        }
-                                        break;
-                                }
-                            }
-
-                            /* put selected nodes in local nodes' set */
-                            nodes = newNodes;
-
-                        } else {
-
-                            /* switch ancestor ( , > , ~ , +) */
-                            ancestor = single;
-                        }
-                    }
-
-                    if (concat) {
-                        /* if sets isn't an array - create new one */
-                        if (!nodes.concat) {
-                            newNodes = [];
-                            h = 0;
-                            while (item = nodes[h]) {
-                                newNodes[h++] = item;
-                            }
-                            nodes = newNodes;
-                            /* concat is faster than simple looping */
-                        }
-                        sets = nodes.concat(sets.length == 1 ? sets[0] : sets);
-
-                    } else {
-
-                        /* inialize sets with nodes */
-                        sets = nodes;
-                    }
-                }
-
-                /* define sets length to clean up expando */
-                idx = sets.length;
-
-                /*
-                 Need this looping as far as we also have expando 'yeasss'
-                 that must be nulled. Need this only to generic case
-                 */
-                while (idx--) {
-                    sets[idx].yeasss = sets[idx].nodeIndex = sets[idx].nodeIndexLast = null;
-                }
-            }
-        }
-
-        /* return and cache results */
-        return sets;
-    };
-
-    select.is = function(el, selector) {
-
-        var els = select(selector, el.parentNode),
-            i, l;
-
-        for (i = -1, l = els.length; ++i < l;) {
-            if (els[i] === el) {
-                return true;
-            }
-        }
-        return false;
-    };
-
-    return select;
-}();
-
-
-
-/**
- * @param {Element} el
- * @param {String} selector
- * @returns {boolean}
- */
-var is = select.is;
-
-
-
-var getAnimationPrefixes = function(){
-
-    var domPrefixes         = ['Moz', 'Webkit', 'ms', 'O', 'Khtml'],
-        animationDelay      = "animationDelay",
-        animationDuration   = "animationDuration",
-        transitionDelay     = "transitionDelay",
-        transitionDuration  = "transitionDuration",
-        transform           = "transform",
-        transitionend       = null,
-        prefixes            = null,
-
-        probed              = false,
-
-        detectCssPrefixes   = function() {
-
-            var el = window.document.createElement("div"),
-                animation = false,
-                pfx,
-                i, len;
-
-            if (el.style['animationName'] !== undf) {
-                animation = true;
-            }
-            else {
-                for(i = 0, len = domPrefixes.length; i < len; i++) {
-                    pfx = domPrefixes[i];
-                    if (el.style[ pfx + 'AnimationName' ] !== undf) {
-                        animation           = true;
-                        animationDelay      = pfx + "AnimationDelay";
-                        animationDuration   = pfx + "AnimationDuration";
-                        transitionDelay     = pfx + "TransitionDelay";
-                        transitionDuration  = pfx + "TransitionDuration";
-                        transform           = pfx + "Transform";
-                        break;
-                    }
-                }
-            }
-
-            if (animation) {
-                if('ontransitionend' in window) {
-                    // Chrome/Saf (+ Mobile Saf)/Android
-                    transitionend = 'transitionend';
-                }
-                else if('onwebkittransitionend' in window) {
-                    // Chrome/Saf (+ Mobile Saf)/Android
-                    transitionend = 'webkitTransitionEnd';
-                }
-            }
-
-            return animation;
-        };
-
-
-    /**
-     * @function animate.getPrefixes
-     * @returns {object}
-     */
-    return function() {
-
-        if (!probed) {
-            if (detectCssPrefixes()) {
-                prefixes = {
-                    animationDelay: animationDelay,
-                    animationDuration: animationDuration,
-                    transitionDelay: transitionDelay,
-                    transitionDuration: transitionDuration,
-                    transform: transform,
-                    transitionend: transitionend
-                };
-            }
-            else {
-                prefixes = {};
-            }
-
-            probed = true;
-        }
-
-
-        return prefixes;
-    };
-}();
-
-
-
-var getAnimationDuration = function(){
-
-    var parseTime       = function(str) {
-            if (!str) {
-                return 0;
-            }
-            var time = parseFloat(str);
-            if (str.indexOf("ms") == -1) {
-                time *= 1000;
-            }
-            return time;
-        },
-
-        getMaxTimeFromPair = function(max, dur, delay) {
-
-            var i, sum, len = dur.length;
-
-            for (i = 0; i < len; i++) {
-                sum = parseTime(dur[i]) + parseTime(delay[i]);
-                max = Math.max(sum, max);
-            }
-
-            return max;
-        },
-
-        pfx                 = false,
-        animationDuration   = null,
-        animationDelay      = null,
-        transitionDuration  = null,
-        transitionDelay     = null;
-
-
-    /**
-     * @function animate.getDuration
-     * @param {Element} el
-     * @returns {number}
-     */
-    return function(el) {
-
-        if (pfx === false) {
-            pfx = getAnimationPrefixes();
-            animationDuration = pfx ? pfx.animationDuration : null;
-            animationDelay = pfx ? pfx.animationDelay : null;
-            transitionDuration = pfx ? pfx.transitionDuration : null;
-            transitionDelay = pfx ? pfx.transitionDelay : null;
-        }
-
-        if (!pfx) {
-            return 0;
-        }
-
-        var style       = window.getComputedStyle ? window.getComputedStyle(el, null) : el.style,
-            duration    = 0,
-            animDur     = (style[animationDuration] || '').split(','),
-            animDelay   = (style[animationDelay] || '').split(','),
-            transDur    = (style[transitionDuration] || '').split(','),
-            transDelay  = (style[transitionDelay] || '').split(',');
-
-        duration    = Math.max(duration, getMaxTimeFromPair(duration, animDur, animDelay));
-        duration    = Math.max(duration, getMaxTimeFromPair(duration, transDur, transDelay));
-
-        return duration;
-    };
-
-}();
-
-
-
-
-
-/**
- * @function animate.stop
- * @param {Element} el
- */
-var stopAnimation = function(el) {
-
-    var queue = data(el, "mjsAnimationQueue"),
-        current,
-        position,
-        stages;
-
-    if (isArray(queue) && queue.length) {
-        current = queue[0];
-
-        if (current) {
-            if (current.stages) {
-                position = current.position;
-                stages = current.stages;
-                removeClass(el, stages[position]);
-                removeClass(el, stages[position] + "-active");
-            }
-            if (current.deferred) {
-                current.deferred.reject(current.el);
-            }
-        }
-    }
-    else if (isFunction(queue)) {
-        queue(el);
-    }
-    else if (queue == "stop") {
-        $(el).stop(true, true);
-    }
-
-    data(el, "mjsAnimationQueue", null);
-};
-
-
-
-
-/**
- * Returns 'then' function or false
- * @param {*} any
- * @returns {Function|boolean}
- */
-function isThenable(any) {
-
-    // any.then must only be accessed once
-    // this is a promise/a+ requirement
-
-    if (!any) { //  || !any.then
-        return false;
-    }
-    var then, t;
-
-    //if (!any || (!isObject(any) && !isFunction(any))) {
-    if (((t = typeof any) != "object" && t != "function")) {
-        return false;
-    }
-    return isFunction((then = any.then)) ?
-           then : false;
-};
-/**
- * @param {Function} fn
- * @param {Object} context
- * @param {[]} args
- * @param {number} timeout
- */
-function async(fn, context, args, timeout) {
-    return setTimeout(function(){
-        fn.apply(context, args || []);
-    }, timeout || 0);
-};
-
-
-
-var error = (function(){
-
-    var listeners = [];
-
-    var error = function error(e) {
-
-        var i, l;
-
-        for (i = 0, l = listeners.length; i < l; i++) {
-            if (listeners[i][0].call(listeners[i][1], e) === false) {
-                return;
-            }
-        }
-
-        var stack = (e ? e.stack : null) || (new Error).stack;
-
-        if (typeof console != strUndef && console.error) {
-            async(function(){
-                if (e) {
-                    console.error(e);
-                }
-                if (stack) {
-                    console.error(stack);
-                }
-            });
-        }
-        else {
-            throw e;
-        }
-    };
-
-    error.on = function(fn, context) {
-        error.un(fn, context);
-        listeners.push([fn, context]);
-    };
-
-    error.un = function(fn, context) {
-        var i, l;
-        for (i = 0, l = listeners.length; i < l; i++) {
-            if (listeners[i][0] === fn && listeners[i][1] === context) {
-                listeners.splice(i, 1);
-                break;
-            }
-        }
-    };
-
-    return error;
-}());
-
-
-
-
-
-
-var Promise = function(){
-
-    var PENDING     = 0,
-        FULFILLED   = 1,
-        REJECTED    = 2,
-
-        queue       = [],
-        qRunning    = false,
-
-
-        nextTick    = typeof process != strUndef ?
-                        process.nextTick :
-                        function(fn) {
-                            setTimeout(fn, 0);
-                        },
-
-        // synchronous queue of asynchronous functions:
-        // callbacks must be called in "platform stack"
-        // which means setTimeout/nextTick;
-        // also, they must be called in a strict order.
-        nextInQueue = function() {
-            qRunning    = true;
-            var next    = queue.shift();
-            nextTick(function(){
-                next[0].apply(next[1], next[2]);
-                if (queue.length) {
-                    nextInQueue();
-                }
-                else {
-                    qRunning = false;
-                }
-            }, 0);
-        },
-
-        /**
-         * add to execution queue
-         * @param {Function} fn
-         * @param {Object} scope
-         * @param {[]} args
-         * @ignore
-         */
-        next        = function(fn, scope, args) {
-            args = args || [];
-            queue.push([fn, scope, args]);
-            if (!qRunning) {
-                nextInQueue();
-            }
-        },
-
-        /**
-         * returns function which receives value from previous promise
-         * and tries to resolve next promise with new value returned from given function(prev value)
-         * or reject on error.
-         * promise1.then(success, failure) -> promise2
-         * wrapper(success, promise2) -> fn
-         * fn(promise1 resolve value) -> new value
-         * promise2.resolve(new value)
-         *
-         * @param {Function} fn
-         * @param {Promise} promise
-         * @returns {Function}
-         * @ignore
-         */
-        wrapper     = function(fn, promise) {
-            return function(value) {
-                try {
-                    promise.resolve(fn(value));
-                }
-                catch (thrownError) {
-                    promise.reject(thrownError);
-                }
-            };
-        };
-
-
-    /**
-     * @class Promise
-     */
-
-
-    /**
-     * @method Promise
-     * @param {Function} fn {
-     *  @description Function that accepts two parameters: resolve and reject functions.
-     *  @param {function} resolve {
-     *      @param {*} value
-     *  }
-     *  @param {function} reject {
-     *      @param {*} reason
-     *  }
-     * }
-     * @param {Object} context
-     * @returns {Promise}
-     * @constructor
-     */
-
-    /**
-     * @method Promise
-     * @param {Thenable} thenable
-     * @returns {Promise}
-     * @constructor
-     */
-
-    /**
-     * @method Promise
-     * @param {*} value Value to resolve promise with
-     * @returns {Promise}
-     * @constructor
-     */
-
-
-    /**
-     * @method Promise
-     * @returns {Promise}
-     * @constructor
-     */
-    var Promise = function(fn, context) {
-
-        if (fn instanceof Promise) {
-            return fn;
-        }
-
-        if (!(this instanceof Promise)) {
-            return new Promise(fn, context);
-        }
-
-        var self = this,
-            then;
-
-        self._fulfills   = [];
-        self._rejects    = [];
-        self._dones      = [];
-        self._fails      = [];
-
-        if (arguments.length > 0) {
-
-            if (then = isThenable(fn)) {
-                if (fn instanceof Promise) {
-                    fn.then(
-                        bind(self.resolve, self),
-                        bind(self.reject, self));
-                }
-                else {
-                    (new Promise(then, fn)).then(
-                        bind(self.resolve, self),
-                        bind(self.reject, self));
-                }
-            }
-            else if (isFunction(fn)) {
-                try {
-                    fn.call(context,
-                            bind(self.resolve, self),
-                            bind(self.reject, self));
-                }
-                catch (thrownError) {
-                    self.reject(thrownError);
-                }
-            }
-            else {
-                self.resolve(fn);
-            }
-        }
-    };
-
-    extend(Promise.prototype, {
-
-        _state: PENDING,
-
-        _fulfills: null,
-        _rejects: null,
-        _dones: null,
-        _fails: null,
-
-        _wait: 0,
-
-        _value: null,
-        _reason: null,
-
-        _triggered: false,
-
-        isPending: function() {
-            return this._state == PENDING;
-        },
-
-        isFulfilled: function() {
-            return this._state == FULFILLED;
-        },
-
-        isResolved: function() {
-            return this._state == FULFILLED;
-        },
-
-        isRejected: function() {
-            return this._state == REJECTED;
-        },
-
-        hasListeners: function() {
-            var self = this,
-                ls  = [self._fulfills, self._rejects, self._dones, self._fails],
-                i, l;
-
-            for (i = 0, l = ls.length; i < l; i++) {
-                if (ls[i] && ls[i].length) {
-                    return true;
-                }
-            }
-
-            return false;
-        },
-
-        _cleanup: function() {
-            var self    = this;
-
-            self._fulfills = null;
-            self._rejects = null;
-            self._dones = null;
-            self._fails = null;
-        },
-
-        _processValue: function(value, cb) {
-
-            var self    = this,
-                then;
-
-            if (self._state != PENDING) {
-                return;
-            }
-
-            if (value === self) {
-                self._doReject(new TypeError("cannot resolve promise with itself"));
-                return;
-            }
-
-            try {
-                if (then = isThenable(value)) {
-                    if (value instanceof Promise) {
-                        value.then(
-                            bind(self._processResolveValue, self),
-                            bind(self._processRejectReason, self));
-                    }
-                    else {
-                        (new Promise(then, value)).then(
-                            bind(self._processResolveValue, self),
-                            bind(self._processRejectReason, self));
-                    }
-                    return;
-                }
-            }
-            catch (thrownError) {
-                if (self._state == PENDING) {
-                    self._doReject(thrownError);
-                }
-                return;
-            }
-
-            cb.call(self, value);
-        },
-
-
-        _callResolveHandlers: function() {
-
-            var self    = this;
-
-            self._done();
-
-            var cbs  = self._fulfills,
-                cb;
-
-            while (cb = cbs.shift()) {
-                next(cb[0], cb[1], [self._value]);
-            }
-
-            self._cleanup();
-        },
-
-
-        _doResolve: function(value) {
-            var self    = this;
-
-            self._value = value;
-            self._state = FULFILLED;
-
-            if (self._wait == 0) {
-                self._callResolveHandlers();
-            }
-        },
-
-        _processResolveValue: function(value) {
-            this._processValue(value, this._doResolve);
-        },
-
-        /**
-         * @param {*} value
-         */
-        resolve: function(value) {
-
-            var self    = this;
-
-            if (self._triggered) {
-                return self;
-            }
-
-            self._triggered = true;
-            self._processResolveValue(value);
-
-            return self;
-        },
-
-
-        _callRejectHandlers: function() {
-
-            var self    = this;
-
-            self._fail();
-
-            var cbs  = self._rejects,
-                cb;
-
-            while (cb = cbs.shift()) {
-                next(cb[0], cb[1], [self._reason]);
-            }
-
-            self._cleanup();
-        },
-
-        _doReject: function(reason) {
-
-            var self        = this;
-
-            self._state     = REJECTED;
-            self._reason    = reason;
-
-            if (self._wait == 0) {
-                self._callRejectHandlers();
-            }
-        },
-
-
-        _processRejectReason: function(reason) {
-            this._processValue(reason, this._doReject);
-        },
-
-        /**
-         * @param {*} reason
-         */
-        reject: function(reason) {
-
-            var self    = this;
-
-            if (self._triggered) {
-                return self;
-            }
-
-            self._triggered = true;
-
-            self._processRejectReason(reason);
-
-            return self;
-        },
-
-        /**
-         * @param {Function} resolve -- called when this promise is resolved; returns new resolve value
-         * @param {Function} reject -- called when this promise is rejects; returns new reject reason
-         * @param {object} context -- resolve's and reject's functions "this" object
-         * @returns {Promise} new promise
-         */
-        then: function(resolve, reject, context) {
-
-            var self            = this,
-                promise         = new Promise,
-                state           = self._state;
-
-            if (context) {
-                if (resolve) {
-                    resolve = bind(resolve, context);
-                }
-                if (reject) {
-                    reject = bind(reject, context);
-                }
-            }
-
-            if (state == PENDING || self._wait != 0) {
-
-                if (resolve && isFunction(resolve)) {
-                    self._fulfills.push([wrapper(resolve, promise), null]);
-                }
-                else {
-                    self._fulfills.push([promise.resolve, promise])
-                }
-
-                if (reject && isFunction(reject)) {
-                    self._rejects.push([wrapper(reject, promise), null]);
-                }
-                else {
-                    self._rejects.push([promise.reject, promise]);
-                }
-            }
-            else if (state == FULFILLED) {
-
-                if (resolve && isFunction(resolve)) {
-                    next(wrapper(resolve, promise), null, [self._value]);
-                }
-                else {
-                    promise.resolve(self._value);
-                }
-            }
-            else if (state == REJECTED) {
-                if (reject && isFunction(reject)) {
-                    next(wrapper(reject, promise), null, [self._reason]);
-                }
-                else {
-                    promise.reject(self._reason);
-                }
-            }
-
-            return promise;
-        },
-
-        /**
-         * @param {Function} reject -- same as then(null, reject)
-         * @returns {Promise} new promise
-         */
-        "catch": function(reject) {
-            return this.then(null, reject);
-        },
-
-        _done: function() {
-
-            var self    = this,
-                cbs     = self._dones,
-                cb;
-
-            while (cb = cbs.shift()) {
-                try {
-                    cb[0].call(cb[1] || null, self._value);
-                }
-                catch (thrown) {
-                    error(thrown);
-                }
-            }
-        },
-
-        /**
-         * @param {Function} fn -- function to call when promise is resolved
-         * @param {Object} context -- function's "this" object
-         * @returns {Promise} same promise
-         */
-        done: function(fn, context) {
-            var self    = this,
-                state   = self._state;
-
-            if (state == FULFILLED && self._wait == 0) {
-                try {
-                    fn.call(context || null, self._value);
-                }
-                catch (thrown) {
-                    error(thrown);
-                }
-            }
-            else if (state == PENDING) {
-                self._dones.push([fn, context]);
-            }
-
-            return self;
-        },
-
-        _fail: function() {
-
-            var self    = this,
-                cbs     = self._fails,
-                cb;
-
-            while (cb = cbs.shift()) {
-                try {
-                    cb[0].call(cb[1] || null, self._reason);
-                }
-                catch (thrown) {
-                    error(thrown);
-                }
-            }
-        },
-
-        /**
-         * @param {Function} fn -- function to call when promise is rejected.
-         * @param {Object} context -- function's "this" object
-         * @returns {Promise} same promise
-         */
-        fail: function(fn, context) {
-
-            var self    = this,
-                state   = self._state;
-
-            if (state == REJECTED && self._wait == 0) {
-                try {
-                    fn.call(context || null, self._reason);
-                }
-                catch (thrown) {
-                    error(thrown);
-                }
-            }
-            else if (state == PENDING) {
-                self._fails.push([fn, context]);
-            }
-
-            return self;
-        },
-
-        /**
-         * @param {Function} fn -- function to call when promise resolved or rejected
-         * @param {Object} context -- function's "this" object
-         * @return {Promise} same promise
-         */
-        always: function(fn, context) {
-            this.done(fn, context);
-            this.fail(fn, context);
-            return this;
-        },
-
-        /**
-         * @returns {object} then: function, done: function, fail: function, always: function
-         */
-        promise: function() {
-            var self = this;
-            return {
-                then: bind(self.then, self),
-                done: bind(self.done, self),
-                fail: bind(self.fail, self),
-                always: bind(self.always, self)
-            };
-        },
-
-        after: function(value) {
-
-            var self = this;
-
-            if (isThenable(value)) {
-
-                self._wait++;
-
-                var done = function() {
-                    self._wait--;
-                    if (self._wait == 0 && self._state != PENDING) {
-                        self._state == FULFILLED ?
-                            self._callResolveHandlers() :
-                            self._callRejectHandlers();
-                    }
-                };
-
-                if (isFunction(value.done)) {
-                    value.done(done);
-                }
-                else {
-                    value.then(done);
-                }
-            }
-
-            return self;
-        }
-    }, true, false);
-
-
-    /**
-     * @param {function} fn
-     * @param {object} context
-     * @param {[]} args
-     * @returns {Promise}
-     * @static
-     */
-    Promise.fcall = function(fn, context, args) {
-        return Promise.resolve(fn.apply(context, args || []));
-    };
-
-    /**
-     * @param {*} value
-     * @returns {Promise}
-     * @static
-     */
-    Promise.resolve = function(value) {
-        var p = new Promise;
-        p.resolve(value);
-        return p;
-    };
-
-
-    /**
-     * @param {*} reason
-     * @returns {Promise}
-     * @static
-     */
-    Promise.reject = function(reason) {
-        var p = new Promise;
-        p.reject(reason);
-        return p;
-    };
-
-
-    /**
-     * @param {[]} promises -- array of promises or resolve values
-     * @returns {Promise}
-     * @static
-     */
-    Promise.all = function(promises) {
-
-        if (!promises.length) {
-            return Promise.resolve(null);
-        }
-
-        var p       = new Promise,
-            len     = promises.length,
-            values  = new Array(len),
-            cnt     = len,
-            i,
-            item,
-            done    = function(value, inx) {
-                values[inx] = value;
-                cnt--;
-
-                if (cnt == 0) {
-                    p.resolve(values);
-                }
-            };
-
-        for (i = 0; i < len; i++) {
-
-            (function(inx){
-                item = promises[i];
-
-                if (item instanceof Promise) {
-                    item.done(function(value){
-                        done(value, inx);
-                    })
-                        .fail(p.reject, p);
-                }
-                else if (isThenable(item) || isFunction(item)) {
-                    (new Promise(item))
-                        .done(function(value){
-                            done(value, inx);
-                        })
-                        .fail(p.reject, p);
-                }
-                else {
-                    done(item, inx);
-                }
-            })(i);
-        }
-
-        return p;
-    };
-
-    /**
-     * @param {Promise|*} promise1
-     * @param {Promise|*} promise2
-     * @param {Promise|*} promiseN
-     * @returns {Promise}
-     * @static
-     */
-    Promise.when = function() {
-        return Promise.all(arguments);
-    };
-
-    /**
-     * @param {[]} promises -- array of promises or resolve values
-     * @returns {Promise}
-     * @static
-     */
-    Promise.allResolved = function(promises) {
-
-        if (!promises.length) {
-            return Promise.resolve(null);
-        }
-
-        var p       = new Promise,
-            len     = promises.length,
-            values  = [],
-            cnt     = len,
-            i,
-            item,
-            settle  = function(value) {
-                values.push(value);
-                proceed();
-            },
-            proceed = function() {
-                cnt--;
-                if (cnt == 0) {
-                    p.resolve(values);
-                }
-            };
-
-        for (i = 0; i < len; i++) {
-            item = promises[i];
-
-            if (item instanceof Promise) {
-                item.done(settle).fail(proceed);
-            }
-            else if (isThenable(item) || isFunction(item)) {
-                (new Promise(item)).done(settle).fail(proceed);
-            }
-            else {
-                settle(item);
-            }
-        }
-
-        return p;
-    };
-
-    /**
-     * @param {[]} promises -- array of promises or resolve values
-     * @returns {Promise}
-     * @static
-     */
-    Promise.race = function(promises) {
-
-        if (!promises.length) {
-            return Promise.resolve(null);
-        }
-
-        var p   = new Promise,
-            len = promises.length,
-            i,
-            item;
-
-        for (i = 0; i < len; i++) {
-            item = promises[i];
-
-            if (item instanceof Promise) {
-                item.done(p.resolve, p).fail(p.reject, p);
-            }
-            else if (isThenable(item) || isFunction(item)) {
-                (new Promise(item)).done(p.resolve, p).fail(p.reject, p);
-            }
-            else {
-                p.resolve(item);
-            }
-
-            if (!p.isPending()) {
-                break;
-            }
-        }
-
-        return p;
-    };
-
-    /**
-     * @param {[]} functions -- array of promises or resolve values or functions
-     * @returns {Promise}
-     * @static
-     */
-    Promise.waterfall = function(functions) {
-
-        if (!functions.length) {
-            return Promise.resolve(null);
-        }
-
-        var first   = functions.shift(),
-            promise = isFunction(first) ? Promise.fcall(first) : Promise.resolve(fn),
-            fn;
-
-        while (fn = functions.shift()) {
-            if (isThenable(fn)) {
-                promise = promise.then(function(fn){
-                    return function(){
-                        return fn;
-                    };
-                }(fn));
-            }
-            else if (isFunction(fn)) {
-                promise = promise.then(fn);
-            }
-            else {
-                promise.resolve(fn);
-            }
-        }
-
-        return promise;
-    };
-
-    Promise.forEach = function(items, fn, context, allResolved) {
-
-        var left = items.slice(),
-            p = new Promise,
-            values = [],
-            i = 0;
-
-        var next = function() {
-
-            if (!left.length) {
-                p.resolve(values);
-                return;
-            }
-
-            var item = left.shift(),
-                index = i;
-
-            i++;
-
-            Promise.fcall(fn, context, [item, index])
-                .done(function(result){
-                    values.push(result);
-                    next();
-                })
-                .fail(function(reason){
-                    if (allResolved) {
-                        p.reject(reason);
-                    }
-                    else {
-                        values.push(null);
-                        next();
-                    }
-                });
-        };
-
-        next();
-
-        return p;
-    };
-
-    Promise.counter = function(cnt) {
-
-        var promise     = new Promise;
-
-        promise.countdown = function() {
-            cnt--;
-            if (cnt == 0) {
-                promise.resolve();
-            }
-        };
-
-        return promise;
-    };
-
-    return Promise;
-}();
-
-
-
-
-
-var raf = function() {
-
-    var raf,
-        cancel;
-
-    if (typeof window != strUndef) {
-        var w   = window;
-        raf     = w.requestAnimationFrame ||
-                    w.webkitRequestAnimationFrame ||
-                    w.mozRequestAnimationFrame;
-        cancel  = w.cancelAnimationFrame ||
-                    w.webkitCancelAnimationFrame ||
-                    w.mozCancelAnimationFrame ||
-                    w.webkitCancelRequestAnimationFrame;
-
-        if (raf) {
-            return function(fn, context, args) {
-                var id = raf(context || args ? function(){
-                    fn.apply(context, args || []);
-                } : fn);
-                return function() {
-                    cancel(id);
-                };
-            };
-        }
-    }
-
-    return function(fn, context, args){
-        var id = async(fn, context, args, 0);
-        return function(){
-            clearTimeout(id);
-        };
-    };
-
-}();
-
-
-
-
-var animate = function(){
-
-
-    var types           = {
-            "show":     ["mjs-show"],
-            "hide":     ["mjs-hide"],
-            "enter":    ["mjs-enter"],
-            "leave":    ["mjs-leave"],
-            "move":     ["mjs-move"]
-        },
-
-        animId          = 0,
-
-        prefixes        = false,
-        cssAnimations   = false,
-
-        dataParam       = "mjsAnimationQueue",
-
-        callTimeout     = function(fn, startTime, duration) {
-            var tick = function(){
-                var time = (new Date).getTime();
-                if (time - startTime >= duration) {
-                    fn();
-                }
-                else {
-                    raf(tick);
-                }
-            };
-            raf(tick);
-        },
-
-
-        cssAnimSupported= function(){
-            if (prefixes === false) {
-                prefixes        = getAnimationPrefixes();
-                cssAnimations   = !!prefixes;
-            }
-            return cssAnimations;
-        },
-
-
-
-        nextInQueue     = function(el) {
-            var queue = data(el, dataParam),
-                next;
-            if (queue.length) {
-                next = queue[0];
-                animationStage(next.el, next.stages, 0, next.start, next.deferred, false, next.id, next.step);
-            }
-            else {
-                data(el, dataParam, null);
-            }
-        },
-
-        animationStage  = function animationStage(el, stages, position, startCallback,
-                                                  deferred, first, id, stepCallback) {
-
-            var stopped   = function() {
-                var q = data(el, dataParam);
-                if (!q || !q.length || q[0].id != id) {
-                    deferred.reject(el);
-                    return true;
-                }
-                return false;
-            };
-
-            var finishStage = function() {
-
-                if (stopped()) {
-                    return;
-                }
-
-                var thisPosition = position;
-
-                position++;
-
-                if (position == stages.length) {
-                    deferred.resolve(el);
-                    data(el, dataParam).shift();
-                    nextInQueue(el);
-                }
-                else {
-                    data(el, dataParam)[0].position = position;
-                    animationStage(el, stages, position, null, deferred, false, id, stepCallback);
-                }
-
-                removeClass(el, stages[thisPosition]);
-                removeClass(el, stages[thisPosition] + "-active");
-            };
-
-            var setStage = function() {
-
-                if (!stopped()) {
-
-                    addClass(el, stages[position] + "-active");
-
-                    Promise.resolve(stepCallback && stepCallback(el, position, "active"))
-                        .done(function(){
-                            if (!stopped()) {
-
-                                var duration = getAnimationDuration(el);
-
-                                if (duration) {
-                                    callTimeout(finishStage, (new Date).getTime(), duration);
-                                }
-                                else {
-                                    raf(finishStage);
-                                }
-                            }
-                        });
-                }
-
-            };
-
-            var start = function(){
-
-                if (!stopped()) {
-                    addClass(el, stages[position]);
-
-                    Promise.waterfall([
-                            stepCallback && stepCallback(el, position, "start"),
-                            function(){
-                                return startCallback ? startCallback(el) : null;
-                            }
-                        ])
-                        .done(function(){
-                            !stopped() && raf(setStage);
-                        });
-                }
-            };
-
-
-
-            first ? raf(start) : start();
-        };
-
-
-    /**
-     * @function animate
-     * @param {Element} el Element being animated
-     * @param {string|function|[]|object} animation {
-     *  'string' - registered animation name,<br>
-     *  'function' - fn(el, callback) - your own animation<br>
-     *  'array' - array or stages (class names)<br>
-     *  'array' - [{before}, {after}] - jquery animation<br>
-     *  'object' - {stages, fn, before, after, options, context, duration, start}
-     * }
-     * @param {function} startCallback call this function before animation begins
-     * @param {bool} checkIfEnabled check if mjs-animate attribute is present
-     * @param {MetaphorJs.Namespace} namespace registered animations storage
-     * @param {function} stepCallback call this function between stages
-     * @returns {MetaphorJs.Promise}
-     */
-    var animate = function animate(el, animation, startCallback, checkIfEnabled, namespace, stepCallback) {
-
-        var deferred    = new Promise,
-            queue       = data(el, dataParam) || [],
-            id          = ++animId,
-            attrValue   = getAttr(el, "mjs-animate"),
-            stages,
-            jsFn,
-            before, after,
-            options, context,
-            duration;
-
-        animation       = animation || attrValue;
-
-        if (checkIfEnabled && isNull(attrValue)) {
-            animation   = null;
-        }
-
-        if (animation) {
-
-            if (isString(animation)) {
-                if (animation.substr(0,1) == '[') {
-                    stages  = (new Function('', 'return ' + animation))();
-                }
-                else {
-                    stages      = types[animation];
-                    animation   = namespace && namespace.get("animate." + animation, true);
-                }
-            }
-            else if (isFunction(animation)) {
-                jsFn = animation;
-            }
-            else if (isArray(animation)) {
-                if (isString(animation[0])) {
-                    stages = animation;
-                }
-                else {
-                    before = animation[0];
-                    after = animation[1];
-                }
-            }
-
-            if (isPlainObject(animation)) {
-                stages      = animation.stages;
-                jsFn        = animation.fn;
-                before      = animation.before;
-                after       = animation.after;
-                options     = animation.options ? extend({}, animation.options) : {};
-                context     = animation.context || null;
-                duration    = animation.duration || null;
-                startCallback   = startCallback || options.start;
-            }
-
-
-            if (cssAnimSupported() && stages) {
-
-                queue.push({
-                    el: el,
-                    stages: stages,
-                    start: startCallback,
-                    step: stepCallback,
-                    deferred: deferred,
-                    position: 0,
-                    id: id
-                });
-                data(el, dataParam, queue);
-
-                if (queue.length == 1) {
-                    animationStage(el, stages, 0, startCallback, deferred, true, id, stepCallback);
-                }
-
-                return deferred;
-            }
-            else {
-
-                options = options || {};
-
-                startCallback && (options.start = function(){
-                    startCallback(el);
-                });
-
-                options.complete = function() {
-                    deferred.resolve(el);
-                };
-
-                duration && (options.duration = duration);
-
-                if (jsFn && isFunction(jsFn)) {
-                    if (before) {
-                        extend(el.style, before, true, false);
-                    }
-                    startCallback && startCallback(el);
-                    data(el, dataParam, jsFn.call(context, el, function(){
-                        deferred.resolve(el);
-                    }));
-                    return deferred;
-                }
-                else if (window.jQuery) {
-
-                    var j = $(el);
-                    before && j.css(before);
-                    data(el, dataParam, "stop");
-
-                    if (jsFn && isString(jsFn)) {
-                        j[jsFn](options);
-                        return deferred;
-                    }
-                    else if (after) {
-                        j.animate(after, options);
-                        return deferred;
-                    }
-                }
-            }
-        }
-
-        // no animation happened
-
-
-        if (startCallback) {
-            var promise = startCallback(el);
-            if (isThenable(promise)) {
-                promise.done(function(){
-                    deferred.resolve(el);
-                });
-            }
-            else {
-                //raf(function(){
-                    deferred.resolve(el);
-                //});
-            }
-        }
-        else {
-            //raf(function(){
-                deferred.resolve(el);
-            //});
-        }
-
-
-        return deferred;
-    };
-
-    animate.addAnimationType     = function(name, stages) {
-        types[name] = stages;
-    };
-
-    animate.stop = stopAnimation;
-    animate.getPrefixes = getAnimationPrefixes;
-    animate.getDuration = getAnimationDuration;
-
-    /**
-     * @function animate.cssAnimationSupported
-     * @returns {bool}
-     */
-    animate.cssAnimationSupported = cssAnimSupported;
-
-    return animate;
-}();
-
-
-
-/**
- * @function trim
- * @param {String} value
- * @returns {string}
- */
-var trim = function() {
-    // native trim is way faster: http://jsperf.com/angular-trim-test
-    // but IE doesn't have it... :-(
-    if (!String.prototype.trim) {
-        return function(value) {
-            return isString(value) ? value.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : value;
-        };
-    }
-    return function(value) {
-        return isString(value) ? value.trim() : value;
-    };
-}();
-
-
-
-var parseJSON = function() {
-
-    return typeof JSON != strUndef ?
-           function(data) {
-               return JSON.parse(data);
-           } :
-           function(data) {
-               return (new Function("return " + data))();
-           };
-}();
-
-
-
-
-
-function parseXML(data, type) {
-
-    var xml, tmp;
-
-    if (!data || !isString(data)) {
-        return null;
-    }
-
-    // Support: IE9
-    try {
-        tmp = new DOMParser();
-        xml = tmp.parseFromString(data, type || "text/xml");
-    } catch (thrownError) {
-        xml = undf;
-    }
-
-    if (!xml || xml.getElementsByTagName("parsererror").length) {
-        throw "Invalid XML: " + data;
-    }
-
-    return xml;
-};
-
-
-
-
-var ObservableEvent = (function(){
-
-    /**
-     * This class is private - you can't create an event other than via Observable.
-     * See Observable reference.
-     * @class ObservableEvent
-     * @private
-     */
-    var ObservableEvent = function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
-
-        var self    = this;
-
-        self.name           = name;
-        self.listeners      = [];
-        self.map            = {};
-        self.hash           = nextUid();
-        self.uni            = '$$' + name + '_' + self.hash;
-        self.suspended      = false;
-        self.lid            = 0;
-
-        if (typeof returnResult == "object" && returnResult !== null) {
-            extend(self, returnResult, true, false);
-        }
-        else {
-            self.returnResult = returnResult === undf ? null : returnResult; // first|last|all
-            self.autoTrigger = autoTrigger;
-            self.triggerFilter = triggerFilter;
-            self.filterContext = filterContext;
-        }
-    };
-
-
-    extend(ObservableEvent.prototype, {
-
-        name: null,
-        listeners: null,
-        map: null,
-        hash: null,
-        uni: null,
-        suspended: false,
-        lid: null,
-        returnResult: null,
-        autoTrigger: null,
-        lastTrigger: null,
-        triggerFilter: null,
-        filterContext: null,
-
-        /**
-         * Get event name
-         * @method
-         * @returns {string}
-         */
-        getName: function() {
-            return this.name;
-        },
-
-        /**
-         * @method
-         */
-        destroy: function() {
-            var self        = this,
-                k;
-
-            for (k in self) {
-                self[k] = null;
-            }
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        on: function(fn, context, options) {
-
-            if (!fn) {
-                return null;
-            }
-
-            context     = context || null;
-            options     = options || {};
-
-            var self        = this,
-                uni         = self.uni,
-                uniContext  = context || fn;
-
-            if (uniContext[uni] && !options.allowDupes) {
-                return null;
-            }
-
-            var id      = ++self.lid,
-                first   = options.first || false;
-
-            uniContext[uni]  = id;
-
-
-            var e = {
-                fn:         fn,
-                context:    context,
-                uniContext: uniContext,
-                id:         id,
-                called:     0, // how many times the function was triggered
-                limit:      0, // how many times the function is allowed to trigger
-                start:      1, // from which attempt it is allowed to trigger the function
-                count:      0, // how many attempts to trigger the function was made
-                append:     null, // append parameters
-                prepend:    null // prepend parameters
-            };
-
-            extend(e, options, true, false);
-
-            if (first) {
-                self.listeners.unshift(e);
-            }
-            else {
-                self.listeners.push(e);
-            }
-
-            self.map[id] = e;
-
-            if (self.autoTrigger && self.lastTrigger && !self.suspended) {
-                var prevFilter = self.triggerFilter;
-                self.triggerFilter = function(l){
-                    if (l.id == id) {
-                        return prevFilter ? prevFilter(l) !== false : true;
-                    }
-                    return false;
-                };
-                self.trigger.apply(self, self.lastTrigger);
-                self.triggerFilter = prevFilter;
-            }
-
-            return id;
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @param {object} options See Observable's on()
-         */
-        once: function(fn, context, options) {
-
-            options = options || {};
-            options.limit = 1;
-
-            return this.on(fn, context, options);
-        },
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         */
-        un: function(fn, context) {
-
-            var self        = this,
-                inx         = -1,
-                uni         = self.uni,
-                listeners   = self.listeners,
-                id;
-
-            if (fn == parseInt(fn)) {
-                id      = fn;
-            }
-            else {
-                context = context || fn;
-                id      = context[uni];
-            }
-
-            if (!id) {
-                return false;
-            }
-
-            for (var i = 0, len = listeners.length; i < len; i++) {
-                if (listeners[i].id == id) {
-                    inx = i;
-                    delete listeners[i].uniContext[uni];
-                    break;
-                }
-            }
-
-            if (inx == -1) {
-                return false;
-            }
-
-            listeners.splice(inx, 1);
-            delete self.map[id];
-            return true;
-        },
-
-        /**
-         * @method hasListener
-         * @return bool
-         */
-
-        /**
-         * @method
-         * @param {function} fn Callback function { @required }
-         * @param {object} context Function's "this" object
-         * @return bool
-         */
-        hasListener: function(fn, context) {
-
-            var self    = this,
-                listeners   = self.listeners,
-                id;
-
-            if (fn) {
-
-                context = context || fn;
-
-                if (!isFunction(fn)) {
-                    id  = fn;
-                }
-                else {
-                    id  = context[self.uni];
-                }
-
-                if (!id) {
-                    return false;
-                }
-
-                for (var i = 0, len = listeners.length; i < len; i++) {
-                    if (listeners[i].id == id) {
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-            else {
-                return listeners.length > 0;
-            }
-        },
-
-
-        /**
-         * @method
-         */
-        removeAllListeners: function() {
-            var self    = this,
-                listeners = self.listeners,
-                uni     = self.uni,
-                i, len;
-
-            for (i = 0, len = listeners.length; i < len; i++) {
-                delete listeners[i].uniContext[uni];
-            }
-            self.listeners   = [];
-            self.map         = {};
-        },
-
-        /**
-         * @method
-         */
-        suspend: function() {
-            this.suspended = true;
-        },
-
-        /**
-         * @method
-         */
-        resume: function() {
-            this.suspended = false;
-        },
-
-
-        _prepareArgs: function(l, triggerArgs) {
-            var args;
-
-            if (l.append || l.prepend) {
-                args    = slice.call(triggerArgs);
-                if (l.prepend) {
-                    args    = l.prepend.concat(args);
-                }
-                if (l.append) {
-                    args    = args.concat(l.append);
-                }
-            }
-            else {
-                args = triggerArgs;
-            }
-
-            return args;
-        },
-
-        /**
-         * @method
-         * @return {*}
-         */
-        trigger: function() {
-
-            var self            = this,
-                listeners       = self.listeners,
-                returnResult    = self.returnResult,
-                filter          = self.triggerFilter,
-                filterContext   = self.filterContext,
-                args;
-
-            if (self.suspended) {
-                return null;
-            }
-
-            if (self.autoTrigger) {
-                self.lastTrigger = slice.call(arguments);
-            }
-
-            if (listeners.length == 0) {
-                return null;
-            }
-
-            var ret     = returnResult == "all" || returnResult == "merge" ?
-                          [] : null,
-                q, l,
-                res;
-
-            if (returnResult == "first") {
-                q = [listeners[0]];
-            }
-            else {
-                // create a snapshot of listeners list
-                q = slice.call(listeners);
-            }
-
-            // now if during triggering someone unsubscribes
-            // we won't skip any listener due to shifted
-            // index
-            while (l = q.shift()) {
-
-                // listener may already have unsubscribed
-                if (!l || !self.map[l.id]) {
-                    continue;
-                }
-
-                args = self._prepareArgs(l, arguments);
-
-                if (filter && filter.call(filterContext, l, args, self) === false) {
-                    continue;
-                }
-
-                if (l.filter && l.filter.apply(l.filterContext || l.context, args) === false) {
-                    continue;
-                }
-
-                l.count++;
-
-                if (l.count < l.start) {
-                    continue;
-                }
-
-                res = l.fn.apply(l.context, args);
-
-                l.called++;
-
-                if (l.called == l.limit) {
-                    self.un(l.id);
-                }
-
-                if (returnResult == "all") {
-                    ret.push(res);
-                }
-                else if (returnResult == "merge" && res) {
-                    ret = ret.concat(res);
-                }
-                else if (returnResult == "first") {
-                    return res;
-                }
-                else if (returnResult == "nonempty" && res) {
-                    return res;
-                }
-                else if (returnResult == "last") {
-                    ret = res;
-                }
-                else if (returnResult == false && res === false) {
-                    return false;
-                }
-            }
-
-            if (returnResult) {
-                return ret;
-            }
-        }
-    }, true, false);
-
-
-    return ObservableEvent;
-}());
-
-
-
-
-var Observable = (function(){
-
-
-    /**
-     * @description A javascript event system implementing two patterns - observable and collector.
-     * @description Observable:
-     * @code examples/observable.js
-     *
-     * @description Collector:
-     * @code examples/collector.js
-     *
-     * @class Observable
-     * @version 1.1
-     * @author johann kuindji
-     * @link https://github.com/kuindji/metaphorjs-observable
-     */
-    var Observable = function() {
-
-        this.events = {};
-
-    };
-
-
-    extend(Observable.prototype, {
-
-
-
-        /**
-        * You don't have to call this function unless you want to pass params other than event name.
-        * Normally, events are created automatically.
-        *
-        * @method createEvent
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {bool|string} returnResult {
-        *   false -- return first 'false' result and stop calling listeners after that<br>
-        *   "all" -- return all results as array<br>
-        *   "merge" -- merge all results into one array (each result must be array)<br>
-        *   "first" -- return result of the first handler (next listener will not be called)<br>
-        *   "last" -- return result of the last handler (all listeners will be called)<br>
-        * }
-        * @param {bool} autoTrigger {
-        *   once triggered, all future subscribers will be automatically called
-        *   with last trigger params
-        *   @code examples/autoTrigger.js
-        * }
-        * @param {function} triggerFilter {
-        *   This function will be called each time event is triggered. Return false to skip listener.
-        *   @code examples/triggerFilter.js
-        *   @param {object} listener This object contains all information about the listener, including
-        *       all data you provided in options while subscribing to the event.
-        *   @param {[]} arguments
-        *   @return {bool}
-        * }
-        * @return {ObservableEvent}
-        */
-
-        /**
-         * @method createEvent
-         * @param {string} name
-         * @param {object} options {
-         *  @type {string} returnResult
-         *  @param {bool} autoTrigger
-         *  @param {function} triggerFilter
-         * }
-         * @param {object} filterContext
-         * @returns {ObservableEvent}
-         */
-        createEvent: function(name, returnResult, autoTrigger, triggerFilter, filterContext) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name, returnResult, autoTrigger, triggerFilter, filterContext);
-            }
-            return events[name];
-        },
-
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @return {ObservableEvent|undefined}
-        */
-        getEvent: function(name) {
-            name = name.toLowerCase();
-            return this.events[name];
-        },
-
-        /**
-        * Subscribe to an event or register collector function.
-        * @method
-        * @access public
-        * @param {string} name {
-        *       Event name
-        *       @required
-        * }
-        * @param {function} fn {
-        *       Callback function
-        *       @required
-        * }
-        * @param {object} context "this" object for the callback function
-        * @param {object} options {
-        *       You can pass any key-value pairs in this object. All of them will be passed to triggerFilter (if
-        *       you're using one).
-        *       @type {bool} first {
-        *           True to prepend to the list of handlers
-        *           @default false
-        *       }
-        *       @type {number} limit {
-        *           Call handler this number of times; 0 for unlimited
-        *           @default 0
-        *       }
-        *       @type {number} start {
-        *           Start calling handler after this number of calls. Starts from 1
-        *           @default 1
-        *       }
-         *      @type {[]} append Append parameters
-         *      @type {[]} prepend Prepend parameters
-         *      @type {bool} allowDupes allow the same handler twice
-        * }
-        */
-        on: function(name, fn, context, options) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                events[name] = new ObservableEvent(name);
-            }
-            return events[name].on(fn, context, options);
-        },
-
-        /**
-        * Same as {@link Observable.on}, but options.limit is forcefully set to 1.
-        * @method
-        * @access public
-        */
-        once: function(name, fn, context, options) {
-            options     = options || {};
-            options.limit = 1;
-            return this.on(name, fn, context, options);
-        },
-
-
-        /**
-        * Unsubscribe from an event
-        * @method
-        * @access public
-        * @param {string} name Event name
-        * @param {function} fn Event handler
-        * @param {object} context If you called on() with context you must call un() with the same context
-        */
-        un: function(name, fn, context) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].un(fn, context);
-        },
-
-        /**
-         * @method hasListener
-         * @access public
-         * @return bool
-         */
-
-        /**
-        * @method hasListener
-        * @access public
-        * @param {string} name Event name { @required }
-        * @return bool
-        */
-
-        /**
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {function} fn Callback function { @required }
-        * @param {object} context Function's "this" object
-        * @return bool
-        */
-        hasListener: function(name, fn, context) {
-            var events = this.events;
-
-            if (name) {
-                name = name.toLowerCase();
-                if (!events[name]) {
-                    return false;
-                }
-                return events[name].hasListener(fn, context);
-            }
-            else {
-                for (name in events) {
-                    if (events[name].hasListener()) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        },
-
-
-        /**
-        * Remove all listeners from all events
-        * @method removeAllListeners
-        * @access public
-        */
-
-        /**
-        * Remove all listeners from specific event
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        */
-        removeAllListeners: function(name) {
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].removeAllListeners();
-        },
-
-        /**
-        * Trigger an event -- call all listeners.
-        * @method
-        * @access public
-        * @param {string} name Event name { @required }
-        * @param {*} ... As many other params as needed
-        * @return mixed
-        */
-        trigger: function() {
-
-            var name = arguments[0],
-                events  = this.events;
-
-            name = name.toLowerCase();
-
-            if (!events[name]) {
-                return null;
-            }
-
-            var e = events[name];
-            return e.trigger.apply(e, slice.call(arguments, 1));
-        },
-
-        /**
-        * Suspend an event. Suspended event will not call any listeners on trigger().
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        suspendEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].suspend();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        suspendAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].suspend();
-            }
-        },
-
-        /**
-        * Resume suspended event.
-        * @method
-        * @access public
-        * @param {string} name Event name
-        */
-        resumeEvent: function(name) {
-            name = name.toLowerCase();
-            var events  = this.events;
-            if (!events[name]) {
-                return;
-            }
-            events[name].resume();
-        },
-
-        /**
-        * @method
-        * @access public
-        */
-        resumeAllEvents: function() {
-            var events  = this.events;
-            for (var name in events) {
-                events[name].resume();
-            }
-        },
-
-        /**
-         * @method
-         * @access public
-         * @param {string} name Event name
-         */
-        destroyEvent: function(name) {
-            var events  = this.events;
-            if (events[name]) {
-                events[name].removeAllListeners();
-                events[name].destroy();
-                delete events[name];
-            }
-        },
-
-
-        /**
-        * Destroy observable
-        * @method
-        * @md-not-inheritable
-        * @access public
-        */
-        destroy: function() {
-            var self    = this,
-                events  = self.events;
-
-            for (var i in events) {
-                self.destroyEvent(i);
-            }
-
-            for (i in self) {
-                self[i] = null;
-            }
-        },
-
-        /**
-        * Although all methods are public there is getApi() method that allows you
-        * extending your own objects without overriding "destroy" (which you probably have)
-        * @code examples/api.js
-        * @method
-        * @md-not-inheritable
-        * @returns object
-        */
-        getApi: function() {
-
-            var self    = this;
-
-            if (!self.api) {
-
-                var methods = [
-                        "createEvent", "getEvent", "on", "un", "once", "hasListener", "removeAllListeners",
-                        "trigger", "suspendEvent", "suspendAllEvents", "resumeEvent",
-                        "resumeAllEvents", "destroyEvent"
-                    ],
-                    api = {},
-                    name;
-
-                for(var i =- 1, l = methods.length;
-                        ++i < l;
-                        name = methods[i],
-                        api[name] = bind(self[name], self)){}
-
-                self.api = api;
-            }
-
-            return self.api;
-
-        }
-    }, true, false);
-
-
-    return Observable;
-}());
-
-
-
-// partly from jQuery serialize.js
-
-var serializeParam = function(){
-
-    var r20 = /%20/g,
-        rbracket = /\[\]$/;
-
-    function buildParams(prefix, obj, add) {
-        var name,
-            i, l, v;
-
-        if (isArray(obj)) {
-            // Serialize array item.
-
-            for (i = 0, l = obj.length; i < l; i++) {
-                v = obj[i];
-
-                if (rbracket.test(prefix)) {
-                    // Treat each array item as a scalar.
-                    add(prefix, v);
-
-                } else {
-                    // Item is non-scalar (array or object), encode its numeric index.
-                    buildParams(
-                        prefix + "[" + ( typeof v === "object" ? i : "" ) + "]",
-                        v,
-                        add
-                    );
-                }
-            }
-        } else if (isPlainObject(obj)) {
-            // Serialize object item.
-            for (name in obj) {
-                buildParams(prefix + "[" + name + "]", obj[ name ], add);
-            }
-
-        } else {
-            // Serialize scalar item.
-            add(prefix, obj);
-        }
-    }
-
-    return function(obj) {
-
-        var prefix,
-            s = [],
-            add = function( key, value ) {
-                // If value is a function, invoke it and return its value
-                value = isFunction(value) ? value() : (value == null ? "" : value);
-                s[s.length] = encodeURIComponent( key ) + "=" + encodeURIComponent( value );
-            };
-
-        for ( prefix in obj ) {
-            buildParams(prefix, obj[prefix], add);
-        }
-
-        // Return the resulting serialization
-        return s.join( "&" ).replace( r20, "+" );
-    };
-
-
-}();
-
-
-/**
- * @mixin Promise
- */
-ns.register("mixin.Promise", {
-
-    $$promise: null,
-
-    $beforeInit: function() {
-        this.$$promise = new Promise;
-    },
-
-    then: function(){
-        return this.$$promise.then.apply(this.$$promise, arguments);
-    },
-
-    done: function() {
-        this.$$promise.done.apply(this.$$promise, arguments);
-        return this;
-    },
-
-    always: function() {
-        this.$$promise.always.apply(this.$$promise, arguments);
-        return this;
-    },
-
-    fail: function() {
-        this.$$promise.fail.apply(this.$$promise, arguments);
-        return this;
-    }
-
-});
-
-
-
-
-(function(){
-
-
-
-    var accepts     = {
-            xml:        "application/xml, text/xml",
-            html:       "text/html",
-            script:     "text/javascript, application/javascript",
-            json:       "application/json, text/javascript",
-            text:       "text/plain",
-            _default:   "*/*"
-        },
-
-        createXHR       = function() {
-
-            var xhr;
-
-            if (!window.XMLHttpRequest || !(xhr = new XMLHttpRequest())) {
-                if (!(xhr = new ActiveXObject("Msxml2.XMLHTTP"))) {
-                    if (!(xhr = new ActiveXObject("Microsoft.XMLHTTP"))) {
-                        throw "Unable to create XHR object";
-                    }
-                }
-            }
-
-            return xhr;
-        },
-
-        httpSuccess     = function(r) {
-            try {
-                return (!r.status && location && location.protocol == "file:")
-                       || (r.status >= 200 && r.status < 300)
-                       || r.status === 304 || r.status === 1223; // || r.status === 0;
-            } catch(thrownError){}
-            return false;
-        };
-
-    return defineClass({
-
-        $class: "ajax.transport.XHR",
-
-        type: "xhr",
-        _xhr: null,
-        _deferred: null,
-        _ajax: null,
-
-        $init: function(opt, deferred, ajax) {
-
-            var self    = this,
-                xhr;
-
-            self._xhr = xhr     = createXHR();
-            self._deferred      = deferred;
-            self._opt           = opt;
-            self._ajax          = ajax;
-
-            if (opt.progress) {
-                xhr.onprogress = bind(opt.progress, opt.context);
-            }
-            if (opt.uploadProgress && xhr.upload) {
-                xhr.upload.onprogress = bind(opt.uploadProgress, opt.context);
-            }
-
-            xhr.onreadystatechange = bind(self.onReadyStateChange, self);
-        },
-
-        setHeaders: function() {
-
-            var self = this,
-                opt = self._opt,
-                xhr = self._xhr,
-                i;
-
-            if (opt.xhrFields) {
-                for (i in opt.xhrFields) {
-                    xhr[i] = opt.xhrFields[i];
-                }
-            }
-            if (opt.data && opt.contentType) {
-                xhr.setRequestHeader("Content-Type", opt.contentType);
-            }
-            xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-            xhr.setRequestHeader("Accept",
-                opt.dataType && accepts[opt.dataType] ?
-                accepts[opt.dataType] + ", */*; q=0.01" :
-                accepts._default
-            );
-            for (i in opt.headers) {
-                xhr.setRequestHeader(i, opt.headers[i]);
-            }
-
-        },
-
-        onReadyStateChange: function() {
-
-            var self        = this,
-                xhr         = self._xhr,
-                deferred    = self._deferred;
-
-            if (xhr.readyState === 0) {
-                xhr.onreadystatechange = emptyFn;
-                deferred.resolve(xhr);
-                return;
-            }
-
-            if (xhr.readyState === 4) {
-                xhr.onreadystatechange = emptyFn;
-
-                if (httpSuccess(xhr)) {
-
-                    self._ajax.processResponse(
-                        isString(xhr.responseText) ? xhr.responseText : undf,
-                        xhr.getResponseHeader("content-type") || ''
-                    );
-                }
-                else {
-
-                    xhr.responseData = null;
-
-                    try {
-                        xhr.responseData = self._ajax.returnResponse(
-                            isString(xhr.responseText) ? xhr.responseText : undf,
-                            xhr.getResponseHeader("content-type") || ''
-                        );
-                    }
-                    catch (thrownErr) {}
-
-                    deferred.reject(xhr);
-                }
-            }
-        },
-
-        abort: function() {
-            var self    = this;
-            self._xhr.onreadystatechange = emptyFn;
-            self._xhr.abort();
-        },
-
-        send: function() {
-
-            var self    = this,
-                opt     = self._opt;
-
-            try {
-                self._xhr.open(opt.method, opt.url, true, opt.username, opt.password);
-                self.setHeaders();
-                self._xhr.send(opt.data);
-            }
-            catch (thrownError) {
-                if (self._deferred) {
-                    self._deferred.reject(thrownError);
-                }
-            }
-        }
-    });
-
-}());
-
-
-
-
-
-
-
-defineClass({
-    $class: "ajax.transport.Script",
+    
+var ajax_transport_Script = MetaphorJs.ajax.transport.Script = cls({
 
     type: "script",
     _opt: null,
@@ -5099,12 +4853,12 @@ defineClass({
         var self    = this,
             script  = document.createElement("script");
 
-        setAttr(script, "async", "async");
-        setAttr(script, "charset", "utf-8");
-        setAttr(script, "src", self._opt.url);
+        dom_setAttr(script, "async", "async");
+        dom_setAttr(script, "charset", "utf-8");
+        dom_setAttr(script, "src", self._opt.url);
 
-        addListener(script, "load", bind(self.onLoad, self));
-        addListener(script, "error", bind(self.onError, self));
+        dom_addListener(script, "load", bind(self.onLoad, self));
+        dom_addListener(script, "error", bind(self.onError, self));
 
         document.head.appendChild(script);
 
@@ -5129,7 +4883,7 @@ defineClass({
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self    = this;
 
@@ -5143,9 +4897,10 @@ defineClass({
 
 
 
-defineClass({
 
-    $class: "ajax.transport.IFrame",
+
+
+var ajax_transport_IFrame = MetaphorJs.ajax.transport.IFrame = cls({
 
     type: "iframe",
     _opt: null,
@@ -5169,16 +4924,16 @@ defineClass({
             id      = "frame-" + nextUid(),
             form    = self._opt.form;
 
-        setAttr(frame, "id", id);
-        setAttr(frame, "name", id);
+        dom_setAttr(frame, "id", id);
+        dom_setAttr(frame, "name", id);
         frame.style.display = "none";
         document.body.appendChild(frame);
 
-        setAttr(form, "action", self._opt.url);
-        setAttr(form, "target", id);
+        dom_setAttr(form, "action", self._opt.url);
+        dom_setAttr(form, "target", id);
 
-        addListener(frame, "load", bind(self.onLoad, self));
-        addListener(frame, "error", bind(self.onError, self));
+        dom_addListener(frame, "load", bind(self.onLoad, self));
+        dom_addListener(frame, "error", bind(self.onError, self));
 
         self._el = frame;
 
@@ -5193,6 +4948,7 @@ defineClass({
                 self._sent = true;
             }
             catch (thrownError) {
+                error(thrownError);
                 if (tries > 2) {
                     self._deferred.reject(thrownError);
                 }
@@ -5224,6 +4980,7 @@ defineClass({
                 self._ajax.processResponse(data);
             }
             catch (thrownError) {
+                error(thrownError);
                 self._deferred.reject(thrownError);
             }
         }
@@ -5246,7 +5003,7 @@ defineClass({
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
         var self    = this;
 
         if (self._el.parentNode) {
@@ -5264,7 +5021,13 @@ defineClass({
 
 
 
-(function(){
+
+
+
+
+
+
+var ajax_Ajax = MetaphorJs.ajax.Ajax = (function(){
 
     var rquery          = /\?/,
         rurl            = /^([\w.+-]+:)(?:\/\/(?:[^\/?#]*@|)([^\/?#:]*)(?::(\d+)|)|)/,
@@ -5272,7 +5035,7 @@ defineClass({
         rts             = /([?&])_=[^&]*/,
         rgethead        = /^(?:GET|HEAD)$/i,
 
-        globalEvents    = new Observable,
+        globalEvents    = new lib_Observable,
 
         formDataSupport = !!(window && window.FormData),
 
@@ -5289,12 +5052,12 @@ defineClass({
             ct = ct || "";
 
             if (type === "xml" || !type && ct.indexOf("xml") >= 0) {
-                doc = parseXML(trim(data));
-                return selector ? select(selector, doc) : doc;
+                doc = parseXML(data.trim());
+                return selector ? dom_select(selector, doc) : doc;
             }
             else if (type === "html") {
                 doc = parseXML(data, "text/html");
-                return selector ? select(selector, doc) : doc;
+                return selector ? dom_select(selector, doc) : doc;
             }
             else if (type == "fragment") {
                 var fragment    = document.createDocumentFragment(),
@@ -5309,7 +5072,7 @@ defineClass({
                 return fragment;
             }
             else if (type === "json" || !type && ct.indexOf("json") >= 0) {
-                return parseJSON(trim(data));
+                return JSON.parse(data.trim());
             }
             else if (type === "script" || !type && ct.indexOf("javascript") >= 0) {
                 globalEval(data);
@@ -5346,7 +5109,7 @@ defineClass({
 
             if (opt.data && opt.method != "POST" && !opt.contentType && (!formDataSupport || !(opt.data instanceof window.FormData))) {
 
-                opt.data = !isString(opt.data) ? serializeParam(opt.data) : opt.data;
+                opt.data = !isString(opt.data) ? ajax_serializeParam(opt.data) : opt.data;
                 url += (rquery.test(url) ? "&" : "?") + opt.data;
                 opt.data = null;
             }
@@ -5360,9 +5123,9 @@ defineClass({
 
             if (!isObject(data) && !isFunction(data) && name) {
                 input   = document.createElement("input");
-                setAttr(input, "type", "hidden");
-                setAttr(input, "name", name);
-                setAttr(input, "value", data);
+                dom_setAttr(input, "type", "hidden");
+                dom_setAttr(input, "name", name);
+                dom_setAttr(input, "value", data);
                 form.appendChild(input);
             }
             else if (isArray(data) && name) {
@@ -5389,12 +5152,13 @@ defineClass({
 
                 oField = form.elements[nItem];
 
-                if (getAttr(oField, "name") === null) {
+                if (dom_getAttr(oField, "name") === null) {
                     continue;
                 }
 
                 sFieldType = oField.nodeName.toUpperCase() === "INPUT" ?
-                             getAttr(oField, "type").toUpperCase() : "TEXT";
+                                dom_getAttr(oField, "type").toUpperCase() : 
+                                "TEXT";
 
                 if (sFieldType === "FILE") {
                     for (nFile = 0;
@@ -5406,7 +5170,7 @@ defineClass({
                 }
             }
 
-            return serializeParam(obj);
+            return ajax_serializeParam(obj);
         },
 
         globalEval = function(code){
@@ -5423,10 +5187,13 @@ defineClass({
             }
         };
 
-    defineClass({
+    /**
+     * @class MetaphorJs.ajax.Ajax
+     * @mixes mixin:mixin_Promise
+     */
+    return cls({
 
-        $class: "Ajax",
-        $mixins: ["mixin.Promise"],
+        $mixins: [mixin_Promise],
 
         _jsonpName: null,
         _transport: null,
@@ -5437,6 +5204,11 @@ defineClass({
         _form: null,
         _removeForm: false,
 
+        /**
+         * @method
+         * @constructor
+         * @param {object} opt See ajax.defaults
+         */
         $init: function(opt) {
 
             if (opt.url) {
@@ -5450,14 +5222,13 @@ defineClass({
 
             self._opt       = opt;
 
-            if (opt.crossDomain !== true) {
+            if (opt.crossDomain !== true && opt.ignoreCrossDomain !== true) {
                 opt.crossDomain = !!(parts &&
                                      (parts[1] !== local[1] || parts[2] !== local[2] ||
                                       (parts[3] || (parts[1] === "http:" ? "80" : "443")) !==
                                       (local[3] || (local[1] === "http:" ? "80" : "443"))));
             }
 
-            //deferred    = new Promise,
             var transport;
 
             if (opt.files) {
@@ -5486,8 +5257,8 @@ defineClass({
                     opt.data = serializeForm(opt.form);
                 }
             }
-            else if (opt.contentType == "json") {
-                opt.contentType = "text/plain";
+            else if (opt.contentType === "json") {
+                opt.contentType = opt.contentTypeHeader || "text/plain";
                 opt.data = isString(opt.data) ? opt.data : JSON.stringify(opt.data);
             }
             else if (isPlainObject(opt.data) && opt.method == "POST" && formDataSupport) {
@@ -5509,28 +5280,48 @@ defineClass({
             opt.url = prepareUrl(opt.url, opt);
 
             if ((opt.crossDomain || opt.transport == "script") && !opt.form) {
-                transport   = new MetaphorJs.ajax.transport.Script(opt, self.$$promise, self);
+                transport   = new ajax_transport_Script(opt, self.$$promise, self);
             }
             else if (opt.transport == "iframe") {
-                transport   = new MetaphorJs.ajax.transport.IFrame(opt, self.$$promise, self);
+                transport   = new ajax_transport_IFrame(opt, self.$$promise, self);
             }
             else {
-                transport   = new MetaphorJs.ajax.transport.XHR(opt, self.$$promise, self);
+                transport   = new ajax_transport_XHR(opt, self.$$promise, self);
             }
 
             //self._deferred      = deferred;
             self._transport     = transport;
 
+            /**
+             * On successful request
+             * @event success
+             * @param {*} value response data
+             */
             self.$$promise.done(function(value) {
                 globalEvents.trigger("success", value);
             });
+
+            /**
+             * On request error
+             * @event error
+             * @param {*} reason
+             */
             self.$$promise.fail(function(reason) {
                 globalEvents.trigger("error", reason);
             });
+
+            /**
+             * On request end (success or failure)
+             * @event end
+             */
             self.$$promise.always(function(){
                 globalEvents.trigger("end");
             });
 
+            /**
+             * On request start
+             * @event start
+             */
             globalEvents.trigger("start");
 
 
@@ -5542,22 +5333,23 @@ defineClass({
                 self.createJsonp();
             }
 
+            /**
+             * Before sending data
+             * @event before-send
+             * @param {object} opt ajax options
+             * @param {MetaphorJs.ajax.transport.*} transport 
+             * @returns {boolean|null} return false to cancel the request
+             */
             if (globalEvents.trigger("before-send", opt, transport) === false) {
-                //self._promise = Promise.reject();
                 self.$$promise.reject();
             }
             if (opt.beforeSend && opt.beforeSend.call(opt.context, opt, transport) === false) {
-                //self._promise = Promise.reject();
                 self.$$promise.reject();
             }
 
             if (self.$$promise.isPending()) {
                 async(transport.send, transport);
-
-                //deferred.abort = bind(self.abort, self);
                 self.$$promise.always(self.asyncDestroy, self);
-
-                //self._promise = deferred;
             }
             else {
                 async(self.asyncDestroy, self, [], 1000);
@@ -5584,6 +5376,11 @@ defineClass({
             return this._promise;
         },*/
 
+        /**
+         * Cancel ajax request
+         * @method
+         * @param {string} reason
+         */
         abort: function(reason) {
             this.$$promise.reject(reason || "abort");
             this._transport.abort();
@@ -5595,6 +5392,11 @@ defineClass({
             this.abort("timeout");
         },
 
+        /**
+         * Get current transport
+         * @method
+         * @returns {MetaphorJs.ajax.transport.*}
+         */
         getTransport: function() {
             return this._transport;
         },
@@ -5605,8 +5407,8 @@ defineClass({
                 form    = document.createElement("form");
 
             form.style.display = "none";
-            setAttr(form, "method", self._opt.method);
-            setAttr(form, "enctype", "multipart/form-data");
+            dom_setAttr(form, "method", self._opt.method);
+            dom_setAttr(form, "enctype", "multipart/form-data");
 
             data2form(self._opt.data, form, null);
 
@@ -5621,7 +5423,6 @@ defineClass({
             var self    = this,
                 opt     = self._opt,
                 files   = opt.files,
-                tr      = opt.transport,
                 form    = self._form,
                 data    = opt.data,
                 i, l,
@@ -5702,12 +5503,11 @@ defineClass({
                 res = self.processResponseData(data);
             }
             catch (thrownError) {
+                error(thrownError);
                 if (self.$$promise) {
                     self.$$promise.reject(thrownError);
                 }
-                else {
-                    error(thrownError);
-                }
+                return;
             }
 
             if (self.$$promise) {
@@ -5723,6 +5523,12 @@ defineClass({
             data    = processData(data, opt, contentType);
 
             if (globalEvents.hasListener("process-response")) {
+                /**
+                 * Process response data
+                 * @event process-response
+                 * @param {*} data response data
+                 * @param {MetaphorJs.lib.Promise} promise Current request's promise
+                 */
                 globalEvents.trigger("process-response", data, self.$$promise);
             }
 
@@ -5755,14 +5561,16 @@ defineClass({
                     result = self.processResponseData(data, contentType)
                 }
                 catch (thrownError) {
+                    error(thrownError);
                     deferred.reject(thrownError);
+                    return;
                 }
 
                 deferred.resolve(result);
             }
             else {
                 if (!data) {
-                    deferred.reject("jsonp script is empty");
+                    deferred.reject(new Error("jsonp script is empty"));
                     return;
                 }
 
@@ -5770,16 +5578,17 @@ defineClass({
                     globalEval(data);
                 }
                 catch (thrownError) {
+                    error(thrownError);
                     deferred.reject(thrownError);
                 }
 
                 if (deferred.isPending()) {
-                    deferred.reject("jsonp script didn't invoke callback");
+                    deferred.reject(new Error("jsonp script didn't invoke callback"));
                 }
             }
         },
 
-        destroy: function() {
+        onDestroy: function() {
 
             var self    = this;
 
@@ -5804,14 +5613,10 @@ defineClass({
         }
 
     }, {
-
-
+        prepareUrl: prepareUrl,
         global: globalEvents
     });
-
-
 }());
-
 
 
 
@@ -5826,36 +5631,198 @@ var ajax = function(){
 
     
 
+    /**
+     * The same set of options you can pass to ajax() and ajax.setup()
+     * @object ajax.defaults 
+     * @access private
+     */
     var defaults    = {
+            /**
+             * @property {string} url Target url
+             */
             url:            null,
+
+            /**
+             * @property {string|object} data Ajax payload
+             */
             data:           null,
+
+            /**
+             * @property {string} method GET|POST|DELETE|PUT etc
+             */
             method:         "GET",
+
+            /**
+             * @property {object} headers {
+             *  Headers to add to XHR object:<br>
+             *  Header-Name: header-value
+             * }
+             */
             headers:        null,
+
+            /**
+             * @property {string} username XHR username
+             */
             username:       null,
+
+            /**
+             * @property {string} password XHR password
+             */
             password:       null,
-            cache:          null,
+
+            /**
+             * @property {string} dataType {
+             * Response data type<br>
+             * html|xml|json|fragment|script<br>
+             * <code>html</code> - along with <code>selector</code> option treats
+             * response as html, creates a document out of it and
+             * returns selected element.<br>
+             * <code>xml</code> - parse response as xml and return element(s)
+             * using <code>selector</code> option<br>
+             * <code>json</code> parse response as json and return the resulting
+             * object<br>
+             * <code>fragment</code> - turn response into a DocumentFragment<br>
+             * <code>script</code> - evaluate response as a script
+             */
             dataType:       null, // response data type
+
+            /**
+             * @property {int} timeout Abort on timeout
+             */
             timeout:        0,
+
+            /**
+             * @property {string} contentType {
+             *  Request content type. Set contentType: json to 
+             *  transform data into json automatically and set 
+             *  header to text/plain. 
+             * }
+             */
             contentType:    null, // request data type
+
+            /**
+             * @property {string} contentTypeHeader {
+             *  If contentType = json, set this to specific header you want to send
+             * }
+             */
+            contentTypeHeader: null,
+
+            /**
+             * @property {object} xhrFields Key:value pairs to set to xhr object
+             */
             xhrFields:      null,
+
+            /**
+             * @property {boolean} jsonp Make a jsonp request
+             */
             jsonp:          false,
+
+            /**
+             * @property {string} jsonParam {
+             * Name of the parameter with callback
+             * function name: url?<jsonParam>=<jsonCallback>
+             * @default callback
+             * }
+             */
             jsonpParam:     null,
+
+            /**
+             * @property {string} jsonpCallback {
+             *  Name of the callback function in global scope
+             * }
+             */
             jsonpCallback:  null,
+
+            /**
+             * @property {string} transport {
+             *  iframe|xhr|script<br>
+             *  If <code>files</code> or <code>form</code> options are set 
+             *  and browser doesn't support FormData, 
+             *  transport will be set to iframe.<br>
+             * }
+             */
             transport:      null,
+
+            /**
+             * @property {boolean} replace {
+             *  When using <code>ajax.load(el, url, opt)</code>
+             *  if replace=true, all contents of el will be replaced
+             *  by response; <br>
+             *  if replace=false, response will be appended.
+             * }
+             */
             replace:        false,
+
+            /**
+             * @property {string} selector See dataType
+             */
             selector:       null,
+
+            /**
+             * @property {FormElement} form {
+             *  Souce of request data and files, target url and request method
+             * }
+             */
             form:           null,
+
+            /**
+             * @property {function} beforeSend {
+             *  @param {object} options Options passed to ajax()
+             *  @param {object} transport Current transport object
+             *  @returns {boolean|null} Return false to abort ajax
+             * }
+             */
             beforeSend:     null,
+
+            /**
+             * @property {function} progress XHR onprogress callback
+             */
             progress:       null,
+
+            /**
+             * @property {function} uploadProgress XHR.upload progress callback
+             */
             uploadProgress: null,
+
+            /**
+             * @property {function} processResponse {
+             *  @param {*} response Either raw or pre-processed response data
+             *  @param {MetaphorJs.lib.Promise} promise ajax's promise
+             * }
+             */
             processResponse:null,
-            context:        null
+
+            /**
+             * @property {object} context All callback's context
+             */
+            context:        null,
+
+            /**
+             * @property {array} files Array of native File objects to send
+             * via FormData or iframe
+             */
+            files:          null
         },
+        /**
+         * @end-object
+         */
 
         defaultSetup    = {};
 
 
-    var ajax    = function(url, opt) {
+    /**
+     * @function ajax
+     * @param {string} url Url to load or send data to
+     * @param {object} opt See ajax.defaults
+     * @returns {ajax_Ajax}
+     */
+
+    /**
+     * @function ajax
+     * @param {object} opt See ajax.defaults
+     * @returns {ajax_Ajax}
+     */
+    var ajax    = function ajax(url, opt) {
 
         opt = opt || {};
 
@@ -5868,10 +5835,10 @@ var ajax = function(){
 
         if (!opt.url) {
             if (opt.form) {
-                opt.url = getAttr(opt.form, "action");
+                opt.url = dom_getAttr(opt.form, "action");
             }
             if (!opt.url) {
-                throw "Must provide url";
+                throw new Error("Must provide url");
             }
         }
 
@@ -5880,7 +5847,7 @@ var ajax = function(){
 
         if (!opt.method) {
             if (opt.form) {
-                opt.method = getAttr(opt.form, "method").toUpperCase() || "GET";
+                opt.method = dom_getAttr(opt.form, "method").toUpperCase() || "GET";
             }
             else {
                 opt.method = "GET";
@@ -5890,33 +5857,78 @@ var ajax = function(){
             opt.method = opt.method.toUpperCase();
         }
 
-        return new MetaphorJs.Ajax(opt);
+        return new ajax_Ajax(opt);
     };
 
+    /**
+     * Set default ajax options
+     * @function ajax.setup
+     * @param {object} opt See ajax.defaults
+     */
     ajax.setup  = function(opt) {
         extend(defaultSetup, opt, true, true);
     };
 
+    /**
+     * Subscribe to global ajax events. See 
+     * MetaphorJs.lib.Observable.on 
+     * @function ajax.on
+     * @param {string} eventName
+     * @param {function} fn 
+     * @param {object} context 
+     * @param {object} options
+     */
     ajax.on     = function() {
-        MetaphorJs.Ajax.global.on.apply(MetaphorJs.Ajax.global, arguments);
+        ajax_Ajax.global.on.apply(ajax_Ajax.global, arguments);
     };
 
+    /**
+     * Unsubscribe from global ajax events. See 
+     * MetaphorJs.lib.Observable.un 
+     * @function ajax.un
+     * @param {string} eventName
+     * @param {function} fn 
+     * @param {object} context 
+     * @param {object} options
+     */
     ajax.un     = function() {
-        MetaphorJs.Ajax.global.un.apply(MetaphorJs.Ajax.global, arguments);
+        ajax_Ajax.global.un.apply(ajax_Ajax.global, arguments);
     };
 
+    /**
+     * Same as ajax(), method is forcefully set to GET
+     * @function ajax.get
+     * @param {string} url 
+     * @param {object} opt 
+     * @returns {ajax_Ajax}
+     */
     ajax.get    = function(url, opt) {
         opt = opt || {};
         opt.method = "GET";
         return ajax(url, opt);
     };
 
+    /**
+     * Same as ajax(), method is forcefully set to POST
+     * @function ajax.post
+     * @param {string} url 
+     * @param {object} opt 
+     * @returns {ajax_Ajax}
+     */
     ajax.post   = function(url, opt) {
         opt = opt || {};
         opt.method = "POST";
         return ajax(url, opt);
     };
 
+    /**
+     * Load response to given html element
+     * @function ajax.load
+     * @param {Element} el
+     * @param {string} url 
+     * @param {object} opt 
+     * @returns {ajax_Ajax}
+     */
     ajax.load   = function(el, url, opt) {
 
         opt = opt || {};
@@ -5937,18 +5949,39 @@ var ajax = function(){
         });
     };
 
+    /**
+     * Load script
+     * @function ajax.loadScript
+     * @param {string} url 
+     * @returns {ajax_Ajax}
+     */
     ajax.loadScript = function(url) {
         return ajax(url, {transport: "script"});
     };
 
+    /**
+     * Send form
+     * @function ajax.submit
+     * @param {FormElement} form
+     * @param {object} opt
+     * @returns {ajax_Ajax}
+     */
     ajax.submit = function(form, opt) {
-
         opt = opt || {};
         opt.form = form;
-
         return ajax(null, opt);
     };
 
+    /**
+     * Utility function that prepares url by adding random seed or
+     * jsonp params and does other stuff based on options
+     * @function ajax.prepareUrl
+     * @param {string} url 
+     * @param {object} opt 
+     */
+    ajax.prepareUrl = function(url, opt) {
+        return ajax_Ajax.prepareUrl(url, opt || {});
+    };
 
     return ajax;
 }();
@@ -5958,24 +5991,415 @@ var ajax = function(){
 
 
 
+/**
+ * Check if given value is a number (not number-like)
+ * @function isNumber
+ * @param {*} value 
+ * @returns {boolean}
+ */
 function isNumber(value) {
-    return varType(value) === 1;
+    return _varType(value) === 1;
 };
 
+/**
+ * Change first character to upper case
+ * @function ucfirst
+ * @param {string} str 
+ * @returns {string}
+ */
 function ucfirst(str) {
     return str.substr(0, 1).toUpperCase() + str.substr(1);
 };
 
-var getStyle = function(node, prop, numeric) {
+
+
+var raf = function() {
+
+    var raf,
+        cancel;
+
+    if (typeof window !== strUndef) {
+        var w   = window;
+        raf     = w.requestAnimationFrame ||
+                    w.webkitRequestAnimationFrame ||
+                    w.mozRequestAnimationFrame;
+        cancel  = w.cancelAnimationFrame ||
+                    w.webkitCancelAnimationFrame ||
+                    w.mozCancelAnimationFrame ||
+                    w.webkitCancelRequestAnimationFrame;
+
+        if (raf) {
+            return function(fn, context, args) {
+                var id = raf(context || args ? function(){
+                    fn.apply(context, args || []);
+                } : fn);
+                return function() {
+                    cancel(id);
+                };
+            };
+        }
+    }
+
+    return function(fn, context, args){
+        var id = async(fn, context, args, 0);
+        return function(){
+            clearTimeout(id);
+        };
+    };
+
+}();
+
+
+
+var functionFactory = function() {
+
+    var REG_REPLACE_EXPR    = /((^|[^a-z0-9_$\]\)'"])|(this))(\.)([^0-9])/ig,
+        REG_REPLACER        = "$2____.$5",
+
+        f               = Function,
+        fnBodyStart     = 'try {',
+        getterBodyEnd   = ';} catch (thrownError) { /*DEBUG-START*/console.log(thrownError);/*DEBUG-END*/return undefined; }',
+        setterBodyEnd   = ';} catch (thrownError) { /*DEBUG-START*/console.log(thrownError);/*DEBUG-END*/return undefined; }',
+
+        getterCache     = {},
+        getterCacheCnt  = 0,
+
+        createGetter    = function createGetter(expr, returnAsCode) {
+
+            try {
+                if (!getterCache[expr] || returnAsCode) {
+                    getterCacheCnt++;
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        'return ',
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return getterCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
+                }
+                return getterCache[expr];
+            }
+            catch (thrownError){
+                error(thrownError);
+                return emptyFn;
+            }
+        },
+
+        setterCache     = {},
+        setterCacheCnt  = 0,
+
+        createSetter    = function createSetter(expr, returnAsCode) {
+            try {
+                if (!setterCache[expr] || returnAsCode) {
+                    setterCacheCnt++;
+                    var code = expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        body = "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd);
+
+                    if (returnAsCode) {
+                        return "function(____, $$$$) {" + body + "}";
+                    }
+                    else {
+                        return setterCache[expr] = new f(
+                            '____',
+                            '$$$$',
+                            body
+                        );
+                    }
+                }
+                return setterCache[expr];
+            }
+            catch (thrownError) {
+                error(thrownError);
+                return emptyFn;
+            }
+        },
+
+        funcCache       = {},
+        funcCacheCnt    = 0,
+
+        createFunc      = function createFunc(expr, returnAsCode) {
+            try {
+                if (!funcCache[expr] || returnAsCode) {
+                    funcCacheCnt++;
+
+                    var body = "".concat(
+                        fnBodyStart,
+                        expr.replace(REG_REPLACE_EXPR, REG_REPLACER),
+                        getterBodyEnd
+                    );
+
+                    if (returnAsCode) {
+                        return "function(____) {" + body + "}";
+                    }
+                    else {
+                        return funcCache[expr] = new f(
+                            '____',
+                            body
+                        );
+                    }
+                }
+                return funcCache[expr];
+            }
+            catch (thrownError) {
+                error(thrownError);
+                return emptyFn;
+            }
+        },
+
+        resetCache = function() {
+            getterCacheCnt >= 1000 && (getterCache = {});
+            setterCacheCnt >= 1000 && (setterCache = {});
+            funcCacheCnt >= 1000 && (funcCache = {});
+        };
+
+    return {
+        createGetter: createGetter,
+        createSetter: createSetter,
+        createFunc: createFunc,
+        resetCache: resetCache,
+        enableResetCacheInterval: function() {
+            setTimeout(resetCache, 10000);
+        }
+    };
+}();
+
+
+
+var createGetter = functionFactory.createGetter;
+
+
+MetaphorJs.dialog = MetaphorJs.dialog || {pointer: {}, position: {}};
+
+
+
+/**
+ * Get cached regular expression
+ * @function getRegExp
+ * @param {string} expr
+ * @returns {RegExp}
+ */
+function getRegExp(expr) {
+    var g = lib_Cache.global(),
+        k = "regex_"+expr;
+    return g.get(k) || g.add(k, new RegExp(expr));
+};
+
+
+
+
+
+
+/**
+ * @param {String} cls
+ * @returns {RegExp}
+ */
+var dom_getClsReg = MetaphorJs.dom.getClsReg = function(cls) {
+    return getRegExp('(?:^|\\s)'+cls+'(?!\\S)');
+};
+
+
+
+
+
+/**
+ * @function MetaphorJs.dom.hasClass
+ * @param {Element} el
+ * @param {String} cls
+ * @returns {boolean}
+ */
+var dom_hasClass = MetaphorJs.dom.hasClass = function(el, cls) {
+    return cls ? dom_getClsReg(cls).test(el.className) : false;
+};
+
+
+
+
+
+/**
+ * @function MetaphorJs.dom.addClass
+ * @param {Element} el
+ * @param {string} cls
+ */
+var dom_addClass = MetaphorJs.dom.addClass = function dom_addClass(el, cls) {
+    if (cls && !dom_hasClass(el, cls)) {
+        el.className += " " + cls;
+    }
+};
+
+
+
+
+
+
+
+
+/**
+ * Remove element's class
+ * @function MetaphorJs.dom.removeClass
+ * @param {DomNode} el
+ * @param {string} cls
+ */
+var dom_removeClass = MetaphorJs.dom.removeClass = function(el, cls) {
+    if (cls) {
+        el.className = el.className.replace(dom_getClsReg(cls), '');
+    }
+};
+
+
+
+/**
+ * Set element's style
+ * @function MetaphorJs.dom.setStyle
+ * @param {DomNode} el
+ * @param {string} name
+ * @param {*} value
+ */
+var dom_setStyle = MetaphorJs.dom.setStyle = function dom_setStyle(el, name, value) {
+
+    if (!el || !el.style) {
+        return;
+    }
+
+    var props,
+        style = el.style,
+        k;
+
+    if (typeof name === "string") {
+        props = {};
+        props[name] = value;
+    }
+    else {
+        props = name;
+    }
+
+    for (k in props) {
+        style[k] = props[k];
+    }
+};
+
+
+
+
+
+/**
+ * Remove element's attribute
+ * @function MetaphorJs.dom.removeAttr
+ * @param {DomNode} node 
+ * @param {string} name
+ */
+var dom_removeAttr = MetaphorJs.dom.removeAttr = function dom_removeAttr(el, name) {
+    return el.removeAttribute(name);
+};
+
+
+
+
+/**
+ * Remove listeners from element's events
+ * @function MetaphorJs.dom.removeListener
+ * @param {DomNode} el 
+ * @param {string} eventName
+ * @param {function} fn
+ */
+var dom_removeListener = MetaphorJs.dom.removeListener = function(){
+
+    var fn = null,
+        prefix = null;
+
+    return function dom_removeListener(el, event, func) {
+
+        if (fn === null) {
+            if (el.removeEventListener) {
+                fn = "removeEventListener";
+                prefix = "";
+            }
+            else {
+                fn = "detachEvent";
+                prefix = "on";
+            }
+            //fn = el.detachEvent ? "detachEvent" : "removeEventListener";
+            //prefix = el.detachEvent ? "on" : "";
+        }
+
+        el[fn](prefix + event, func);
+    }
+}();
+
+
+
+
+/**
+ * Is element visible on the page
+ * @function MetaphorJs.dom.isVisible
+ * @param {DomNode} el
+ * @returns {boolean}
+ */
+var dom_isVisible = MetaphorJs.dom.isVisible = function dom_isVisible(el) {
+    return el && !(el.offsetWidth <= 0 || el.offsetHeight <= 0);
+};
+
+
+
+
+
+
+/**
+ * Check if given element matches selector
+ * @function MetaphorJs.dom.is
+ * @param {Element} el
+ * @param {string} selector
+ * @returns {boolean}
+ */
+var dom_is = MetaphorJs.dom.is = function(el, selector) {
+
+    var els = dom_select(selector, el.parentNode),
+        i, l;
+
+    for (i = -1, l = els.length; ++i < l;) {
+        if (els[i] === el) {
+            return true;
+        }
+    }
+    return false;
+};
+
+
+
+
+/**
+ * Get element's style object
+ * @function MetaphorJs.dom.getStyle
+ * @param {DomNode} node
+ * @returns {DomStyle}
+ */
+
+ /**
+ * Get element's style property
+ * @function MetaphorJs.dom.getStyle
+ * @param {DomNode} node
+ * @param {string} prop
+ * @param {boolean} numeric return as number
+ * @returns {string|int}
+ */
+var dom_getStyle = MetaphorJs.dom.getStyle = function dom_getStyle(node, prop, numeric) {
 
     var style, val;
 
     if (window.getComputedStyle) {
-
         if (node === window) {
             return prop? (numeric ? 0 : null) : {};
         }
-        style = getComputedStyle(node, null);
+        style = window.getComputedStyle(node, null);
         val = prop ? style[prop] : style;
     }
     else {
@@ -5984,12 +6408,12 @@ var getStyle = function(node, prop, numeric) {
     }
 
     return numeric ? parseFloat(val) || 0 : val;
-
 };
 
 
 
-var boxSizingReliable = function() {
+
+var _boxSizingReliable = function() {
 
     var boxSizingReliableVal;
 
@@ -6034,15 +6458,17 @@ var boxSizingReliable = function() {
     };
 }();
 
-// from jQuery
 
 
 
-var getDimensions = function(type, name) {
 
+
+var _dom_getDimensions = function(type, name) {
+
+    // from jQuery
     var rnumnonpx = new RegExp( "^([+-]?(?:\d*\.|)\d+(?:[eE][+-]?\d+|))(?!px)[a-z%]+$", "i"),
         cssExpand = [ "Top", "Right", "Bottom", "Left" ],
-        defaultExtra = !type ? "content" : (type == "inner" ? "padding" : "");
+        defaultExtra = !type ? "content" : (type === "inner" ? "padding" : "");
 
     var augmentWidthOrHeight = function(elem, name, extra, isBorderBox, styles) {
         var i = extra === (isBorderBox ? "border" : "content") ?
@@ -6104,7 +6530,7 @@ var getDimensions = function(type, name) {
             // Check for style in case a browser which returns unreliable values
             // for getComputedStyle silently falls back to the reliable elem.style
             valueIsBorderBox = isBorderBox &&
-                               (boxSizingReliable() || val === elem.style[name]);
+                               (_boxSizingReliable() || val === elem.style[name]);
 
             // Normalize "", auto, and prepare for extra
             val = parseFloat(val) || 0;
@@ -6122,7 +6548,7 @@ var getDimensions = function(type, name) {
     };
 
 
-    return function getDimensions(elem, margin) {
+    return function dom_getDimensions(elem, margin) {
 
         if (elem === window) {
             return elem.document.documentElement["client" + name];
@@ -6145,7 +6571,7 @@ var getDimensions = function(type, name) {
             elem,
             name.toLowerCase(),
             defaultExtra || (margin === true ? "margin" : "border"),
-            getStyle(elem)
+            dom_getStyle(elem)
         );
     };
 
@@ -6153,25 +6579,55 @@ var getDimensions = function(type, name) {
 
 
 
-var getOuterWidth = getDimensions("outer", "Width");
+
+/**
+ * Get element outer width
+ * @function MetaphorJs.dom.getOuterWidth
+ * @param {DomNode} el
+ * @returns {int}
+ */
+var dom_getOuterWidth = MetaphorJs.dom.getOuterWidth = _dom_getDimensions("outer", "Width");
 
 
 
-var getOuterHeight = getDimensions("outer", "Height");
 
-var delegates = {};
+/**
+ * Get element outer height
+ * @function MetaphorJs.dom.getOuterHeight
+ * @param {DomNode} el
+ * @returns {int}
+ */
+var dom_getOuterHeight = MetaphorJs.dom.getOuterHeight = _dom_getDimensions("outer", "Height");
 
 
 
 
-function delegate(el, selector, event, fn) {
+
+
+
+
+
+/**
+ * Delegate dom event
+ * @function MetaphorJs.dom.delegate
+ * @param {DomNode} el Dom node to add event listener to
+ * @param {string} selector Event target selector
+ * @param {string} event Event name
+ * @param {function} fn {
+ *  Event handler
+ *  @param {object} event
+ * }
+ */
+var dom_delegate = MetaphorJs.dom.delegate = function dom_delegate(el, selector, event, fn) {
+
+    var delegates = lib_Cache.global().get("dom/delegates", []);
 
     var key = selector + "-" + event,
         listener    = function(e) {
-            e = normalizeEvent(e);
+            e = dom_normalizeEvent(e);
             var trg = e.target;
             while (trg) {
-                if (is(trg, selector)) {
+                if (dom_is(trg, selector)) {
                     return fn(e);
                 }
                 trg = trg.parentNode;
@@ -6185,8 +6641,11 @@ function delegate(el, selector, event, fn) {
 
     delegates[key].push({el: el, ls: listener, fn: fn});
 
-    addListener(el, event, listener);
+    dom_addListener(el, event, listener);
 };
+
+
+
 
 
 
@@ -6194,12 +6653,13 @@ function undelegate(el, selector, event, fn) {
 
     var key = selector + "-" + event,
         i, l,
-        ds;
+        ds,
+        delegates = lib_Cache.global().get("dom/delegates", []);
 
     if (ds = delegates[key]) {
         for (i = -1, l = ds.length; ++i < l;) {
             if (ds[i].el === el && ds[i].fn === fn) {
-                removeListener(el, event, ds[i].ls);
+                dom_removeListener(el, event, ds[i].ls);
             }
         }
     }
@@ -6207,208 +6667,637 @@ function undelegate(el, selector, event, fn) {
 
 
 
-var functionFactory = function() {
-
-    var REG_REPLACE_EXPR    = /(^|[^a-z0-9_$\]\)'"])(\.)([^0-9])/ig,
-
-        f               = Function,
-        fnBodyStart     = 'try {',
-        //getterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____); }',
-        //setterBodyEnd   = ';} catch (thrownError) { return $$interceptor(thrownError, $$itself, ____, $$$$); }',
-        getterBodyEnd   = ';} catch (thrownError) { return undefined; }',
-        setterBodyEnd   = ';} catch (thrownError) { return undefined; }',
 
 
-        /*interceptor     = function(thrownError, func, scope, value) {
+/**
+ * Get dom data value
+ * @function MetaphorJs.dom.data
+ * @param {Element} el
+ * @param {string} key
+ */
 
-            while (scope && !scope.$isRoot) {
+/**
+ * Set dom data value
+ * @function MetaphorJs.dom.data
+ * @param {Element} el
+ * @param {string} key
+ * @param {*} value
+ */
+var dom_data = MetaphorJs.dom.data = function(){
 
-                scope = scope.$parent;
+    var dataCache   = {},
 
-                if (scope) {
-
-                    try {
-                        if (arguments.length == 4) {
-                            return func.call(null, scope, value, emptyFn, func);
-                        }
-                        else {
-                            return func.call(null, scope, emptyFn, func);
-                        }
-                    }
-                    catch (newError) {}
-                }
-            }
-
-            if (thrownError !== null) {
-                error(thrownError);
-            }
-
-            return undf;
-        },*/
-
-        isFailed        = function(val) {
-            return val === undf || (typeof val == "number" && isNaN(val));
-        },
-
-        wrapFunc        = function(func, returnsValue) {
-            return function(scope) {
-                var args = slice.call(arguments),
-                    val;
-
-                //args.push(interceptor);
-                args.push(null);
-                args.push(func);
-
-                val = func.apply(null, args);
-                return isFailed(val) ? undf : val;
-
-                /*if (returnsValue) {
-                    val = func.apply(null, args);
-                    while (isFailed(val) && !scope.$isRoot) {
-                        scope = scope.$parent;
-                        args[0] = scope;
-                        val = func.apply(null, args);
-                    }
-                    return val;
-                }
-                else {
-                    return func.apply(null, args);
-                }*/
-
-                /*if (returnsValue && isFailed(val)) {//) {
-                    args = slice.call(arguments);
-                    args.unshift(func);
-                    args.unshift(null);
-                    return interceptor.apply(null, args);
-                }
-                else {
-                    return val;
-                }*/
-            };
-        },
-
-        getterCache     = {},
-        getterCacheCnt  = 0,
-
-        createGetter    = function createGetter(expr) {
-
-            try {
-                if (!getterCache[expr]) {
-                    getterCacheCnt++;
-                    return getterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, 'return ', expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ), true);
-                }
-                return getterCache[expr];
-            }
-            catch (thrownError){
-                error(thrownError);
-                return emptyFn;
-            }
-        },
-
-        setterCache     = {},
-        setterCacheCnt  = 0,
-
-        createSetter    = function createSetter(expr) {
-            try {
-                if (!setterCache[expr]) {
-                    setterCacheCnt++;
-                    var code = expr.replace(REG_REPLACE_EXPR, '$1____.$3');
-                    return setterCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$$$',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, code, ' = $$$$', setterBodyEnd)
-                    ));
-                }
-                return setterCache[expr];
-            }
-            catch (thrownError) {
-                error(thrownError);
-                return emptyFn;
-            }
-        },
-
-        funcCache       = {},
-        funcCacheCnt    = 0,
-
-        createFunc      = function createFunc(expr) {
-            try {
-                if (!funcCache[expr]) {
-                    funcCacheCnt++;
-                    return funcCache[expr] = wrapFunc(new f(
-                        '____',
-                        '$$interceptor',
-                        '$$itself',
-                        "".concat(fnBodyStart, expr.replace(REG_REPLACE_EXPR, '$1____.$3'), getterBodyEnd)
-                    ));
-                }
-                return funcCache[expr];
-            }
-            catch (thrownError) {
-                error(thrownError);
-                return emptyFn;
-            }
-        },
-
-        resetCache = function() {
-            getterCacheCnt >= 1000 && (getterCache = {});
-            setterCacheCnt >= 1000 && (setterCache = {});
-            funcCacheCnt >= 1000 && (funcCache = {});
+        getNodeId   = function(el) {
+            return el._mjsid || (el._mjsid = nextUid());
         };
 
-    return {
-        createGetter: createGetter,
-        createSetter: createSetter,
-        createFunc: createFunc,
-        resetCache: resetCache,
-        enableResetCacheInterval: function() {
-            setTimeout(resetCache, 10000);
+
+    return function dom_data(el, key, value) {
+        var id  = getNodeId(el),
+            obj = dataCache[id];
+
+        if (value !== undf) {
+            if (!obj) {
+                obj = dataCache[id] = {};
+            }
+            obj[key] = value;
+            return value;
         }
+        else {
+            return obj ? obj[key] : undf;
+        }
+    };
+
+}();
+
+
+
+MetaphorJs.animate = MetaphorJs.animate || {};
+
+
+
+
+
+var animate_getPrefixes = MetaphorJs.animate.getPrefixes = function(){
+
+    var domPrefixes         = ['Moz', 'Webkit', 'ms', 'O', 'Khtml'],
+        animationDelay      = "animationDelay",
+        animationDuration   = "animationDuration",
+        transitionDelay     = "transitionDelay",
+        transitionDuration  = "transitionDuration",
+        transform           = "transform",
+        transitionend       = null,
+        prefixes            = null,
+
+        probed              = false,
+
+        detectCssPrefixes   = function() {
+
+            var el = window.document.createElement("div"),
+                animation = false,
+                pfx,
+                i, len;
+
+            if (el.style['animationName'] !== undf) {
+                animation = true;
+            }
+            else {
+                for(i = 0, len = domPrefixes.length; i < len; i++) {
+                    pfx = domPrefixes[i];
+                    if (el.style[ pfx + 'AnimationName' ] !== undf) {
+                        animation           = true;
+                        animationDelay      = pfx + "AnimationDelay";
+                        animationDuration   = pfx + "AnimationDuration";
+                        transitionDelay     = pfx + "TransitionDelay";
+                        transitionDuration  = pfx + "TransitionDuration";
+                        transform           = pfx + "Transform";
+                        break;
+                    }
+                }
+            }
+
+            if (animation) {
+                if('ontransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'transitionend';
+                }
+                else if('onwebkittransitionend' in window) {
+                    // Chrome/Saf (+ Mobile Saf)/Android
+                    transitionend = 'webkitTransitionEnd';
+                }
+            }
+
+            return animation;
+        };
+
+
+    /**
+     * Get css prefixes used in current browser
+     * @function MetaphorJs.animate.getPrefixes
+     * @returns {object} {
+     *  @type {string} animationDelay
+     *  @type {string} animationDuration
+     *  @type {string} transitionDelay
+     *  @type {string} transitionDuration
+     *  @type {string} transform
+     *  @type {string} transitionend
+     * }
+     */
+    return function() {
+
+        if (!probed) {
+            if (detectCssPrefixes()) {
+                prefixes = {
+                    animationDelay: animationDelay,
+                    animationDuration: animationDuration,
+                    transitionDelay: transitionDelay,
+                    transitionDuration: transitionDuration,
+                    transform: transform,
+                    transitionend: transitionend
+                };
+            }
+            else {
+                prefixes = {};
+            }
+
+            probed = true;
+        }
+
+
+        return prefixes;
     };
 }();
 
 
 
-var createGetter = functionFactory.createGetter;
+
+
+
+var animate_getDuration = MetaphorJs.animate.getDuration = function(){
+
+    var parseTime       = function(str) {
+            if (!str) {
+                return 0;
+            }
+            var time = parseFloat(str);
+            if (str.indexOf("ms") === -1) {
+                time *= 1000;
+            }
+            return time;
+        },
+
+        getMaxTimeFromPair = function(max, dur, delay) {
+
+            var i, sum, len = dur.length;
+
+            for (i = 0; i < len; i++) {
+                sum = parseTime(dur[i]) + parseTime(delay[i]);
+                max = Math.max(sum, max);
+            }
+
+            return max;
+        },
+
+        pfx                 = false,
+        animationDuration   = null,
+        animationDelay      = null,
+        transitionDuration  = null,
+        transitionDelay     = null;
+
+
+    /**
+     * Get duration in milliseconds from html 
+     * element based on current computed style
+     * @function MetaphorJs.animate.getDuration
+     * @param {Element} el
+     * @returns {number}
+     */
+    return function(el) {
+
+        if (pfx === false) {
+            pfx = animate_getPrefixes();
+            animationDuration = pfx ? pfx.animationDuration : null;
+            animationDelay = pfx ? pfx.animationDelay : null;
+            transitionDuration = pfx ? pfx.transitionDuration : null;
+            transitionDelay = pfx ? pfx.transitionDelay : null;
+        }
+
+        if (!pfx) {
+            return 0;
+        }
+
+        var style       = window.getComputedStyle ? window.getComputedStyle(el, null) : el.style,
+            duration    = 0,
+            animDur     = (style[animationDuration] || '').split(','),
+            animDelay   = (style[animationDelay] || '').split(','),
+            transDur    = (style[transitionDuration] || '').split(','),
+            transDelay  = (style[transitionDelay] || '').split(',');
+
+        duration    = Math.max(duration, getMaxTimeFromPair(duration, animDur, animDelay));
+        duration    = Math.max(duration, getMaxTimeFromPair(duration, transDur, transDelay));
+
+        return duration;
+    };
+
+}();
+
+
+
+
+
 
 
 
 /**
- * @mixin Observable
+ * Is css animation supported in current browser
+ * @function MetaphorJs.animate.isCssSupported
+ * @returns {bool}
  */
-ns.register("mixin.Observable", {
+var animate_isCssSupported = MetaphorJs.animate.isCssSupported = (function(){
+
+    var cssAnimations = null;
+
+    return function() {
+        if (cssAnimations === null) {
+            cssAnimations   = !!animate_getPrefixes();
+        }
+        return cssAnimations;
+    };
+}());
+
+
+
+
+
+
+
+
+
+
+
+var animate_animate = MetaphorJs.animate.animate = function(){
+
+    var types           = {
+            "show":     ["mjs-show"],
+            "hide":     ["mjs-hide"],
+            "enter":    ["mjs-enter"],
+            "leave":    ["mjs-leave"],
+            "move":     ["mjs-move"]
+        },
+
+        animId          = 0,
+        dataParam       = "mjsAnimationQueue",
+
+        callTimeout     = function(fn, startTime, duration) {
+            var tick = function(){
+                var time = (new Date).getTime();
+                if (time - startTime >= duration) {
+                    fn();
+                }
+                else {
+                    raf(tick);
+                }
+            };
+            raf(tick);
+        },
+
+
+        nextInQueue     = function(el) {
+            var queue = dom_data(el, dataParam),
+                next;
+            if (queue.length) {
+                next = queue[0];
+                animationStage(next.el, next.stages, 0, next.start, next.deferred, false, next.id, next.step);
+            }
+            else {
+                dom_data(el, dataParam, null);
+            }
+        },
+
+        animationStage  = function animationStage(el, stages, position, startCallback,
+                                                  deferred, first, id, stepCallback) {
+
+            var stopped   = function() {
+                var q = dom_data(el, dataParam);
+                if (!q || !q.length || q[0].id != id) {
+                    deferred.reject(el);
+                    return true;
+                }
+                return false;
+            };
+
+            var finishStage = function() {
+
+                if (stopped()) {
+                    return;
+                }
+
+                var thisPosition = position;
+
+                position++;
+
+                if (position === stages.length) {
+                    deferred.resolve(el);
+                    dom_data(el, dataParam).shift();
+                    nextInQueue(el);
+                }
+                else {
+                    dom_data(el, dataParam)[0].position = position;
+                    animationStage(el, stages, position, null, deferred, false, id, stepCallback);
+                }
+
+                dom_removeClass(el, stages[thisPosition]);
+                dom_removeClass(el, stages[thisPosition] + "-active");
+            };
+
+            var setStage = function() {
+
+                if (!stopped()) {
+
+                    dom_addClass(el, stages[position] + "-active");
+
+                    lib_Promise.resolve(stepCallback && stepCallback(el, position, "active"))
+                        .done(function(){
+                            if (!stopped()) {
+
+                                var duration = animate_getDuration(el);
+
+                                if (duration) {
+                                    callTimeout(finishStage, (new Date).getTime(), duration);
+                                }
+                                else {
+                                    raf(finishStage);
+                                }
+                            }
+                        });
+                }
+
+            };
+
+            var start = function(){
+
+                if (!stopped()) {
+                    dom_addClass(el, stages[position]);
+
+                    lib_Promise.waterfall([
+                            stepCallback && stepCallback(el, position, "start"),
+                            function(){
+                                return startCallback ? startCallback(el) : null;
+                            }
+                        ])
+                        .done(function(){
+                            !stopped() && raf(setStage);
+                        });
+                }
+            };
+
+            first ? raf(start) : start();
+        };
+
 
     /**
+     * @function MetaphorJs.animate.animate
+     * @param {Element} el Element being animated
+     * @param {string|function|[]|object} animation {
+     *  'string' - registered animation name,<br>
+     *  'function' - fn(el, callback) - your own animation<br>
+     *  'array' - array or stages (class names)<br>
+     *  'array' - [{before}, {after}] - jquery animation<br>
+     *  'object' - {stages, fn, before, after, options, context, duration, start}
+     * }
+     * @param {function} startCallback call this function before animation begins
+     * @param {function} stepCallback call this function between stages
+     * @returns {lib_Promise}
+     */
+    var animate = function animate(el, animation, startCallback, stepCallback) {
+
+        var deferred    = new lib_Promise,
+            queue       = dom_data(el, dataParam) || [],
+            id          = ++animId,
+            stages,
+            jsFn,
+            before, after,
+            options, context,
+            duration;
+
+        if (animation) {
+
+            if (isString(animation)) {
+                stages = types[animation];
+            }
+            else if (isFunction(animation)) {
+                jsFn = animation;
+            }
+            else if (isArray(animation)) {
+                if (isString(animation[0])) {
+                    stages = animation;
+                }
+                else {
+                    before = animation[0];
+                    after = animation[1];
+                }
+            }
+
+            if (isPlainObject(animation)) {
+                stages      = animation.stages;
+                jsFn        = animation.fn;
+                before      = animation.before;
+                after       = animation.after;
+                options     = animation.options ? extend({}, animation.options) : {};
+                context     = animation.context || null;
+                duration    = animation.duration || null;
+                startCallback   = startCallback || options.start;
+            }
+
+
+            if (animate_isCssSupported() && stages) {
+
+                queue.push({
+                    el: el,
+                    stages: stages,
+                    start: startCallback,
+                    step: stepCallback,
+                    deferred: deferred,
+                    position: 0,
+                    id: id
+                });
+                dom_data(el, dataParam, queue);
+
+                if (queue.length === 1) {
+                    animationStage(el, stages, 0, startCallback, deferred, true, id, stepCallback);
+                }
+
+                return deferred;
+            }
+            else {
+
+                options = options || {};
+
+                startCallback && (options.start = function(){
+                    startCallback(el);
+                });
+
+                options.complete = function() {
+                    deferred.resolve(el);
+                };
+
+                duration && (options.duration = duration);
+
+                if (jsFn && isFunction(jsFn)) {
+                    if (before) {
+                        extend(el.style, before, true, false);
+                    }
+                    startCallback && startCallback(el);
+                    dom_data(el, dataParam, jsFn.call(context, el, function(){
+                        deferred.resolve(el);
+                    }));
+                    return deferred;
+                }
+                else if (window.jQuery) {
+
+                    var j = $(el);
+                    before && j.css(before);
+                    dom_data(el, dataParam, "stop");
+
+                    if (jsFn && isString(jsFn)) {
+                        j[jsFn](options);
+                        return deferred;
+                    }
+                    else if (after) {
+                        j.animate(after, options);
+                        return deferred;
+                    }
+                }
+            }
+        }
+
+        // no animation happened
+
+        if (startCallback) {
+            var promise = startCallback(el);
+            if (isThenable(promise)) {
+                promise.done(function(){
+                    deferred.resolve(el);
+                });
+            }
+            else {
+                deferred.resolve(el);
+            }
+        }
+        else {
+            deferred.resolve(el);
+        }
+
+        return deferred;
+    };
+
+    /**
+     * @function MetaphorJs.animate.animate.addAnimationType
+     * @param {string} name 
+     * @param {array} stages 
+     */
+    animate.addAnimationType     = function(name, stages) {
+        types[name] = stages;
+    };
+
+    return animate;
+}();
+
+
+
+
+
+
+
+/**
+ * Stop ongoing animation for given element
+ * @function MetaphorJs.animate.stop
+ * @param {Element} el
+ */
+var animate_stop = MetaphorJs.animate.stop = function(el) {
+
+    var queue = dom_data(el, "mjsAnimationQueue"),
+        current,
+        position,
+        stages;
+
+    if (isArray(queue) && queue.length) {
+        current = queue[0];
+
+        if (current) {
+            if (current.stages) {
+                position = current.position;
+                stages = current.stages;
+                dom_removeClass(el, stages[position]);
+                dom_removeClass(el, stages[position] + "-active");
+            }
+            if (current.deferred) {
+                current.deferred.reject(current.el);
+            }
+        }
+    }
+    else if (isFunction(queue)) {
+        queue(el);
+    }
+    else if (queue === "stop") {
+        $(el).stop(true, true);
+    }
+
+    dom_data(el, "mjsAnimationQueue", null);
+};
+
+
+
+
+
+/**
+ * @mixin MetaphorJs.mixin.Observable
+ * @description Mixin adds observable features to the host object.
+ *              It adds 'callback' option to the host config. See $beforeInit.
+ *              Mixin is designed for MetaphorJs class system.
+ * @code src-docs/examples/mixin.js
+ */
+var mixin_Observable = MetaphorJs.mixin.Observable = {
+
+    /**
+     * @private
      * @type {Observable}
+     * @description You can use this instance in your $init function
      */
     $$observable: null,
+
+    /**
+     * @private
+     * @type {object}
+     */
     $$callbackContext: null,
 
+    /**
+     * @protected
+     * @type {object} {
+     *      Override this to define event properties. 
+     *      Object's key is event name, value - either returnResult or 
+     *      options object. See {@link class:lib_Observable.createEvent}
+     * }
+     */
+    $$events: null,
+
+    /**
+     * @method
+     * @private
+     * @param {object} cfg {
+     *      This is a config that was passed to the host object's constructor.
+     *      It is being passed to mixin's $beforeInit automatically.
+     *      @type {object} callback {
+     *          Here, except for 'context', '$context' and 'scope', 
+     *          keys are event names and values are listeners. 
+     *          @type {object} context All given listeners context
+     *          @type {object} scope The same
+     *      }
+     * }
+     */
     $beforeInit: function(cfg) {
-
         var self = this;
-
-        self.$$observable = new Observable;
-
+        self.$$observable = new lib_Observable;
         self.$initObservable(cfg);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     * @param {object} cfg
+     */
     $initObservable: function(cfg) {
 
         var self    = this,
-            obs     = self.$$observable;
+            obs     = self.$$observable,
+            i;
 
         if (cfg && cfg.callback) {
             var ls = cfg.callback,
                 context = ls.context || ls.scope || ls.$context,
-                events = extend({}, self.$$events, ls.$events, true, false),
-                i;
+                events = extend({}, self.$$events, ls.$events, true, false);
 
             for (i in events) {
                 obs.createEvent(i, events[i]);
@@ -6429,44 +7318,75 @@ ns.register("mixin.Observable", {
                 self.$$callbackContext = context;
             }
         }
+        else if (self.$$events) {
+            for (i in self.$$events) {
+                obs.createEvent(i, self.$$events[i]);
+            }
+        }
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.on}
+     */
     on: function() {
         var o = this.$$observable;
         return o ? o.on.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.un}
+     */
     un: function() {
         var o = this.$$observable;
         return o ? o.un.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.once}
+     */
     once: function() {
         var o = this.$$observable;
         return o ? o.once.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @see {@link class:Observable.trigger}
+     */
     trigger: function() {
         var o = this.$$observable;
         return o ? o.trigger.apply(o, arguments) : null;
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $beforeDestroy: function() {
         this.$$observable.trigger("before-destroy", this);
     },
 
+    /**
+     * @method
+     * @private
+     * @ignore
+     */
     $afterDestroy: function() {
         var self = this;
         self.$$observable.trigger("destroy", self);
-        self.$$observable.destroy();
+        self.$$observable.$destroy();
         self.$$observable = null;
     }
-});
+};
 
 
 
 
-var getScrollTopOrLeft = function(vertical) {
+var _getScrollTopOrLeft = function(vertical) {
 
     var defaultST,
         wProp = vertical ? "pageYOffset" : "pageXOffset",
@@ -6518,24 +7438,67 @@ var getScrollTopOrLeft = function(vertical) {
 
 
 
-var getScrollTop = getScrollTopOrLeft(true);
+
+/**
+ * Get element's vertical scroll position
+ * @function MetaphorJs.dom.getScrollLeft
+ * @param {DomNode} element
+ * @returns {int}
+ */
+var dom_getScrollLeft = MetaphorJs.dom.getScrollLeft = _getScrollTopOrLeft(true);
 
 
 
-var getScrollLeft = getScrollTopOrLeft(false);
+
+
+/**
+ * Get element's horizontal scroll position
+ * @function MetaphorJs.dom.getScrollLeft
+ * @param {DomNode} element
+ * @returns {int}
+ */
+MetaphorJs.dom.getScrollLeft = _getScrollTopOrLeft(false);
 
 
 
-var getWidth = getDimensions("", "Width");
 
 
-var getHeight = getDimensions("", "Height");
+/**
+ * Get element width
+ * @function MetaphorJs.dom.getWidth
+ * @param {DomNode} el
+ * @returns {int}
+ */
+var dom_getWidth = MetaphorJs.dom.getWidth = _dom_getDimensions("", "Width");
 
 
 
-defineClass({
 
-    $class: "dialog.position.Abstract",
+/**
+ * Get element height
+ * @function MetaphorJs.dom.getHeight
+ * @param {DomNode} el
+ * @returns {int}
+ */
+var dom_getHeight = MetaphorJs.dom.getHeight = _dom_getDimensions("", "Height");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+var dialog_position_Abstract = MetaphorJs.dialog.position.Abstract = cls({
+
     dialog: null,
     positionBase: null,
     correct: "solid",
@@ -6584,7 +7547,7 @@ defineClass({
         var b;
         if (b = dlg.getCfg().position.base) {
             if (typeof b == "string") {
-                self.positionBase = select(b).shift();
+                self.positionBase = dom_select(b).shift();
             }
             else {
                 self.positionBase = b;
@@ -6605,9 +7568,9 @@ defineClass({
             ofs;
 
         if (base) {
-            ofs = getOffset(base);
-            w = getOuterWidth(base);
-            h = getOuterHeight(base);
+            ofs = MetaphorJs.dom.getOffset(base);
+            w = dom_getOuterWidth(base);
+            h = dom_getOuterHeight(base);
             return {
                 x: ofs.left + sx,
                 y: ofs.top + sy,
@@ -6618,10 +7581,10 @@ defineClass({
             };
         }
         else {
-            w = getWidth(window);
-            h = getHeight(window);
-            st = getScrollTop(window);
-            sl = getScrollLeft(window);
+            w = dom_getWidth(window);
+            h = dom_getHeight(window);
+            st = MetaphorJs.dom.getScrollTop(window);
+            sl = dom_getScrollLeft(window);
             return {
                 x: sl + sx,
                 y: st + sy,
@@ -6799,26 +7762,26 @@ defineClass({
         axis != "y" && (pos.left = coords.x + "px");
         axis != "x" && (pos.top = coords.y + "px");
 
-        setStyle(dlg.getElem(), pos);
+        dom_setStyle(dlg.getElem(), pos);
     },
 
     onWindowResize: function(e) {
-        this.dialog.reposition(normalizeEvent(e));
+        this.dialog.reposition(dom_normalizeEvent(e));
     },
 
     onWindowScroll: function(e) {
-        this.dialog.reposition(normalizeEvent(e));
+        this.dialog.reposition(dom_normalizeEvent(e));
     },
 
     onShowAfterDelay: function() {
         var self = this;
 
         if (self.resize || self.screenX || self.screenY) {
-            addListener(window, "resize", self.onWindowResizeDelegate);
+            dom_addListener(window, "resize", self.onWindowResizeDelegate);
         }
 
         if (self.scroll || self.screenX || self.screenY) {
-            addListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+            dom_addListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
         }
     },
 
@@ -6827,21 +7790,21 @@ defineClass({
         var self = this;
 
         if (self.resize || self.screenX || self.screenY) {
-            removeListener(window, "resize", self.onWindowResizeDelegate);
+            dom_removeListener(window, "resize", self.onWindowResizeDelegate);
         }
 
         if (self.scroll || self.screenX || self.screenY) {
-            removeListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+            dom_removeListener(self.dialog.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
         }
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self = this,
             dlg = self.dialog;
 
-        removeListener(window, "resize", self.onWindowResizeDelegate);
-        removeListener(dlg.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
+        dom_removeListener(window, "resize", self.onWindowResizeDelegate);
+        dom_removeListener(dlg.getScrollEl(self.scroll), "scroll", self.onWindowScrollDelegate);
 
         dlg.un("reposition", self.onReposition, self);
         dlg.un("show-after-delay", self.onShowAfterDelay, self);
@@ -6860,52 +7823,55 @@ defineClass({
 
 
 
+/**
+ * Is node attached to DOM
+ * @function MetaphorJs.dom.isAttached
+ * @param {DomNode} node
+ * @returns {boolean}
+ */
+var dom_isAttached = MetaphorJs.dom.isAttached = function dom_isAttached(node) {
 
-function getOffsetParent(node) {
-
-    var html = window.document.documentElement,
-        offsetParent = node.offsetParent || html;
-
-    while (offsetParent && (offsetParent != html &&
-                              getStyle(offsetParent, "position") == "static")) {
-        offsetParent = offsetParent.offsetParent;
+    if (node === window) {
+        return true;
     }
-
-    return offsetParent || html;
-
-};
-
-var isAttached = function(){
-    var isAttached = function isAttached(node) {
-
-        if (node === window) {
+    if (node.nodeType == 3) {
+        if (node.parentElement) {
+            return dom_isAttached(node.parentElement);
+        }
+        else {
             return true;
         }
-        if (node.nodeType == 3) {
-            if (node.parentElement) {
-                return isAttached(node.parentElement);
-            }
-            else {
-                return true;
-            }
-        }
+    }
 
-        var html = window.document.documentElement;
+    var html = window.document.documentElement;
 
-        return node === html ? true : html.contains(node);
-    };
-    return isAttached;
-}();
+    return node === html ? true : html.contains(node);
+};
 
 
 
-function getOffset(node) {
+
+
+
+
+
+
+/**
+ * Get element's offset
+ * @function MetaphorJs.dom.getOffet
+ * @param {DomNode} node
+ * @returns {object} {
+ *  @type {int} top
+ *  @type {int} left
+ * }
+ */
+MetaphorJs.dom.getOffet = function dom_getOffset(node) {
 
     var box = {top: 0, left: 0},
         html = window.document.documentElement;
 
     // Make sure it's not a disconnected DOM node
-    if (!isAttached(node) || node === window) {
+    if (!dom_isAttached(node) || node === window) {
         return box;
     }
 
@@ -6916,14 +7882,55 @@ function getOffset(node) {
     }
 
     return {
-        top: box.top + getScrollTop() - html.clientTop,
-        left: box.left + getScrollLeft() - html.clientLeft
+        top: box.top + MetaphorJs.dom.getScrollTop() - html.clientTop,
+        left: box.left + dom_getScrollLeft() - html.clientLeft
     };
 };
 
 
 
-function getPosition(node, to) {
+
+
+
+/**
+ * Get element's offset parent
+ * @function MetaphorJs.dom.getOffsetParent
+ * @param {DomNode} node 
+ * @returns {DomNode}
+ */
+var dom_getOffsetParent = MetaphorJs.dom.getOffsetParent = function dom_getOffsetParent(node) {
+
+    var html = window.document.documentElement,
+        offsetParent = node.offsetParent || html;
+
+    while (offsetParent && 
+            (offsetParent != html &&
+                dom_getStyle(offsetParent, "position") === "static")) {
+        offsetParent = offsetParent.offsetParent;
+    }
+
+    return offsetParent || html;
+};
+
+
+
+
+
+
+
+
+
+/**
+ * Get node position relative to offset parent or specific node
+ * @function MetaphorJs.dom.getPosition
+ * @param {DomNode} node 
+ * @param {DomNode} to 
+ * @return {object} {
+ *  @type {int} top
+ *  @type {int} left
+ * }
+ */
+var dom_getPosition = MetaphorJs.dom.getPosition = function dom_getPosition(node, to) {
 
     var offsetParent, offset,
         parentOffset = {top: 0, left: 0},
@@ -6935,13 +7942,13 @@ function getPosition(node, to) {
 
     // Fixed elements are offset from window (parentOffset = {top:0, left: 0},
     // because it is its only offset parent
-    if (getStyle(node, "position" ) == "fixed") {
+    if (dom_getStyle(node, "position" ) == "fixed") {
         // Assume getBoundingClientRect is there when computed position is fixed
         offset = node.getBoundingClientRect();
     }
     else if (to) {
-        var thisOffset = getOffset(node),
-            toOffset = getOffset(to),
+        var thisOffset = MetaphorJs.dom.getOffset(node),
+            toOffset = MetaphorJs.dom.getOffset(to),
             position = {
                 left: thisOffset.left - toOffset.left,
                 top: thisOffset.top - toOffset.top
@@ -6957,24 +7964,24 @@ function getPosition(node, to) {
     }
     else {
         // Get *real* offsetParent
-        offsetParent = getOffsetParent(node);
+        offsetParent = dom_getOffsetParent(node);
 
         // Get correct offsets
-        offset = getOffset(node);
+        offset = MetaphorJs.dom.getOffset(node);
 
         if (offsetParent !== html) {
-            parentOffset = getOffset(offsetParent);
+            parentOffset = MetaphorJs.dom.getOffset(offsetParent);
         }
 
         // Add offsetParent borders
-        parentOffset.top += getStyle(offsetParent, "borderTopWidth", true);
-        parentOffset.left += getStyle(offsetParent, "borderLeftWidth", true);
+        parentOffset.top += dom_getStyle(offsetParent, "borderTopWidth", true);
+        parentOffset.left += dom_getStyle(offsetParent, "borderLeftWidth", true);
     }
 
     // Subtract parent offsets and element margins
     return {
-        top: offset.top - parentOffset.top - getStyle(node, "marginTop", true),
-        left: offset.left - parentOffset.left - getStyle(node, "marginLeft", true)
+        top: offset.top - parentOffset.top - dom_getStyle(node, "marginTop", true),
+        left: offset.left - parentOffset.left - dom_getStyle(node, "marginLeft", true)
     };
 };
 
@@ -6982,10 +7989,10 @@ function getPosition(node, to) {
 
 
 
-defineClass({
 
-    $class: "dialog.position.Target",
-    $extends: "dialog.position.Abstract",
+
+var dialog_position_Target = MetaphorJs.dialog.position.Target = 
+                dialog_position_Abstract.$extend({
 
     getCoords: function(e, type, absolute) {
 
@@ -6998,14 +8005,15 @@ defineClass({
             return null;
         }
 
-        var otype = type;
+        type    = type || self.type;
 
         var pBase   = self.getPositionBase(),
             size    = dlg.getDialogSize(),
-            offset  = pBase && !absolute ? getPosition(target, pBase) : getOffset(target),
+            offset  = pBase && !absolute ?
+                        dom_getPosition(target, pBase) :
+                        MetaphorJs.dom.getOffset(target),
             tsize   = dlg.getTargetSize(),
             pos     = {},
-            type    = type || self.type,
             pri     = type.substr(0, 1),
             sec     = type.substr(1),
             offsetX = cfg.position.offsetX,
@@ -7060,12 +8068,14 @@ defineClass({
                 switch (pri) {
                     case "t":
                     case "b": {
-                        pos.x   = offset.left + (tsize.width / 2) - (size.width / 2);
+                        pos.x   = offset.left + (tsize.width / 2) -
+                                    (size.width / 2);
                         break;
                     }
                     case "r":
                     case "l": {
-                        pos.y   = offset.top + (tsize.height / 2) - (size.height / 2);
+                        pos.y   = offset.top + (tsize.height / 2) -
+                                    (size.height / 2);
                         break;
                     }
                 }
@@ -7090,7 +8100,8 @@ defineClass({
     },
 
     getAllPositions: function() {
-        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb", "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
+        return ["t", "r", "b", "l", "tl", "tr", "rt", "rb",
+                "br", "bl", "lb", "lt", "tlc", "trc", "brc", "blc"];
     }
 
 });
@@ -7103,10 +8114,13 @@ defineClass({
 
 
 
-defineClass({
 
-    $class: "dialog.position.Mouse",
-    $extends: "dialog.position.Target",
+
+
+
+
+var dialog_position_Mouse = MetaphorJs.dialog.position.Mouse = dialog_position_Target.$extend({
+
     correct: "position",
 
     $init: function(dialog) {
@@ -7138,7 +8152,7 @@ defineClass({
             absOfs  = {x: 0, y: 0};
 
         if (!absolute && base) {
-            var baseOfs = getOffset(base);
+            var baseOfs = MetaphorJs.dom.getOffset(base);
             absOfs.x = baseOfs.left;
             absOfs.y = baseOfs.top;
         }
@@ -7218,17 +8232,17 @@ defineClass({
     onShowAfterDelay: function() {
         var self = this;
         self.$super();
-        addListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
+        dom_addListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
     },
 
     onHideAfterDelay: function() {
         var self = this;
         self.$super();
-        removeListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
+        dom_removeListener(window.document.documentElement, "mousemove", self.onMouseMoveDelegate);
     },
 
     onMouseMove: function(e) {
-        this.dialog.reposition(normalizeEvent(e));
+        this.dialog.reposition(dom_normalizeEvent(e));
     },
 
     getPrimaryPosition: function(pos) {
@@ -7250,11 +8264,12 @@ defineClass({
 
 
 
-defineClass({
 
-    $class: "dialog.position.Window",
-    $extends: "dialog.position.Abstract",
 
+
+
+
+var dialog_position_Window = MetaphorJs.dialog.position.Window = dialog_position_Abstract.$extend({
 
     getCoords: function(e, type) {
 
@@ -7266,10 +8281,10 @@ defineClass({
             type    = (type || self.type).substr(1),
             offsetX = self.offsetX,
             offsetY = self.offsetY,
-            st      = getScrollTop(pBase),
-            sl      = getScrollLeft(pBase),
-            ww      = getOuterWidth(pBase),
-            wh      = getOuterHeight(pBase);
+            st      = MetaphorJs.dom.getScrollTop(pBase),
+            sl      = dom_getScrollLeft(pBase),
+            ww      = dom_getOuterWidth(pBase),
+            wh      = dom_getOuterHeight(pBase);
 
         switch (type) {
             case "c": {
@@ -7347,13 +8362,11 @@ defineClass({
 
 
 
-defineClass({
 
-    $class: "dialog.position.Custom",
-    $extends: "dialog.position.Abstract",
+var dialog_position_Custom = MetaphorJs.dialog.position.Custom = 
+                    dialog_position_Abstract.$extend({
 
     getCoords: function(e) {
-
         var dlg = this.dialog;
         return this.get.call(dlg.$$callbackContext, dlg, e);
     }
@@ -7363,9 +8376,9 @@ defineClass({
 
 
 
-defineClass({
 
-    $class: "dialog.pointer.Abstract",
+var dialog_pointer_Abstract = MetaphorJs.dialog.pointer.Abstract = cls({
+
     enabled: null,
     node: null,
     correctX: 0,
@@ -7557,7 +8570,7 @@ defineClass({
 
     render: function() {},
 
-    destroy: function() {
+    onDestroy: function() {
         var self = this;
         self.remove();
     },
@@ -7608,7 +8621,9 @@ defineClass({
 
 
 
-(function(){
+
+
+MetaphorJs.dialog.pointer.Html = (function(){
 
     var ie6             = null,
         defaultProps    = {
@@ -7620,11 +8635,7 @@ defineClass({
             lineHeight:     '0px' // ie6
         };
 
-
-    return defineClass({
-
-        $class: "dialog.pointer.Html",
-        $extends: "dialog.pointer.Abstract",
+    return dialog_pointer_Abstract.$extend({
 
         node: null,
         sub: null,
@@ -7661,7 +8672,7 @@ defineClass({
             newcfg.offset = 0;
             newcfg.inner = self.border;
 
-            self.sub = factory("dialog.pointer.Html", self.dialog, newcfg);
+            self.sub = new MetaphorJs.dialog.pointer.Html(self.dialog, newcfg);
         },
 
 
@@ -7761,7 +8772,7 @@ defineClass({
 
                 offsets[names[opposite[auto]]]  = positionOffset;
 
-                var pfxs = getAnimationPrefixes(),
+                var pfxs = animate_getPrefixes(),
                     transformPfx = pfxs.transform,
                     transform = "",
                     cx = self.correctX,
@@ -7832,7 +8843,7 @@ defineClass({
             self.node.appendChild(cmt);
 
             setStyle(self.node, defaultProps);
-            addClass(self.node, self.borderCls || self.cls);
+            dom_addClass(self.node, self.borderCls || self.cls);
 
             if (self.sub) {
                 self.sub.render();
@@ -7850,8 +8861,10 @@ defineClass({
                 return;
             }
 
-            setStyle(self.node, self.getBorders(position, direction, self.borderColor || self.color));
-            setStyle(self.node, self.getOffsets(position, direction));
+            dom_setStyle(self.node, 
+                self.getBorders(position, direction, self.borderColor || self.color));
+            dom_setStyle(self.node, 
+                self.getOffsets(position, direction));
 
             if (self.sub) {
                 self.sub.reposition();
@@ -7874,7 +8887,7 @@ defineClass({
             }
         },
 
-        destroy: function() {
+        onDestroy: function() {
 
             var self = this;
 
@@ -7907,9 +8920,12 @@ defineClass({
 
 
 
-defineClass({
 
-    $class:         "dialog.Overlay",
+
+
+
+var dialog_Overlay = MetaphorJs.dialog.Overlay = cls({
+
     dialog:         null,
     enabled:		false,
     color:			'#000',
@@ -7918,7 +8934,7 @@ defineClass({
     animateShow:	false,
     animateHide:	false,
 
-    $mixins:        ["mixin.Observable"],
+    $mixins:        [mixin_Observable],
 
     $init: function(dialog) {
 
@@ -7997,7 +9013,7 @@ defineClass({
         var node = window.document.createElement("div"),
             cfg = self.dialog.getCfg();
 
-        setStyle(node, {
+        dom_setStyle(node, {
             display:            "none",
             position: 			"fixed",
             left:				0,
@@ -8008,13 +9024,13 @@ defineClass({
             backgroundColor: 	self.color
         });
 
-        addListener(node, "click", self.onClickDelegate);
+        dom_addListener(node, "click", self.onClickDelegate);
 
         if (cfg.render.zIndex) {
-            setStyle(node, "zIndex", cfg.render.zIndex);
+            dom_setStyle(node, "zIndex", cfg.render.zIndex);
         }
         if (self.cls) {
-            addClass(node, self.cls);
+            MetaphorJs.dom.addClass(node, self.cls);
         }
 
         self.node = node;
@@ -8022,7 +9038,6 @@ defineClass({
 
     remove: function() {
         var self = this,
-            dialog = self.dialog,
             node = self.node;
 
         if (node) {
@@ -8069,17 +9084,14 @@ defineClass({
             a = [a];
         }
 
-        return animate(node, a, function(){
+        return animate_animate(node, a, function(){
             if (type == "show") {
-
-                var p = new Promise;
-
-                raf(function(){
-                    node.style.display = "";
-                    p.resolve();
+                return new lib_Promise(function(resolve, reject){
+                    raf(function(){
+                        node.style.display = "";
+                        resolve();
+                    });
                 });
-
-                return p;
             }
         }, false);
     },
@@ -8095,7 +9107,7 @@ defineClass({
         }
 
         if (self.modal) {
-            e = normalizeEvent(e);
+            e = dom_normalizeEvent(e);
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -8103,7 +9115,7 @@ defineClass({
         return null;
     },
 
-    destroy: function() {
+    onDestroy: function() {
 
         var self = this;
         self.remove();
@@ -8113,8 +9125,9 @@ defineClass({
 
 
 
-defineClass({
-    $class: "dialog.Manager",
+
+var dialog_Manager = MetaphorJs.dialog.Manager = cls({
+
     all: null,
     groups: null,
 
@@ -8195,12 +9208,34 @@ defineClass({
 
 
 
-var Dialog = (function(){
 
-    var manager = factory("dialog.Manager");
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+MetaphorJs.dialog.Dialog = (function(){
+
+    var manager = new dialog_Manager;
 
     var defaultEventProcessor = function(dlg, e, type, returnMode){
-        if (type == "show" || !returnMode) {
+        if (type === "show" || !returnMode) {
             e.preventDefault();
             e.stopPropagation();
             return false;
@@ -8216,7 +9251,7 @@ var Dialog = (function(){
 
         while (trg && trg !== dlgEl) {
 
-            data    = getAttr(trg, "data-" + action + "-" + type);
+            data    = dom_getAttr(trg, "data-" + action + "-" + type);
 
             if (data) {
                 cfg = createGetter(data)({});
@@ -9175,10 +10210,9 @@ var Dialog = (function(){
 
 
 
-    var Dialog = defineClass({
+    var Dialog = cls({
 
-        $class:             "Dialog",
-        $mixins:            ["mixin.Observable"],
+        $mixins:            [mixin_Observable],
 
         id:                 null,
         node:               null,
@@ -9253,10 +10287,12 @@ var Dialog = (function(){
             if (cfg.modal) {
                 cfg.overlay.enabled = true;
             }
-            self.overlay    = factory("dialog.Overlay", self);
+            self.overlay    = new dialog_Overlay(self);
 
             var pointerCls = ucfirst(cfg.pointer.$class || "Html");
-            self.pointer    = factory("dialog.pointer." + pointerCls, self, cfg.pointer);
+            self.pointer    = cls.factory(
+                                "MetaphorJs.dialog.pointer." + pointerCls, 
+                                self, cfg.pointer);
 
             if (isFunction(cfg.position.type)) {
                 self.positionGetType = cfg.position.type;
@@ -9265,8 +10301,8 @@ var Dialog = (function(){
             self.setTarget(cfg.target);
 
             if (cfg.target && cfg.useHref) {
-                var href = getAttr(self.getTarget(), "href");
-                if (href.substr(0, 1) == "#") {
+                var href = dom_getAttr(self.getTarget(), "href");
+                if (href.substr(0, 1) === "#") {
                     cfg.render.el = href;
                 }
                 else {
@@ -9465,8 +10501,10 @@ var Dialog = (function(){
             var self    = this,
                 cfg     = self.cfg,
                 fns     = ["show", "hide", "toggle"],
-                lfn     = mode == "bind" ? addListener : removeListener,
-                dfn     = mode == "bind" ? delegate : undelegate,
+                lfn     = mode === "bind" ? dom_addListener : 
+                                            dom_removeListener,
+                dfn     = mode === "bind" ? dom_delegate :
+                                            MetaphorJs.dom.undelegate,
                 fn,
                 fnCfg,
                 selector,
@@ -9498,17 +10536,21 @@ var Dialog = (function(){
                 for (selector in fnCfg) {
 
                     if (only) {
-                        if (only == '_self') {
-                            if (selector != '_self' && selector != "_overlay" && selector.substr(0,1) != '>') {
+                        if (only === '_self') {
+                            if (selector !== '_self' &&
+                                selector !== "_overlay" &&
+                                selector.substr(0,1) !== '>') {
                                 continue;
                             }
                         }
-                        else if (selector != only) {
+                        else if (selector !== only) {
                             continue;
                         }
                     }
 
-                    if ((selector == '_self' || selector == '_overlay' || selector.substr(0,1) == '>')
+                    if ((selector === '_self' ||
+                            selector === '_overlay' ||
+                            selector.substr(0,1) === '>')
                         && !self.node) {
 
                         self.bindSelfOnRender = true;
@@ -9547,9 +10589,9 @@ var Dialog = (function(){
                             break;
 
                         default:
-                            el  = selector.substr(0,1) == '>' ?
-                                  select(selector.substr(1), self.node) :
-                                  select(selector);
+                            el  = selector.substr(0,1) === '>' ?
+                                    dom_select(selector.substr(1), self.node) :
+                                    dom_select(selector);
 
                     }
 
@@ -9579,13 +10621,13 @@ var Dialog = (function(){
 
 
         onPreventScroll: function(e) {
-            normalizeEvent(e).preventDefault();
+            dom_normalizeEvent(e).preventDefault();
         },
 
         onButtonClick: function(e) {
 
-            var target  = normalizeEvent(e).target,
-                btnId   = data(target, "metaphorjsTooltip-button-id");
+            var target  = dom_normalizeEvent(e).target,
+                btnId   = dom_data(target, "metaphorjsTooltip-button-id");
 
             if (btnId) {
                 this.trigger("button", this, btnId, e);
@@ -9593,12 +10635,12 @@ var Dialog = (function(){
         },
 
         onButtonKeyup: function(e) {
-            if (e.keyCode == 13 || e.keyCode == 32) {
+            if (e.keyCode === 13 || e.keyCode === 32) {
                 var target  = e.target,
-                    btnId   = data(target, "metaphorjsTooltip-button-id");
+                    btnId   = dom_data(target, "metaphorjsTooltip-button-id");
 
                 if (btnId) {
-                    this.trigger("button", this, btnId, normalizeEvent(e));
+                    this.trigger("button", this, btnId, dom_normalizeEvent(e));
                 }
             }
         },
@@ -9635,7 +10677,7 @@ var Dialog = (function(){
                 returnMode  = null;
 
             if (e) {
-                e = normalizeEvent(e);
+                e = dom_normalizeEvent(e);
             }
 
             // if tooltip is disabled, we do not stop propagation and do not return false.s
@@ -9735,7 +10777,7 @@ var Dialog = (function(){
             }
 
             // first, we stop all current animations
-            stopAnimation(self.node);
+            animate_stop(self.node);
 
             // as of this moment we mark dialog as visible so that hide() were able
             // to work. also, all next steps should check for this state
@@ -9786,10 +10828,10 @@ var Dialog = (function(){
                 if (ps === true) {
                     ps = "body";
                 }
-                ps = select(ps);
+                ps = dom_select(ps);
                 for (i = -1, l = ps.length; ++i < l;
-                     addListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
-                     addListener(ps[i], "touchmove", self.onPreventScrollDelegate)
+                    dom_addListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
+                    dom_addListener(ps[i], "touchmove", self.onPreventScrollDelegate)
                 ){}
             }
 
@@ -9820,8 +10862,8 @@ var Dialog = (function(){
 
             // now we can finally show the dialog (if it wasn't shown already
             // during the animation
-            removeClass(node, cfg.cls.hidden);
-            addClass(node, cfg.cls.visible);
+            dom_removeClass(node, cfg.cls.hidden);
+            dom_addClass(node, cfg.cls.visible);
 
             if (!cfg.render.keepVisible) {
                 node.style.display = cfg.show.display || "block";
@@ -9922,7 +10964,7 @@ var Dialog = (function(){
             }
 
             // now we can stop all current animations
-            stopAnimation(self.node);
+            animate_stop(self.node);
 
             // and change the state
             self.visible = false;
@@ -9964,10 +11006,10 @@ var Dialog = (function(){
                 if (ps === true) {
                     ps = "body";
                 }
-                ps = select(ps);
+                ps = dom_select(ps);
                 for (i = -1, l = ps.length; ++i < l;
-                     removeListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
-                     removeListener(ps[i], "touchmove", self.onPreventScrollDelegate)
+                    dom_removeListener(ps[i], "mousewheel", self.onPreventScrollDelegate) &&
+                    dom_removeListener(ps[i], "touchmove", self.onPreventScrollDelegate)
                 ){}
             }
 
@@ -9997,8 +11039,8 @@ var Dialog = (function(){
                 return;
             }
 
-            removeClass(node, cfg.cls.visible);
-            addClass(node, cfg.cls.hidden);
+            dom_removeClass(node, cfg.cls.visible);
+            dom_addClass(node, cfg.cls.hidden);
 
             if (!cfg.render.keepVisible) {
                 node.style.display = "none";
@@ -10019,7 +11061,7 @@ var Dialog = (function(){
 
             if (node && cfg.hide.destroy) {
                 raf(function(){
-                    data(node, cfg.instanceName, null);
+                    dom_data(node, cfg.instanceName, null);
                     self.$destroy();
                 });
             }
@@ -10062,7 +11104,7 @@ var Dialog = (function(){
 
             if (rnd.el) {
                 if (isString(rnd.el)) {
-                    elem = select(rnd.el).shift();
+                    elem = dom_select(rnd.el).shift();
                     rnd.keepInDOM = true;
                 }
                 else {
@@ -10083,18 +11125,18 @@ var Dialog = (function(){
             self.node = elem;
 
             if (rnd.id) {
-                setAttr(elem, 'id', rnd.id);
+                dom_setAttr(elem, 'id', rnd.id);
             }
 
             if (!cfg.render.keepVisible) {
                 elem.style.display = "none";
             }
 
-            addClass(elem, cls.dialog);
-            addClass(elem, cls.hidden);
+            dom_addClass(elem, cls.dialog);
+            dom_addClass(elem, cls.hidden);
 
             if (rnd.style) {
-                setStyle(elem, rnd.style);
+                dom_setStyle(elem, rnd.style);
             }
 
 
@@ -10111,7 +11153,7 @@ var Dialog = (function(){
             }
 
             if (rnd.zIndex) {
-                setStyle(elem, {zIndex: rnd.zIndex});
+                dom_setStyle(elem, {zIndex: rnd.zIndex});
             }
 
             var cnt = cfg.content;
@@ -10136,11 +11178,11 @@ var Dialog = (function(){
             if (cfg.buttons) {
                 var btnId, btn;
                 for (btnId in cfg.buttons) {
-                    btn = select(cfg.buttons[btnId], elem).shift();
+                    btn = dom_select(cfg.buttons[btnId], elem).shift();
                     if (btn) {
-                        data(btn, "metaphorjsTooltip-button-id", btnId);
-                        addListener(btn, "click", self.onButtonClickDelegate);
-                        addListener(btn, "keyup", self.onButtonKeyupDelegate);
+                        dom_data(btn, "metaphorjsTooltip-button-id", btnId);
+                        dom_addListener(btn, "click", self.onButtonClickDelegate);
+                        dom_addListener(btn, "keyup", self.onButtonKeyupDelegate);
                     }
                 }
             }
@@ -10166,17 +11208,17 @@ var Dialog = (function(){
 
         setPositionType: function(type) {
             var self    = this,
-                cls     = self.getPositionClass(type);
+                positionCls     = self.getPositionClass(type);
 
             self.cfg.position.type = type;
 
-            if (self.positionClass != cls || !self.position) {
+            if (self.positionClass !== positionCls || !self.position) {
                 if (self.position) {
                     self.position.$destroy();
                     self.position = null;
                 }
-                if (cls) {
-                    self.position = factory(cls, self);
+                if (positionCls) {
+                    self.position = cls.factory(positionCls, self);
                 }
             }
             else {
@@ -10195,8 +11237,8 @@ var Dialog = (function(){
 
             if (!self.position) {
 
-                if (!self.positionGetType && cfgPos.type != "custom") {
-                    if (isFunction(cfgPos.get) && cfgPos.type != "m") {
+                if (!self.positionGetType && cfgPos.type !== "custom") {
+                    if (isFunction(cfgPos.get) && cfgPos.type !== "m") {
                         cfgPos.type = "custom";
                     }
                 }
@@ -10204,18 +11246,16 @@ var Dialog = (function(){
                 var type    = self.positionGetType ?
                                 self.positionGetType.call(self.$$callbackContext, self, e) :
                                 cfgPos.type,
-                    cls     = self.getPositionClass(type);
-
-
+                    positionCls = self.getPositionClass(type);
 
                 cfgPos.type     = type;
 
-                if (cls === false) {
+                if (positionCls === false) {
                     return;
                 }
 
-                if (self.positionClass != cls) {
-                    self.position   = factory(self.getPositionClass(type), self);
+                if (self.positionClass !== positionCls) {
+                    self.position   = cls.factory(positionCls, self);
                 }
                 else {
                     self.position.type = type;
@@ -10231,8 +11271,8 @@ var Dialog = (function(){
                 return false;
             }
 
-            if (isFunction(type) || type == "custom") {
-                return "dialog.position.Custom";
+            if (isFunction(type) || type === "custom") {
+                return "dialog_position_Custom";
             }
 
             var fc = type.substr(0, 1);
@@ -10240,14 +11280,14 @@ var Dialog = (function(){
             if (!fc) {
                 return false;
             }
-            else if (fc == "w") {
-                return "dialog.position.Window";
+            else if (fc === "w") {
+                return "dialog_position_Window";
             }
-            else if (fc == "m") {
-                return "dialog.position.Mouse";
+            else if (fc === "m") {
+                return "dialog_position_Mouse";
             }
             else {
-                return "dialog.position.Target";
+                return "dialog_position_Target";
             }
         },
 
@@ -10266,7 +11306,7 @@ var Dialog = (function(){
 
             self.repositioning = true;
 
-            e && (e = normalizeEvent(e));
+            e && (e = dom_normalizeEvent(e));
 
             self.getPosition(e);
             self.trigger("before-reposition", self, e);
@@ -10317,13 +11357,13 @@ var Dialog = (function(){
 
             var isStr = isString(newTarget);
 
-            if (isStr && newTarget.substr(0,1) != "#") {
+            if (isStr && newTarget.substr(0,1) !== "#") {
                 self.dynamicTarget = true;
                 self.target        = null;
             }
             else {
                 if (isStr) {
-                    newTarget       = select(newTarget).shift();
+                    newTarget       = dom_select(newTarget).shift();
                 }
                 self.dynamicTarget = false;
                 self.target        = newTarget;
@@ -10353,7 +11393,7 @@ var Dialog = (function(){
                 t	    = e.target,
                 curr    = self.dynamicTargetEl;
 
-            while (t && !is(t, dt)) {
+            while (t && !dom_is(t, dt)) {
                 t   = t.parentNode;
             }
 
@@ -10372,7 +11412,7 @@ var Dialog = (function(){
                 t	    = e.target,
                 curr    = self.dynamicTargetEl;
 
-            while (t && !is(t, dt)) {
+            while (t && !dom_is(t, dt)) {
                 t   = t.parentNode;
             }
 
@@ -10420,7 +11460,7 @@ var Dialog = (function(){
             }
 
             if (self.cfg.selector.content) {
-                var el = select(self.cfg.selector.content, node).shift();
+                var el = dom_select(self.cfg.selector.content, node).shift();
                 return el || node;
             }
             else {
@@ -10465,14 +11505,16 @@ var Dialog = (function(){
                 try {
                     node.removeChild(pntEl);
                 }
-                catch (thrownError) {}
+                catch (thrownError) {
+                    error(thrownError);
+                }
             }
 
             if (!isString(content)) {
                 for (var i in content) {
                     var sel     = cfg.selector[i];
                     if (sel) {
-                        var cel = select(sel, contentElem).shift();
+                        var cel = dom_select(sel, contentElem).shift();
                         if (cel) {
                             cel.innerHTML = content[i];
                         }
@@ -10491,15 +11533,18 @@ var Dialog = (function(){
                 try {
                     node.appendChild(pntEl);
                 }
-                catch (thrownError){}
+                catch (thrownError) {
+                    error(thrownError);
+                }
             }
 
-            var imgs = select("img", contentElem),
+            var imgs = dom_select("img", contentElem),
                 l;
 
             self.images = imgs.length;
 
-            for (i = -1, l = imgs.length; ++i < l; addListener(imgs[i], "load", self.onImageLoadDelegate)){}
+            for (i = -1, l = imgs.length; ++i < l; 
+                dom_addListener(imgs[i], "load", self.onImageLoadDelegate)){}
 
             self.trigger('content-change', self, content, mode);
             self.onContentChange();
@@ -10519,12 +11564,12 @@ var Dialog = (function(){
 
             if (el) {
                 if (cfg.content.attr) {
-                    content = getAttr(el, cfg.content.attr);
+                    content = dom_getAttr(el, cfg.content.attr);
                 }
                 else {
-                    content = getAttr(el, 'tooltip') ||
-                              getAttr(el, 'title') ||
-                              getAttr(el, 'alt');
+                    content = dom_getAttr(el, 'tooltip') ||
+                            dom_getAttr(el, 'title') ||
+                            dom_getAttr(el, 'alt');
                 }
             }
 
@@ -10543,7 +11588,7 @@ var Dialog = (function(){
             var self = this,
                 cfg = self.cfg;
 
-            addClass(self.node, cfg.cls.loading);
+            dom_addClass(self.node, cfg.cls.loading);
             var opt = extend({}, cfg.ajax, options, true, true);
             self.trigger('before-ajax', self, opt);
             return ajax(opt).done(self.onAjaxLoad, self);
@@ -10551,7 +11596,7 @@ var Dialog = (function(){
 
         onAjaxLoad: function(data) {
             var self = this;
-            removeClass(self.node, self.cfg.cls.loading);
+            dom_removeClass(self.node, self.cfg.cls.loading);
             self.setContent(data, 'ajax');
         },
 
@@ -10585,11 +11630,11 @@ var Dialog = (function(){
 
             if (trg) {
                 if (state === false) {
-                    data(trg, "tmp-title", getAttr(trg, "title"));
-                    removeAttr(trg, 'title');
+                    dom_data(trg, "tmp-title", dom_getAttr(trg, "title"));
+                    dom_removeAttr(trg, 'title');
                 }
-                else if (title = data(trg, "tmp-title")) {
-                    setAttr(trg, "title", title);
+                else if (title = dom_data(trg, "tmp-title")) {
+                    dom_setAttr(trg, "title", title);
                 }
             }
         },
@@ -10607,22 +11652,23 @@ var Dialog = (function(){
 
             var cfg     = self.cfg,
                 node    = self.node,
-                hidden  = cfg.cls.hidden ? hasClass(node, cfg.cls.hidden) : !isVisible(node),
+                hidden  = cfg.cls.hidden ? dom_hasClass(node, cfg.cls.hidden) : 
+                                            !dom_isVisible(node),
                 size,
                 left    = node.style.left;
 
             if (hidden) {
-                setStyle(node, {left: "-1000px"});
+                dom_setStyle(node, {left: "-1000px"});
                 node.style.display = cfg.show.display;
             }
 
             size    = {
-                width:      getOuterWidth(node),
-                height:     getOuterHeight(node)
+                width:      dom_getOuterWidth(node),
+                height:     dom_getOuterHeight(node)
             };
 
             if (hidden) {
-                setStyle(node, {left: left});
+                dom_setStyle(node, {left: left});
                 node.style.display = "none";
             }
 
@@ -10639,8 +11685,8 @@ var Dialog = (function(){
             }
 
             return {
-                width:      getOuterWidth(target),
-                height:     getOuterHeight(target)
+                width:      dom_getOuterWidth(target),
+                height:     dom_getOuterHeight(target)
             };
         },
 
@@ -10663,20 +11709,21 @@ var Dialog = (function(){
                 input;
 
             if (af === true) {
-                input   = select("input", node).concat(select("textarea", node));
+                input   = dom_select("input", node).concat(
+                            dom_select("textarea", node));
                 if (input.length > 0) {
                     input[0].focus();
                 }
                 else if (cfg.buttons) {
                     for (i in cfg.buttons) {
-                        var btn = select(cfg.buttons[i], node).shift();
+                        var btn = dom_select(cfg.buttons[i], node).shift();
                         btn && btn.focus();
                         break;
                     }
                 }
             }
             else {
-                var el = select(af, node).shift();
+                var el = dom_select(af, node).shift();
                 el && el.focus();
             }
         },
@@ -10685,8 +11732,8 @@ var Dialog = (function(){
             if (cfgScroll === true || cfgScroll === false) {
                 return window;
             }
-            else if (typeof cfgScroll == "string") {
-                return select(cfgScroll).shift();
+            else if (typeof cfgScroll === "string") {
+                return dom_select(cfgScroll).shift();
             }
             else {
                 return cfgScroll;
@@ -10717,17 +11764,14 @@ var Dialog = (function(){
                 a = [a];
             }
 
-            return animate(node, a, function(){
-                if (section == "show" && !skipDisplay) {
-
-                    var p = new Promise;
-
-                    raf(function(){
-                        node.style.display = cfg.show.display || "block";
-                        p.resolve();
+            return animate_animate(node, a, function(){
+                if (section === "show" && !skipDisplay) {
+                    return new lib_Promise(function(resolve, reject){
+                        raf(function(){ 
+                            node.style.display = cfg.show.display || "block";
+                            resolve();
+                        });
                     });
-
-                    return p;
                 }
             }, false);
         },
@@ -10760,7 +11804,7 @@ var Dialog = (function(){
 
             self.overlay.append();
 
-            if (self.node) {
+            if (self.node && cfg.render.appendTo !== false) {
                 to.appendChild(self.node);
             }
         },
@@ -10781,7 +11825,7 @@ var Dialog = (function(){
 
             if (node) {
                 if (!self.cfg.render.keepInDOM) {
-                    node.parentNode.removeChild(node);
+                    node.parentNode && node.parentNode.removeChild(node);
                 }
                 self.node = null;
             }
@@ -10794,7 +11838,7 @@ var Dialog = (function(){
          * @access public
          * @method
          */
-        destroy: function() {
+        onDestroy: function() {
 
             var self = this;
 
@@ -10818,117 +11862,9 @@ var Dialog = (function(){
     return Dialog;
 
 }());
+var __mjsExport = {};
+__mjsExport['Dialog'] = MetaphorJs.dialog.Dialog;
 
+typeof global != "undefined" ? (global['MetaphorJs'] = __mjsExport) : (window['MetaphorJs'] = __mjsExport);
 
-
-/**
- * @param {Function} fn
- * @param {Window} w optional window object
- */
-function onReady(fn, w) {
-
-    var done    = false,
-        top     = true,
-        win     = w || window,
-        root, doc,
-
-        init    = function(e) {
-            if (e.type == 'readystatechange' && doc.readyState != 'complete') {
-                return;
-            }
-
-            removeListener(e.type == 'load' ? win : doc, e.type, init);
-
-            if (!done && (done = true)) {
-                fn.call(win, e.type || e);
-            }
-        },
-
-        poll = function() {
-            try {
-                root.doScroll('left');
-            } catch(thrownError) {
-                setTimeout(poll, 50);
-                return;
-            }
-
-            init('poll');
-        };
-
-    doc     = win.document;
-    root    = doc.documentElement;
-
-    if (doc.readyState == 'complete') {
-        fn.call(win, 'lazy');
-    }
-    else {
-        if (doc.createEventObject && root.doScroll) {
-            try {
-                top = !win.frameElement;
-            } catch(thrownError) {}
-
-            top && poll();
-        }
-        addListener(doc, 'DOMContentLoaded', init);
-        addListener(doc, 'readystatechange', init);
-        addListener(win, 'load', init);
-    }
-};
-
-if (window.jQuery) {
-
-    /**
-     * jQuery plugin. Basically the same as new MetaphorJs.lib.Dialog({target: $("...")});
-     * @function
-     * @param {string|object} options See constructor.
-     * @param {string} instanceName {
-     *   You can access dialog's api later by $(...).data("dialog-"+instanceName)
-     *   @default "default"
-     * }
-     * @return jQuery
-     */
-    jQuery.fn.metaphorjsTooltip = function(options, instanceName) {
-
-        var dataName    = "dialog",
-            preset;
-
-        if (typeof options == "string" && options != "destroy") {
-            preset          = options;
-            options         = arguments[1];
-            instanceName    = arguments[2];
-        }
-
-        instanceName    = instanceName || "default";
-        options         = options || {};
-
-        dataName        += "-" + instanceName;
-
-        this.each(function() {
-
-            var el  = this,
-                t   = data(el, dataName);
-
-            if (!t) {
-                options.target          = el;
-                options.instanceName    = dataName;
-                options.preset          = preset;
-                data(el, dataName, new MetaphorJs.Dialog(options));
-            }
-            else if (options == "destroy") {
-                t.destroy();
-                data(el, dataName, null);
-            }
-            else {
-                throw new Error("MetaphorJs tooltip already instantiated for this html element");
-            }
-        });
-    };
-
-}
-
-var MetaphorJsExports = {};
-MetaphorJsExports['Dialog'] = Dialog;
-MetaphorJsExports['onReady'] = onReady;
-typeof global != "undefined" ? (global['MetaphorJs'] = MetaphorJsExports) : (window['MetaphorJs'] = MetaphorJsExports);
-
-}());
+}());/* BUNDLE END 003 */
