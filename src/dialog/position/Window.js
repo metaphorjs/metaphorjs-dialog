@@ -27,27 +27,27 @@ module.exports = MetaphorJs.dialog.position.Window = MetaphorJs.dialog.position.
 
         switch (type) {
             case "c": {
-                pos.y   = (wh / 2) - (size.height / 2) + st;
-                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                pos.y   = (wh / 2) - (size.height / 2) + st + offsetY;
+                pos.x   = (ww / 2) - (size.width / 2) + sl + offsetX;
                 break;
             }
             case "t": {
                 pos.y   = st + offsetY;
-                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                pos.x   = (ww / 2) - (size.width / 2) + sl + offsetX;
                 break;
             }
             case "r": {
-                pos.y   = (wh / 2) - (size.height / 2) + st;
+                pos.y   = (wh / 2) - (size.height / 2) + st - offsetY;
                 pos.x   = ww - size.width + sl - offsetX;
                 break;
             }
             case "b": {
                 pos.y   = wh - size.height + st - offsetY;
-                pos.x   = (ww / 2) - (size.width / 2) + sl;
+                pos.x   = (ww / 2) - (size.width / 2) + sl + offsetX;
                 break;
             }
             case "l": {
-                pos.y   = (wh / 2) - (size.height / 2) + st;
+                pos.y   = (wh / 2) - (size.height / 2) + st + offsetY;
                 pos.x   = sl + offsetX;
                 break;
             }
