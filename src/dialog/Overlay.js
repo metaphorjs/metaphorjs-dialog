@@ -7,7 +7,7 @@ require("metaphorjs-animate/src/animate/animate.js");
 require("metaphorjs-promise/src/lib/Promise.js");
 require("metaphorjs-observable/src/mixin/Observable.js");
 
-var cls = require("metaphorjs-class/src/cls.js"),
+const cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     bind = require("metaphorjs-shared/src/func/bind.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),

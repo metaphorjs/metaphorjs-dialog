@@ -4,7 +4,7 @@ require("./Abstract.js");
 require("metaphorjs/src/func/dom/getOffset.js");
 require("metaphorjs/src/func/dom/removeStyle.js");
 
-var MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
+const MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 module.exports = MetaphorJs.dialog.position.None = 
                     MetaphorJs.dialog.position.Abstract.$extend({

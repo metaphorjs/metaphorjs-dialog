@@ -4,7 +4,7 @@ require("metaphorjs/src/func/dom/addClass.js");
 require("metaphorjs-animate/src/animate/getPrefixes.js");
 require("./Abstract.js");
 
-var MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+const MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     ucfirst = require("metaphorjs-shared/src/func/ucfirst.js");
 
 module.exports = MetaphorJs.dialog.pointer.Html = (function(){

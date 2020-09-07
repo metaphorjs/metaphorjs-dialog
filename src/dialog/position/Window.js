@@ -1,5 +1,5 @@
 
-var MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
+const MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 require("../../__init.js");
 require("metaphorjs/src/func/dom/getScrollTop.js");

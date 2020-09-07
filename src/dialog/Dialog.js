@@ -1,5 +1,5 @@
 
-var cls             = require("metaphorjs-class/src/cls.js"),
+const cls             = require("metaphorjs-class/src/cls.js"),
     extend          = require("metaphorjs-shared/src/func/extend.js"),
     nextUid         = require("metaphorjs-shared/src/func/nextUid.js"),
     bind            = require("metaphorjs-shared/src/func/bind.js"),
@@ -8,7 +8,6 @@ var cls             = require("metaphorjs-class/src/cls.js"),
     isString        = require("metaphorjs-shared/src/func/isString.js"),
     isFunction      = require("metaphorjs-shared/src/func/isFunction.js"),
     isNumber        = require("metaphorjs-shared/src/func/isNumber.js"),
-    undf            = require("metaphorjs-shared/src/var/undf.js"),
     isBool          = require("metaphorjs-shared/src/func/isBool.js"),
     ucfirst         = require("metaphorjs-shared/src/func/ucfirst.js"),
     raf             = require("metaphorjs-animate/src/func/raf.js"),
@@ -100,7 +99,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
         var value   = options[level1],
             yes     = false;
 
-        if (value === undf) {
+        if (value === undefined) {
             return;
         }
 

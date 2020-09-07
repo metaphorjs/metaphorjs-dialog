@@ -3,7 +3,7 @@ require("../__init.js");
 require("metaphorjs/src/lib/DomEvent.js");
 require("../dialog/Dialog.js");
 
-var MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+const MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     extend = require("metaphorjs-shared/src/func/extend.js");
 
 

@@ -1,2 +1,2 @@
 
-var stopAnimation = animate.stop;
+const stopAnimation = animate.stop;

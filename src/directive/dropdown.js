@@ -3,7 +3,7 @@ require("metaphorjs/src/lib/Config.js");
 require("../dialog/Dialog.js");
 require("metaphorjs/src/func/dom/getParentDocument.js");
 
-var Directive = require("metaphorjs/src/app/Directive.js"),
+const Directive = require("metaphorjs/src/app/Directive.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),
     isThenable = require("metaphorjs-shared/src/func/isThenable.js"),

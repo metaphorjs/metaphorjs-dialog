@@ -1,6 +1,6 @@
 
 
-var MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+const MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
     bind = require("metaphorjs-shared/src/func/bind.js");
 
 require("../../__init.js");
