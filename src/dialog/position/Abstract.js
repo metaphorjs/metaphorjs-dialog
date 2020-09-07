@@ -15,6 +15,7 @@ require("metaphorjs/src/func/dom/isAttached.js");
 
 var cls = require("metaphorjs-class/src/cls.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),
+    bind = require("metaphorjs-shared/src/func/bind.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js");
 
 module.exports = MetaphorJs.dialog.position.Abstract = cls({
