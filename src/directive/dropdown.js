@@ -31,7 +31,7 @@ Directive.registerAttribute("dropdown", 1100,
 
             var self = this,
                 config = self.config,
-                scope = self.scope,
+                state = self.state,
                 ref = config.get("ref"),
                 cmpid = config.get("cmp"),
                 selector = config.get("selector"),
@@ -45,9 +45,9 @@ Directive.registerAttribute("dropdown", 1100,
                 }
                 else if (cmpid) {
                     if (typeof cmpid === "string") {
-                        if (scope.$app) {
-                            cmp = scope.$app.getCmp(cmpid) ||
-                                    scope.$app.onAvailable(cmpid);
+                        if (state.$app) {
+                            cmp = state.$app.getCmp(cmpid) ||
+                                    state.$app.onAvailable(cmpid);
                         }
                     }
                     else {
@@ -92,7 +92,7 @@ Directive.registerAttribute("dropdown", 1100,
                     cfg = self._getDialogConfig();
                 self._dialog = new cls(cfg);
                 self.$$observable.relayEvent(self._dialog, "*");
-                self._dialog.on("*", self.scope.$check, self.scope);
+                self._dialog.on("*", self.state.$check, self.state);
             }
 
             return this._dialog;
