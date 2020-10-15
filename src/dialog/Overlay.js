@@ -9,6 +9,7 @@ require("metaphorjs-observable/src/mixin/Observable.js");
 
 const cls = require("metaphorjs-class/src/cls.js"),
     MetaphorJs = require("metaphorjs-shared/src/MetaphorJs.js"),
+    raf = require("metaphorjs-animate/src/func/raf.js"),
     bind = require("metaphorjs-shared/src/func/bind.js"),
     extend = require("metaphorjs-shared/src/func/extend.js"),
     isFunction = require("metaphorjs-shared/src/func/isFunction.js"),
