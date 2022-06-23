@@ -4,7 +4,6 @@ const cls             = require("metaphorjs-class/src/cls.js"),
     nextUid         = require("metaphorjs-shared/src/func/nextUid.js"),
     bind            = require("metaphorjs-shared/src/func/bind.js"),
     isArray         = require("metaphorjs-shared/src/func/isArray.js"),
-    ajax            = require("metaphorjs-ajax/src/func/ajax.js"),
     isString        = require("metaphorjs-shared/src/func/isString.js"),
     isFunction      = require("metaphorjs-shared/src/func/isFunction.js"),
     isNumber        = require("metaphorjs-shared/src/func/isNumber.js"),
@@ -157,7 +156,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
         fixShorthand(options, "content", "value", "string");
         fixShorthand(options, "content", "value", "boolean");
         fixShorthand(options, "content", "fn", "function");
-        fixShorthand(options, "ajax", "url", "string");
+        fixShorthand(options, "remote", "url", "string");
         fixShorthand(options, "cls", "dialog", "string");
         fixShorthand(options, "render", "tpl", "string");
         fixShorthand(options, "render", "fn", "function");
@@ -210,14 +209,14 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
         modal:			false,
 
         /**
-         * Use link's href attribute as ajax.url or as render.el
+         * Use link's href attribute as remote.url or as render.el
          * @property {bool} useHref
          */
         useHref:        false,
 
 
         /**
-         * If neither content value nor ajax url are provided,
+         * If neither content value nor remote url are provided,
          * plugin will try to read target's attribute values: 'tooltip', 'title' and 'alt'.
          * (unless attr is specified).<br>
          * <em>shorthand</em>: string -> content.value<br>
@@ -250,8 +249,8 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
              * @param {string} mode
              *      empty string - content has come from content.value or setContent()<br>
              *      'attribute' - content has been read from target attributes<br>
-             *      'ajax' - data returned by ajax request
-             *      @default '' | 'attribute' | 'ajax'
+             *      'remote' - data returned by fetch request
+             *      @default '' | 'attribute' | 'remote'
              *
              * @param {string} content
              * @returns {string}
@@ -271,13 +270,13 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
 
 
         /**
-         * All these options are passed to $.ajax().
+         * All these options are passed to fetch().
          * You can provide more options in this section
          * but 'success' will be overriden (use content.prepare for data processing).<br>
-         * <em>shorthand</em>: string -> ajax.url
-         * @object ajax
+         * <em>shorthand</em>: string -> remote.url
+         * @object remote
          */
-        ajax: {
+        remote: {
 
             /**
              * Url to load content from.
@@ -286,20 +285,26 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
             url: 			null,
 
             /**
+             * Use Metaphor.remote.fetch library
+             * @property {boolean} useMetaphor
+             */
+            useMetaphor:    false
+
+            /*
              * Pass this data along with xhr.
              * @property {object} data
-             */
+             *
             data: 			null,
 
-            /**
+            /*
              * @property {string} dataType
-             */
+             *
             dataType: 		'text',
 
-            /**
+            /*
              * @property {string} method
-             */
-            method: 		'GET'
+             *
+            method: 		'GET'*/
 
             /**
              * @end-object
@@ -328,7 +333,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
              */
             hidden:         null,
             /**
-             * Only applied when dialog is performing ajax request.
+             * Only applied when dialog is fetching remote data.
              * @property {string} loading
              */
             loading:        null
@@ -1217,7 +1222,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
                     cfg.render.el = href;
                 }
                 else {
-                    cfg.ajax.url = href;
+                    cfg.remote.url = href;
                 }
             }
 
@@ -2091,7 +2096,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
                         self.setContent(cnt.fn.call(self.$$callbackContext, self));
                     }
                     else {
-                        self[cfg.ajax.url ? 'loadContent' : 'readContent']();
+                        self[cfg.remote.url ? 'loadContent' : 'readContent']();
                     }
                 }
             }
@@ -2416,7 +2421,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
              *      See "selector" option
              *      @required
          * }
-         * @param {string} mode "", "attribute", "ajax" -- optional (used internally). See
+         * @param {string} mode "", "attribute", "remote" -- optional (used internally). See
          * content.prepare option.
          */
         setContent: function(content, mode) {
@@ -2519,25 +2524,35 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
         },
 
         /**
-         * Load content via ajax.
+         * Load remote content.
          * @method
-         * @param {object} options Merged with cfg.ajax
+         * @param {object} options Merged with cfg.remote
          */
         loadContent: function(options) {
 
-            var self = this,
-                cfg = self.cfg;
+            const self = this,
+                    cfg = self.cfg;
 
             MetaphorJs.dom.addClass(self.node, cfg.cls.loading);
-            var opt = extend({}, cfg.ajax, options, true, true);
-            self.trigger('before-ajax', self, opt);
-            return ajax(opt).done(self.onAjaxLoad, self);
+            var opt = extend({}, cfg.remote, options, true, true);
+
+            self.trigger('before-fetch', self, opt);
+
+            if (opt.useMetaphor) {
+                if (!MetaphorJs.remote || !MetaphorJs.remote.fetch) {
+                    console.error("MetaphorJs.remote.fetch is not available in this build");
+                }
+                delete opt.useMetaphor;
+                return MetaphorJs.remote.fetch(opt).done(self.onRemoteLoad, self);
+            }
+
+            return fetch(opt).then((resp) => self.onRemoteLoad(resp));
         },
 
-        onAjaxLoad: function(data) {
+        onRemoteLoad: function(data) {
             var self = this;
             MetaphorJs.dom.removeClass(self.node, self.cfg.cls.loading);
-            self.setContent(data, 'ajax');
+            self.setContent(data, 'remote');
         },
 
         onImageLoad: function() {
