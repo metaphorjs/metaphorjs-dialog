@@ -2546,7 +2546,7 @@ module.exports = MetaphorJs.dialog.Dialog = (function(){
                 return MetaphorJs.remote.fetch(opt).done(self.onRemoteLoad, self);
             }
 
-            return fetch(opt).then((resp) => self.onRemoteLoad(resp));
+            return fetch(opt).then(r => r.text()).then((resp) => self.onRemoteLoad(resp));
         },
 
         onRemoteLoad: function(data) {
